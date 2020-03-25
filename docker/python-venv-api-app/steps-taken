@@ -1,0 +1,17 @@
+Created Dockerfile
+	podman run -it python:3-alpine sh
+		python -m venv /opt/.venv
+		source /opt/.venv/bin/activate
+		pip install gunicorn flask flask_restx
+		cat > /opt/app.py
+		cd /opt
+		gunicorn app:app -b "0.0.0.0:8080" -w 2
+Created app.py
+Built image
+	podman build . -t simple-api
+Ran container
+	podman run -d -p 8080:8080 localhost/simple-api
+Tested api, opened 192.168.1.8:8080 in a browser to see the Swagger UI.
+	curl -X GET "http://192.168.1.8:8080/v1/hello/" -H  "accept: application/json"
+	curl -X GET "http://192.168.1.8:8080/v1/hello/" -H  "accept: application/xml"
+
