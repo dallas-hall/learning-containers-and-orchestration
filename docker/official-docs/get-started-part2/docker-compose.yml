@@ -1,0 +1,53 @@
+version: "3"
+services:
+  web:
+    # access my online repo
+    image: blindcant/repository:getting-started-part2
+    # configure the instance(s)
+    deploy:
+      # run n instances
+      replicas: 5
+      # configure the instance(s) hardware
+      resources:
+        limits:
+          # 10% of cpu on all cores
+          cpus: "0.1"
+          # use 50MB of memoery
+          memory: 50M
+      # restart the instance(s) if it fails
+      restart_policy:
+        condition: on-failure
+    # share port 80 with the load-balancer called webnet
+    ports:
+      - "80:80"
+    networks:
+      - webnet
+  # add the swarm visualiser
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+  # add the redis data store
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - "/home/docker/data:/data"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    command: redis-server --appendonly yes
+    networks:
+      - webnet
+# define webnet with default settings
+networks:
+  webnet:
+
