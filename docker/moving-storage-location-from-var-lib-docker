@@ -1,0 +1,8 @@
+cat > /etc/docker/daemon.json
+{
+	"data-root": "/media/veracrypt1/Development/docker"
+}
+^D
+
+vi /home/blindcant/.config/containers/storage.conf
+graphroot = "/media/veracrypt1/Development/podman"
