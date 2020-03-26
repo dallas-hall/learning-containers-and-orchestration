@@ -21,13 +21,14 @@
 # Class B IP address with default subnet mask 255.255.0.0
 # Host range = 172.16.0.1 - 172.16.255.254 (1 subnet & 65534 hosts)
 # Subnet ID = 172.16.0.0
+# CIDR = 172.16.0.0/16
 # Broadcast address = 172.16.255.255
 
  $nodes = [
   {
     :hostname => 'centos-8-01',
     :ip => '172.16.2.11',
-    :cpus => '1',
+    :cpus => '2',
     :memory => '2048',
     :http_port => 1180,
     :https_port => 1443,
@@ -36,20 +37,20 @@
   {
     :hostname => 'centos-8-02',
     :ip => '172.16.2.12',
-    :cpus => '1',
+    :cpus => '2',
     :memory => '2048',
     :http_port => 2280,
     :https_port => 2443,
-    :groups => ['cluster', 'master']
+    :groups => ['cluster', 'worker']
  	},
   {
     :hostname => 'centos-8-03',
     :ip => '172.16.2.13',
-    :cpus => '1',
+    :cpus => '2',
     :memory => '2048',
     :http_port => 3380,
     :https_port => 3443,
-    :groups => ['cluster', 'master']
+    :groups => ['cluster', 'worker']
  	}
  ]
 
