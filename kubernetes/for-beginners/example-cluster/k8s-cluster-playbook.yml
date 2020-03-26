@@ -1,0 +1,8 @@
+---
+- name: Configure CentOS 8
+  hosts: all
+  become: yes
+  gather_facts: yes
+  roles:
+    - configure-centos8
+
