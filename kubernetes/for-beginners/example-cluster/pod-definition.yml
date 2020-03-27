@@ -1,0 +1,26 @@
+# There is always 4 root elements
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Pod
+
+# Must have name and labels inside of it, the name is the pod name
+metadata:
+  name: my-nginx-pod
+  # Can have any key/value pair here
+  labels:
+    app: my-nginx-app
+    
+# Which container(s) will be running
+spec:
+  # Can have multiple containers, but usually 1 container per pod.
+  containers:
+    - name: nginx-container
+      image: nginx
+
+    - name: postgres
+      image: postgres
+      env:
+        - name: POSTGRES_PASSWORD
+          value: abc123
