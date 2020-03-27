@@ -1,0 +1,31 @@
+# This provides Kubernetes a way to ensure n pods are always running.
+apiVersion: apps/v1
+# ReplicaSet is the new technology, compared to ReplicationController
+kind: ReplicaSet
+# All Kubernetes yml files need metadata, and they must have name and label.
+metadata:
+  name: my-app-replica-set
+  # Provide your own key/value pairs here.
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  # This is used to tell Kubernetes how to create new Pods. It is basically like pod-definition.yml without apiVersion and kind.
+  template:
+    metadata:
+      name: my-app-pod
+      labels:
+        app: my-app
+        type: front-end
+    spec:
+      # Which container(s) to run
+      containers:
+        - name: nginx
+          image: nginx
+    # How many pods must be running at once
+  replicas: 3
+    # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
+  selector:
+    matchLabels:
+      type: front-end
+# kubectl create -f replicaset-definition.yml
