@@ -31,8 +31,27 @@ spec:
     matchLabels:
       type: front-end
 
-# Run and create deploymanet -> replicaset -> pods set= kubectl create -f deployment-definition.yml
-# kubectl get deployments
-# kubectl get replicaset
-# kubectl get pods
-# Show all objects= kubectl get all
+# Create a Deployment -> ReplicaSet -> Pods
+# Using file= kubectl create -f deployment-definition.yml
+# Using image= kubectl run nginx --image=nginx
+
+# Delete Deployment, ReplicaSet, and its Pods
+# kubectl delete deployments/my-app-deployment
+
+# Get Deployment information
+# kubectl get deployment [dep-name]
+# kubectl get rs|replicaset [rs-name]
+# kubectl get pod [pod-name]
+# kubectl get all
+# kubectl describe deployments
+
+# Update Deployments
+# Update image version in this file= kubectl apply -f deployment-definition.yml
+# No file update= kubectl set image deployement/my-deployment nginx=ngninx:1.9.1
+
+# Get Deployment Status
+# kubectl rollout status deployment/my-deployment
+# kubectl rollout history deployment/my-deployment
+
+# Rollback An Update
+# kubectl rollout undo deployment/my-deployment
