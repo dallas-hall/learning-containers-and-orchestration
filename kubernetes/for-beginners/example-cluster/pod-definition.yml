@@ -12,6 +12,7 @@ metadata:
   # Can have any key/value pair here
   labels:
     app: my-nginx-app
+    type: front-end
     
 # Which container(s) will be running
 spec:
