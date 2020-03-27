@@ -1,0 +1,42 @@
+# https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Service
+
+metadata:
+  name: my-app-service
+
+    
+# The networking configuration of the Service
+spec:
+  # 3 types available here, NodePort, ClusterIP, LoadBalancer
+  type: NodePort
+  ports:
+      # The Pod port(s), where we want to go
+    - targetPort: 80
+      # The Service object port
+      port: 80
+      # The Node port exposed externally. Use 30000-32767
+      nodePort: 30008
+  # Add the labels here of the Pods you want to link to the Service
+  selector:
+    # These are from pod|replicaset|deployment-definition.yml -> metadata: labels: and must match exactly.
+    app: my-app
+
+# Create a Service
+# kubectl create -f service-definition.yml
+
+ # Delete Service
+# kubectl delete service my-service
+
+# Get Service information
+# kubectl get services
+# kubectl get service my-service
+# kubectl get all
+# kubectl describe service
+
+# Update Existing Pod
+# Using this file= kubectl replace -f mypod-definition.yml
+# Update this file= kubectl edit pod my-pod
