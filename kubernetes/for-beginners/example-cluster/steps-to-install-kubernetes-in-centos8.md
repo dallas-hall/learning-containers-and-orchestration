@@ -2,7 +2,7 @@
 
 * https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-on-linux
 
-```bash
+```
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -23,7 +23,7 @@ dnf install -y kubectl
 
 * https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 
-```bash
+```
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 ssh vms
 sudo -s
@@ -75,9 +75,10 @@ kubectl get nodes
 kubectl run nginx --image=nginx
 kubectl get pods
 kubectl get pods --no-headers=true | awk '/nginx/{print $1}' | xargs  kubectl delete pod
+kubectl delete pod nginx
 ```
 
 # Install k8s cluster with Kubespray
 
 * https://kubernetes.io/docs/setup/production-environment/tools/kubespray/
-** Can use Ansible or Vagrant, I used my own Vagrant and then Ansible.
+* Can use Ansible or Vagrant, I used my own Vagrant and then Ansible.
