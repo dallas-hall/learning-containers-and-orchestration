@@ -1,8 +1,10 @@
 # This is a typical production way. Deployment -> ReplicaSet -> Pods. All from this file.
 apiVersion: apps/v1
+
 # Provides a way for rolling updates (1 by 1) and rolling back updates. Or pause, update, and reusume.
 kind: Deployment
 # All Kubernetes yml files need metadata, and they must have name and label.
+
 metadata:
   name: my-app-deployment
   # Provide your own key/value pairs here.
@@ -10,6 +12,7 @@ metadata:
   labels:
     app: my-app
     type: front-end
+
 spec:
   # This is used to tell Kubernetes how to create new Pods. It is basically like pod-definition.yml without apiVersion and kind.
   template:
@@ -33,6 +36,7 @@ spec:
 
 # Create a Deployment -> ReplicaSet -> Pods
 # Using file= kubectl create -f deployment-definition.yml
+# Using file and save change history= kubectl create -f deployment-definition.yml --record
 # Using image= kubectl run nginx --image=nginx
 
 # Delete Deployment, ReplicaSet, and its Pods
