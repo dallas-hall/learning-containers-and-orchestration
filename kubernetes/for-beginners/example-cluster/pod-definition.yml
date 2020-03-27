@@ -26,5 +26,18 @@ spec:
         - name: POSTGRES_PASSWORD
           value: abc123
 
-# Run= kubectl create -f pod-definition.yml
-# kubectl get pods $PODNAME -o yaml
+# Create a Pod
+# kubectl create -f pod-definition.yml
+
+# Delete ReplicaSet and its Pods
+# kubectl delete pod my-pod
+
+# Get Pod information
+# kubectl get pods
+# kubectl get pod my-pod
+# kubectl get all
+# kubectl describe pods
+
+# Update Existing Pod
+# Using this file= kubectl replace -f mypod-definition.yml
+# Update this file= kubectl edit pod my-pod

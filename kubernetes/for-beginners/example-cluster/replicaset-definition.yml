@@ -31,11 +31,23 @@ spec:
   selector:
     matchLabels:
       type: front-end
-# Run and create replicaset -> pods= kubectl create -f replicaset-definition.yml
-# kubectl get replicaset
-# kubectl get pods
-# kubectl delete replicaset
-# Update replicas in file= kubectl replace -f replicaset-definition.yml
-# Update replicas but not it file= kubectl scale --replicas=6 -f replicaset-definition.yml
-# Update replicas but not it file= kubectl scale --replicas=6 replicaset replicaset-name
-# Update replicas in place= kubectl edit replicaset new-replica-set
+
+# Create a ReplicaSet -> Pods
+# kubectl create -f replicaset-definition.yml
+
+# Delete ReplicaSet and its Pods
+# kubectl delete rs|replicaset my-replicaset
+
+# Get ReplicaSet information
+# kubectl get rs|replicaset [rs-name]
+# kubectl get pod [name]
+# kubectl get all
+# kubectl describe rs|replicaset
+
+# Update Existing ReplicaSet (Need to delete Pods)
+# Using this file= kubectl replace -f replicaset-definition.yml
+# Update this file= kubectl edit replicaset new-replica-set
+
+# Scale Up/Down Replica Without File Updates
+# kubectl scale --replicas=6 -f replicaset-definition.yml
+# kubectl scale --replicas=6 replicaset replicaset-name
