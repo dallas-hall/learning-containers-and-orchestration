@@ -1,3 +1,4 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#example
 # This provides Kubernetes a way to ensure n pods are always running.
 apiVersion: apps/v1
 # ReplicaSet is the new technology, compared to ReplicationController
@@ -6,6 +7,7 @@ kind: ReplicaSet
 metadata:
   name: my-app-replica-set
   # Provide your own key/value pairs here.
+  # This should match the nested metadata. Helps the Selector manage P ods.
   labels:
     app: my-app
     type: front-end
@@ -14,6 +16,7 @@ spec:
   template:
     metadata:
       name: my-app-pod
+      # This should match the parent metadata. Helps the Selector manage Pods.
       labels:
         app: my-app
         type: front-end
@@ -28,4 +31,11 @@ spec:
   selector:
     matchLabels:
       type: front-end
-# kubectl create -f replicaset-definition.yml
+# Run and create replicaset -> pods= kubectl create -f replicaset-definition.yml
+# kubectl get replicaset
+# kubectl get pods
+# kubectl delete replicaset
+# Update replicas in file= kubectl replace -f replicaset-definition.yml
+# Update replicas but not it file= kubectl scale --replicas=6 -f replicaset-definition.yml
+# Update replicas but not it file= kubectl scale --replicas=6 replicaset replicaset-name
+# Update replicas in place= kubectl edit replicaset new-replica-set
