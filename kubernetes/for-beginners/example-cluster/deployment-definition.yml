@@ -1,0 +1,38 @@
+# This is a typical production way. Deployment -> ReplicaSet -> Pods. All from this file.
+apiVersion: apps/v1
+# Provides a way for rolling updates (1 by 1) and rolling back updates. Or pause, update, and reusume.
+kind: Deployment
+# All Kubernetes yml files need metadata, and they must have name and label.
+metadata:
+  name: my-app-deployment
+  # Provide your own key/value pairs here.
+  # This should match the nested metadata. Helps the Selector manage P ods.
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  # This is used to tell Kubernetes how to create new Pods. It is basically like pod-definition.yml without apiVersion and kind.
+  template:
+    metadata:
+      name: my-app-pod
+      # This should match the parent metadata. Helps the Selector manage Pods.
+      labels:
+        app: my-app
+        type: front-end
+    spec:
+      # Which container(s) to run
+      containers:
+        - name: nginx
+          image: nginx # Updating the image is how you can trigger a new Deployment.
+    # How many pods must be running at once
+  replicas: 3
+    # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
+  selector:
+    matchLabels:
+      type: front-end
+
+# Run and create deploymanet -> replicaset -> pods set= kubectl create -f deployment-definition.yml
+# kubectl get deployments
+# kubectl get replicaset
+# kubectl get pods
+# Show all objects= kubectl get all
