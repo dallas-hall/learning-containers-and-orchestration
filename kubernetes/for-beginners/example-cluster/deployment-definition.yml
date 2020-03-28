@@ -34,6 +34,8 @@ spec:
     matchLabels:
       type: front-end
 
+# NOTE: For a deployment to work, we still need a service.
+
 # Create a Deployment -> ReplicaSet -> Pods
 # Using file= kubectl create -f deployment-definition.yml
 # Using file and save change history= kubectl create -f deployment-definition.yml --record
