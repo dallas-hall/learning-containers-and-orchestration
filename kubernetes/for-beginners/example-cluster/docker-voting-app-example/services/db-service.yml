@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  # These are used by selectors to link k8s objects.
+  labels:
+    name: db-service
+    app: docker-voting-app-demo
+spec:
+  ports:
+      # Listening port
+    - port: 5432
+      # Forwarding port
+      targetPort: 5432
+  # Link the Service to Pods
+  selector:
+    name: db-pod
+    app: docker-voting-app-demo

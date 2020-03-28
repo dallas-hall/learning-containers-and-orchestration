@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: voting-app-pod
+  # These are used by selectors to link k8s objects.
+  labels:
+    name: voting-app-pod
+    app: docker-voting-app-demo
+spec:
+  containers:
+    - name: voting-app
+    # https://hub.docker.com/r/dockersamples/examplevotingapp_vote
+      image: dockersamples/examplevotingapp_vote
+      # Container ports to expose to the host
+      ports:
+        - containerPort: 80
