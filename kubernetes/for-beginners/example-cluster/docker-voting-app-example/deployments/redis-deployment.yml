@@ -10,9 +10,7 @@ metadata:
   # Provide your own key/value pairs here.
   # This should match the nested metadata. Helps the Selector manage P ods.
   labels:
-    name: redis-pod
-    app: docker-voting-app-demo
-
+    name: redis
 spec:
   # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
   selector:
