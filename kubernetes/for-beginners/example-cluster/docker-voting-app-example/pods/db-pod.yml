@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-pod
+  # These are used by selectors to link k8s objects.
+  labels:
+    name: db-pod
+    app: docker-voting-app-demo
+spec:
+  containers:
+    - name: db
+      image: postgres:9.4
+      # Container ports to expose to the host
+      ports:
+        - containerPort: 5432

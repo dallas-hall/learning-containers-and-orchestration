@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: voting-service
+  # These are used by selectors to link k8s objects.
+  labels:
+    name: voting-service
+    app: docker-voting-app-demo
+spec:
+  # If we were on Google Cloud Platform we could use LoadBalancer and hook into theirs automatically. Without this we need to configure nginx or another load balancer ourselves.
+  # https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-services-running-on-the-cluster
+  type: NodePort
+  ports:
+      # Listening port
+    - port: 80
+      # Forwarding port
+      targetPort: 80
+      # Access port directly
+      nodePort: 30080
+  # Link the Service to Pods
+  selector:
+    name: voting-app-pod
+    app: docker-voting-app-demo

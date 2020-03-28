@@ -1,0 +1,65 @@
+# This is a typical production way. Deployment -> ReplicaSet -> Pods. All from this file.
+apiVersion: apps/v1
+
+# Provides a way for rolling updates (1 by 1) and rolling back updates. Or pause, update, and reusume.
+kind: Deployment
+# All Kubernetes yml files need metadata, and they must have name and label.
+
+metadata:
+  name: worker-deployment
+  # Provide your own key/value pairs here.
+  # This should match the nested metadata. Helps the Selector manage P ods.
+  labels:
+    name: worker-app-pod
+    app: docker-voting-app-demo
+
+spec:
+  # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
+  selector:
+    # Copy these from your Pod metadata: labels:
+    matchLabels:
+      name: worker-app-pod
+      app: docker-voting-app-demo
+  # This is used to tell Kubernetes how to create new Pods. It is everything from pod-definition.yml without apiVersion and kind.
+  template:
+    metadata:
+      name: worker-app-pod
+      # This should match the parent metadata. Helps the Selector manage Pods.
+      labels:
+        name: worker-app-pod
+        app: docker-voting-app-demo
+    spec:
+      # Which container(s) to run
+      containers:
+        - name: worker-app
+          image: dockersamples/examplevotingapp_worker # Updating the image is how you can trigger a new Deployment.
+  # How many pods must be running at once
+  replicas: 1
+
+# NOTE: For a deployment to work, we still need a service.
+
+# Create a Deployment -> ReplicaSet -> Pods
+# Using file= kubectl create -f deployment-definition.yml
+# Using file and save change history= kubectl create -f deployment-definition.yml --record
+# Using image= kubectl run nginx --image=nginx
+
+# Delete Deployment, ReplicaSet, and its Pods
+# kubectl delete deployments/my-app-deployment
+
+# Get Deployment information
+# kubectl get deployment [dep-name]
+# kubectl get rs|replicaset [rs-name]
+# kubectl get pod [pod-name]
+# kubectl get all
+# kubectl describe deployments
+
+# Update Deployments
+# Update image version in this file= kubectl apply -f deployment-definition.yml
+# No file update= kubectl set image deployement/my-deployment nginx=ngninx:1.9.1
+
+# Get Deployment Status
+# kubectl rollout status deployment/my-deployment
+# kubectl rollout history deployment/my-deployment
+
+# Rollback An Update
+# kubectl rollout undo deployment/my-deployment

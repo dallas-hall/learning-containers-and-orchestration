@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-pod
+  # These are used by selectors to link k8s objects.
+  labels:
+    name: redis-pod
+    app: docker-voting-app-demo
+spec:
+  containers:
+    - name: redis
+      image: redis
+      # Container ports to expose to the host
+      ports:
+        - containerPort: 6379
+ 
