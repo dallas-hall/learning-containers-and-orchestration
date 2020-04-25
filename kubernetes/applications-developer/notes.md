@@ -1,0 +1,445 @@
+# k8s Application Developer Notes
+
+* Second course in a series [beginner, developer, administrator]
+* Can do the exam if you want
+
+# 1) Core Concepts
+
+* This is the entire Beginner's Course recapped.
+
+## 1.1) Architecture Recap
+
+* A Node is physical or virtual machine where k8s is installed. A Node is used as a k8s worker. Also known as a Minion in the past. This is where applications and their containers run. It has:
+  * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
+  * container runtime - the software (e.g docker) used to run containers
+* A Cluster is a set of Nodes grouped together. Which provides the ability to deploy applications across multiple Nodes and provide high availability and load balancing.
+* The Master is another Node in the Cluster. The Master monitors and controls the worker Nodes. It has:
+  * kube-apiserver - allows interaction with the k8s cluster. kube-apiserver
+  * kubelet - an agent that runs on each Node in the cluster. The Master and Node(s) talk to each other through this.
+  * etcd - a distributed key value store which has data to manage the cluster
+  * controller - make the decisions whether to bring up new containers
+  * scheduler - distributes work or containers across the nodes
+  * kubectl - an agent that runs on each Node in the cluster
+
+* k8s cluster components
+  * api server - allows interaction with the k8s cluster. kube-apiserver
+  * etcd - a distributed key value store which has data to manage the cluster
+  * container runtime - the software (e.g docker) used to run containers
+  * controller - make the decisions whether to bring up new containers
+  * scheduler - distributes work or containers across the nodes
+  * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
+  * kubectl - the command line tool used to deploy and manage clusters
+
+```bash
+# Deploy an application
+kubectl run myapp
+
+# Get k8s Cluster information
+kubectl cluster-info
+
+# List all Nodes in the Cluster
+kubcetl get nodes
+```
+
+* The ultimate aim is to deploy an application in the form of containers on a set of machines configured as a k8s Cluster.
+
+## 1.2) Pod Recap
+
+* To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
+* Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
+* k8s doesn't deploy containers directly onto Nodes, they are deployed into Pods.
+* A Pod
+  * Is a single instance of an application. But multiple instances can be run by creating additional Pods.
+  * Is the smallest object that can be created in k8s. This object is where containers are run.
+  * Can have one or multiple containers. If running multiple containers, the containers are unique applications that are all related (e.g. main container and helper containers). These are created and destroyed together.
+  * Multiple containers within a Pod can refer to each other via `localhost` as they share the same network space, they also share the same storage.
+  * Are created by YAML files.
+* k8s objects are created by YAML files. Each YAML file must contain 4 parts
+  * apiVersion = controls what objects you can create. Versions support different types of objects.
+  * kind = the type of k8s object you are creating
+  * metadata = data about the object, in the form of a dictionary.
+  * spec = the objects we are going to run, as a list of dictionaries
+
+```yaml
+# https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates
+# There is always 4 root elements
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Pod
+
+# Must have name and labels inside of it, the name is the pod name
+metadata:
+  name: my-nginx-pod
+  # Can have any key/value pair here
+  labels:
+    app: my-nginx-app
+    type: front-end
+    
+# Which container(s) will be running
+spec:
+  # Can have multiple containers, but usually 1 container per pod.
+  containers:
+    - name: nginx-container
+      image: nginx
+
+    - name: postgres
+      image: postgres
+      env:
+        - name: POSTGRES_PASSWORD
+          value: abc123
+```
+
+```bash
+# Run a Pod from CLI
+kubectl run pod-name --image container-image-name --generator=run-pod/v1
+
+# Create a Pod
+kubectl create -f pod-definition.yml
+
+# Delete Pod
+kubectl delete pod my-pod
+
+# Get Pods information
+kubectl get pods
+kubectl get pods -o wide
+kubectl get all
+kubectl describe pods
+
+# Get Pod specific information
+kubectl get pod my-pod
+
+# Update Existing Pod With File - remember to delete the existing Pods for the changes to apply
+kubectl replace -f mypod-definition.yml
+
+# Update Existing Pod Without File - remember to delete the existing Pods for the changes to apply
+kubectl edit pod my-pod
+
+# Extract Pod Definition From Running Pod
+kubectl get pod pod-name -o yaml > pod-definition.yaml
+```
+## 1.3) Controller Recap
+
+* These are the brains behind k8s.
+* Controllers are processes that monitor k8s objects and respond to accordingly to events.
+
+### 1.3.1) Replication Controller
+
+* Helps us run multiple instances of a single pod in a Cluster.
+* It provides high availability by ensuring that the specified number of Pods is running at all times.
+* It provides load balancing and scaling, by creating Pods across Nodes in the Cluster and spans across mutiple Nodes in a Cluster.
+* But it is an older technology being replaced by Replica Set
+
+```yaml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: my-apps-rc
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  replicas: 3 # How many Pods to run
+  template:
+  # Everything from pod-definition file goes here, but exclude apiVersion: and kind:
+    metadata:
+      name: my-apps-pod
+      labels:
+        app: my-app
+        type: front-end
+    spec:
+      containers:
+        - name: some-container
+          image: some-container-image
+        - name: some-container-2
+          image: some-container-image-2
+```
+
+### 1.3.2) ReplicaSet
+
+* Very similar to ReplicationController but it is not the same. The ReplicaSet is the modern and recommended replacement. 
+* The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
+* The ReplicaSet is in a different apiVersion to the ReplicationController. 
+* The ReplicaSet is a process that knows which Pods to monitor by the Labels provided during Pod creation.
+* The Selector tells the RepliceSet what labels to watch. If any of the Pods matching the watched labels fail, the ReplicaSet will create new ones.
+* The Selector tells the ReplicaSet what Pods it can control, even if they weren't created by the ReplicaSet. Thus the ReplicaSet can create its own Pods to monitor or monitor existing Pods.
+* You may scale a ReplicaSet by updating the YAML file or update via command line with kubectl, second approach doesn't update the file.
+* Labels and Selectors are used in many other places in k8s.
+
+```yaml
+# basically same as ReplicationController but the object is now ReplicaSet and has selector property.
+# https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#example### 1.3.1) 
+apiVersion: apps/v1
+
+# ReplicaSet is the new technology, compared to ReplicationController
+kind: ReplicaSet
+
+# All Kubernetes yml files need metadata, and they must have name and label.
+metadata:
+  name: my-app-replica-set
+  # Provide your own key/value pairs here.
+  # This should match the nested metadata. Helps the Selector manage P ods.
+  labels:
+    app: my-app
+    type: front-end
+
+spec:
+  # How many pods must be running at once
+  replicas: 3
+  # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
+  selector:
+    matchLabels:
+      type: front-end
+  # This is used to tell Kubernetes how to create new Pods. It is basically like pod-definition.yml without apiVersion and kind.
+  template:
+    metadata:
+      name: my-app-pod
+      # This should match the parent metadata. Helps the Selector manage Pods.
+      labels:
+        app: my-app
+        type: front-end
+    spec:
+      # Which container(s) to run
+      containers:
+        - name: nginx
+          image: nginx
+```
+
+```bash
+# Create a ReplicaSet -> Pods
+kubectl create -f replicaset-definition.yml
+
+# Delete ReplicaSet and its Pods
+kubectl delete rs|replicaset my-replicaset
+
+# Get Specific ReplicaSet information
+kubectl get rs|replicaset [rs-name]
+kubectl get pod [name]
+
+# Get ReplicaSet information
+kubectl get all
+kubectl describe rs|replicaset
+kubectl get rs|replicaset -o wide
+
+# Update Existing ReplicaSet With File - remember to delete the existing ReplicaSet or Pods for the changes to apply
+kubectl replace -f replicaset-definition.yml
+
+# Update Existing ReplicaSet Without File - remember to delete the existing ReplicaSet or Pods for the changes to apply
+kubectl edit rs|replicaset my-replicaset
+
+# Extract ReplicaSet Definition From Running Pod
+kubectl get rs|replicaset replicaset-name -o yaml > replicaset-definition.yaml
+
+# Scale Up/Down Replica Without File Updates
+kubectl scale --replicas=6 -f replicaset-definition.yml
+kubectl scale --replicas=6 replicaset replicaset-name
+```
+
+## 1.4) Deployments Recap
+# Update image version in this fil
+* Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
+* A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
+  * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
+* The Deployment object provides a way to do updates and rollbacks to Pod application versions.
+
+```yaml
+# This is a typical production way. Deployment -> ReplicaSet -> Pods. All from this file.
+apiVersion: apps/v1
+
+# Provides a way for rolling updates (1 by 1) and rolling back updates. Or pause, update, and reusume.
+kind: Deployment
+# All Kubernetes yml files need metadata, and they must have name and label.
+
+metadata:
+  name: my-app-deployment
+  # Provide your own key/value pairs here.
+  # This should match the nested metadata. Helps the Selector manage P ods.
+  labels:
+    app: my-app
+    type: front-end
+
+spec:
+  # How many pods must be running at once
+  replicas: 3
+  # Required by ReplicaSet, not ReplicationController. Explains what pods fall under it, as you can add other pods that weren't created here.
+  selector:
+    matchLabels:
+      type: front-end
+  # This is used to tell Kubernetes how to create new Pods. It is basically like pod-definition.yml without apiVersion and kind.
+  template:
+    metadata:
+      name: my-app-pod
+      # This should match the parent metadata. Helps the Selector manage Pods.
+      labels:
+        app: my-app
+        type: front-end
+    spec:
+      # Which container(s) to run
+      containers:
+        - name: nginx
+          image: nginx # Updating the image is how you can trigger a new Deployment.
+```
+
+```bash
+# NOTE: For a deployment to work, we still need a service.
+
+# Create a Deployment -> ReplicaSet -> Pods With File
+kubectl create -f deployment-definition.yml
+# Use a file and save the history changes
+kubectl create -f deployment-definition.yml --record
+# Using an image
+kubectl run nginx --image=nginx
+
+# Delete Deployment, ReplicaSet, and its Pods
+kubectl delete deployments/my-app-deployment
+
+# Get Deployment information
+kubectl get deployment [dep-name]
+kubectl get rs|replicaset [rs-name]
+kubectl get pod [pod-name]
+kubectl get all
+kubectl describe deployments
+
+# Update Deployments Using File - remember to delete the existing Deployment or ReplicaSet or Pods for the changes to apply
+kubectl apply -f deployment-definition.yml
+
+# Update Deployments Without a File -  remember to delete the existing Deployment or ReplicaSet or Pods for the changes to apply
+kubectl set image deployement/my-deployment nginx=ngninx:1.9.1
+
+# Get Deployment Status
+kubectl rollout status deployment/my-deployment
+kubectl rollout history deployment/my-deployment
+
+# Rollback An Update
+kubectl rollout undo deployment/my-deployment
+```
+
+### 1.4.1) Deployment Updates and Rollbacks
+
+each time a Deployment is run, a Rollout is triggered. a version (i.e. revision) of the Rollout is kept, which can be used later to Rollback to
+2 types of Deployment strategies
+* Recreate strategy = delete all at once and create all at once, this means there will be an outage
+* Rolling Update = delete old Pods and replace with new Pods 1 by 1, this means no outage. DEFAULT
+updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version. or do it from the command line, but doesn't update the YAML file
+a new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
+you can undo a Deployment and rollback to a previous Rollout version.
+
+# Networking
+
+each Node has an IP address (e.g. for ssh etc)
+each Pod has its own internal dynamic IP address, but for multiple Node clusters each Node/Pod gets the same IP address and this will cause networking conflicts. 
+k8s does not setup any networking to handle networking conflicts, you must do that yourself with an external application (e.g calico) this network manager will manage networking within the cluster and assign different IP addresses to each node and thus each Pod
+
+# Services
+
+enable communications between various cluster components.
+helps us connect applications/users together by loosely coupling them together
+
+## NodePort
+
+how do external users access a k8s application externally through a browser? connect to the external Node IP and a Service (NodePort) will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod
+3 ports involved here
+* the port running on the Pod, called the TargetPort
+* the port running on the Service, called the Port
+* the port running on the Node, called the NodePort, 30000-32767 default range
+the Pod label is used by Service selector to find all pods to apply the NodePort to and when Pods are on multipe Nodes in the cluster, the Service automatically spans across the Nodes.
+
+```yaml
+# https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Service
+
+metadata:
+  name: my-app-service
+    
+# The networking configuration of the Service
+spec:
+  # 3 types available here, NodePort, ClusterIP, LoadBalancer
+  type: NodePort
+  ports:
+      # The Pod port(s), where we want to go
+    - targetPort: 80
+      # The Service object port
+      port: 80
+      # The Node port exposed externally. Use 30000-32767
+      # If we leave this blank Kubernetes will provide it for us automatically.
+      nodePort: 30008
+  # Add the labels here of the Pods you want to link to the Service
+  selector:
+    # These are from pod|replicaset|deployment-definition.yml -> metadata: labels: and must match exactly.
+    app: my-app
+
+# Create a Service
+# kubectl create -f service-definition.yml
+
+ # Delete Service
+# kubectl delete service my-service
+
+# Get Service information
+# kubectl get services
+# kubectl get service my-service
+# kubectl get all
+# kubectl describe service
+
+# Update Existing Pod
+# Using this file= kubectl replace -f mypod-definition.yml
+# Update this file= kubectl edit pod my-pod
+```
+
+## ClusterIP
+
+the Service creates a virtual IP within the cluster and that is used for network communications
+this can used when you have multiple Pods.
+a fullstack application typically has a multiple set of Pods running different tiers of the application (e.g, frontend web app, backend databases, messaging services, etc) - the ClusterIP Service helps up group Pods together and provides a single interface to access the different tiers of Pods
+each Service gets a name and IP address and that is what is used to access the Pods grouped with the Service.
+
+```yaml
+# https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Service
+
+metadata:
+  name: backend
+    
+# The networking configuration of the Service
+spec:
+  # 3 types available here, NodePort, ClusterIP, LoadBalancer
+  type: ClusterIP
+  ports:
+      # The Pod port(s), where we want to go
+    - targetPort: 80
+      # The Service object port
+      port: 80
+  # Add the labels here of the Pods you want to link to the Service
+  selector:
+    # These are from pod|replicaset|deployment-definition.yml -> metadata: labels: and must match exactly.
+    app: my-app
+    type: backend
+
+# Create a Service
+# kubectl create -f service-definition.yml
+
+ # Delete Service
+# kubectl delete service my-service
+
+# Get Service information
+# kubectl get services
+# kubectl get service my-service
+# kubectl get all
+# kubectl describe service
+
+# Update Existing Pod
+# Using this file= kubectl replace -f mypod-definition.yml
+# Update this file= kubectl edit pod my-pod
+```
+
+## LoadBalancer
+
+Delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent
