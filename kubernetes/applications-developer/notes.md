@@ -7,7 +7,29 @@
 
 * This is the entire Beginner's Course recapped.
 
-## 1.1) Architecture Recap
+## 1.1) Containers
+
+* Containers are an isolated environment with its own resources (e.g. processes, network interfaces, storage etc) within an operating system but all containers within the same O/S share the same kernel.
+
+![container example](container-example.png)
+
+* Containers are used to isolate applications from each other. Each container has its own O/S that supports the application and its dependencies.
+
+![container example](container-example-detailed.png)
+
+* A container can only run on the same O/S kernel that it has. So if Docker is running on a Linux kernel, any Linux distribution can run on it. Running a Linux Docker container on Windows actually spins up a Linux VM.
+
+![kernel sharing](kernel-sharing.png)
+
+* Containers are not new but Docker is a high level tool that has made them very popular.
+* Docker uses LXC containers.
+* Containers are more resource friendly than VMs. They are typically 100s of MB in size whereas VMs are typically GBs in size.  It is common to run containers within VMs.
+
+![container v vm](container-vs-vm.png)
+
+## 1.2) Architecture Recap
+
+![cluster](cluster.png)
 
 * A Node is physical or virtual machine where k8s is installed. A Node is used as a k8s worker. Also known as a Minion in the past. This is where applications and their containers run. It has:
   * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
@@ -20,6 +42,8 @@
   * controller - make the decisions whether to bring up new containers
   * scheduler - distributes work or containers across the nodes
   * kubectl - an agent that runs on each Node in the cluster
+
+![k8s components](k8s-components.png)
 
 * k8s cluster components
   * api server - allows interaction with the k8s cluster. kube-apiserver
@@ -43,7 +67,7 @@ kubcetl get nodes
 
 * The ultimate aim is to deploy an application in the form of containers on a set of machines configured as a k8s Cluster.
 
-## 1.2) Pod Recap
+## 1.3) Pod Recap
 
 * To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
 * Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
@@ -93,13 +117,13 @@ spec:
 
 ```bash
 # Run a Pod from CLI
-kubectl run pod-name --image container-image-name --generator=run-pod/v1
+kubectl run --generator=run-pod/v1 $POD_NAME --image=$IMAGE_NAME -l $LABEL_KEY=$LABEL_VALUE
 
 # Create a Pod
 kubectl create -f pod-definition.yml
 
 # Delete Pod
-kubectl delete pod my-pod
+kubectl delete pod $POD_NAME
 
 # Get Pods information
 kubectl get pods
@@ -108,23 +132,25 @@ kubectl get all
 kubectl describe pods
 
 # Get Pod specific information
-kubectl get pod my-pod
+kubectl get pod $POD_NAME
 
 # Update Existing Pod With File - remember to delete the existing Pods for the changes to apply
 kubectl replace -f mypod-definition.yml
 
 # Update Existing Pod Without File - remember to delete the existing Pods for the changes to apply
-kubectl edit pod my-pod
+kubectl edit pod $POD_NAME
 
 # Extract Pod Definition From Running Pod
-kubectl get pod pod-name -o yaml > pod-definition.yaml
+kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
+kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
 ```
-## 1.3) Controller Recap
+
+## 1.4) Controller Recap
 
 * These are the brains behind k8s.
 * Controllers are processes that monitor k8s objects and respond to accordingly to events.
 
-### 1.3.1) Replication Controller
+### 1.4.1) Replication Controller
 
 * Helps us run multiple instances of a single pod in a Cluster.
 * It provides high availability by ensuring that the specified number of Pods is running at all times.
@@ -156,7 +182,7 @@ spec:
           image: some-container-image-2
 ```
 
-### 1.3.2) ReplicaSet
+### 1.4.2) ReplicaSet
 
 * Very similar to ReplicationController but it is not the same. The ReplicaSet is the modern and recommended replacement. 
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
@@ -211,11 +237,11 @@ spec:
 kubectl create -f replicaset-definition.yml
 
 # Delete ReplicaSet and its Pods
-kubectl delete rs|replicaset my-replicaset
+kubectl delete rs|replicaset $REPLICA_SET_NAME
 
 # Get Specific ReplicaSet information
-kubectl get rs|replicaset [rs-name]
-kubectl get pod [name]
+kubectl get rs|replicaset [$REPLICA_SET_NAME]
+kubectl get pod [$POD_NAME]
 
 # Get ReplicaSet information
 kubectl get all
@@ -226,18 +252,17 @@ kubectl get rs|replicaset -o wide
 kubectl replace -f replicaset-definition.yml
 
 # Update Existing ReplicaSet Without File - remember to delete the existing ReplicaSet or Pods for the changes to apply
-kubectl edit rs|replicaset my-replicaset
+kubectl edit rs|replicaset $REPLICA_SET_NAME
 
 # Extract ReplicaSet Definition From Running Pod
-kubectl get rs|replicaset replicaset-name -o yaml > replicaset-definition.yaml
+kubectl get rs|replicaset $REPLICA_SET_NAME -o yaml > replicaset-definition.yaml
 
 # Scale Up/Down Replica Without File Updates
 kubectl scale --replicas=6 -f replicaset-definition.yml
-kubectl scale --replicas=6 replicaset replicaset-name
+kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 ```
 
-## 1.4) Deployments Recap
-# Update image version in this fil
+## 1.5) Deployments Recap
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
@@ -289,15 +314,15 @@ kubectl create -f deployment-definition.yml
 # Use a file and save the history changes
 kubectl create -f deployment-definition.yml --record
 # Using an image
-kubectl run nginx --image=nginx
+kubectl create deployment $DEPLOYMENT_NAME --image=$IMAGE_NAME
 
 # Delete Deployment, ReplicaSet, and its Pods
-kubectl delete deployments/my-app-deployment
+kubectl delete deployments/$DEPLOYMENT_NAME
 
 # Get Deployment information
-kubectl get deployment [dep-name]
-kubectl get rs|replicaset [rs-name]
-kubectl get pod [pod-name]
+kubectl get deployment [$DEPLOYMENT_NAME]
+kubectl get rs|replicaset [$REPLICA_SET_NAME]
+kubectl get pod [$POD_NAME]
 kubectl get all
 kubectl describe deployments
 
@@ -305,17 +330,31 @@ kubectl describe deployments
 kubectl apply -f deployment-definition.yml
 
 # Update Deployments Without a File -  remember to delete the existing Deployment or ReplicaSet or Pods for the changes to apply
-kubectl set image deployement/my-deployment nginx=ngninx:1.9.1
+kubectl set image deployement/$DEPLOYMENT_NAME nginx=ngninx:1.9.1
+
+# Scale deployment without file
+kubectl scale $DEPLOYMENT_NAME --replicas=$REPLICA_AMOUNT
 
 # Get Deployment Status
-kubectl rollout status deployment/my-deployment
-kubectl rollout history deployment/my-deployment
+kubectl rollout status deployment/$DEPLOYMENT_NAME
+kubectl rollout history deployment/$DEPLOYMENT_NAME
 
 # Rollback An Update
-kubectl rollout undo deployment/my-deployment
+kubectl rollout undo deployment/$DEPLOYMENT_NAME
+
+# Create a YAML file
+kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry-run -o yaml > deployment.yaml
 ```
 
-### 1.4.1) Deployment Updates and Rollbacks
+* `kubectl [command] [TYPE][NAME] -o $OUTPUT_FORMAT` has 4 types
+  1. `-o json` - which prints out JSON
+  1. `-o name` - which prints out the resource name only.
+  1. `-o wide` - which prints out additional information.
+  1. `-o yaml` - which prints out YAML.
+* https://kubernetes.io/docs/reference/kubectl/overview/
+* https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+
+### 1.5.1) Deployment Updates and Rollbacks
 
 each time a Deployment is run, a Rollout is triggered. a version (i.e. revision) of the Rollout is kept, which can be used later to Rollback to
 2 types of Deployment strategies
@@ -325,18 +364,74 @@ updates to version numbers are applied in the Deployment YAML file, by specifyin
 a new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
 you can undo a Deployment and rollback to a previous Rollout version.
 
-# Networking
+## 1.6) Namespaces
+
+* Namespaces are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
+  * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
+* All objects within k8s are created within a namespace.
+* 3 namespaces are automatically created by k8s
+  1. Default - all user created objects will go here by default unless another namespace is created and used.
+  1. kube-system - a namespace used by k8s for system level objects (e.g. networking).
+  1. kube-public - a namespace that can be used for objects that will be available to all users.
+* Namespaces can have policies which will define who can do what. Such as compute resource allocation.
+
+```yaml
+# https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+# https://kubernetes.io/docs/tasks/administer-cluster/namespaces/
+# There is always 4 root elements
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Namespace
+
+# Must have name and labels inside of it, the name is the pod name
+metadata:
+  name: my-namespace
+```
+
+```bash
+# Run a Pod from CLI
+kubectl run --generator=run-pod/v1 $POD_NAME --image=$IMAGE_NAME -l $LABEL_KEY=$LABEL_VALUE
+
+# Create a Pod
+kubectl create -f pod-definition.yml
+
+# Delete Pod
+kubectl delete pod $POD_NAME
+
+# Get Pods information
+kubectl get pods
+kubectl get pods -o wide
+kubectl get all
+kubectl describe pods
+
+# Get Pod specific information
+kubectl get pod $POD_NAME
+
+# Update Existing Pod With File - remember to delete the existing Pods for the changes to apply
+kubectl replace -f mypod-definition.yml
+
+# Update Existing Pod Without File - remember to delete the existing Pods for the changes to apply
+kubectl edit pod $POD_NAME
+
+# Extract Pod Definition From Running Pod
+kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
+kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
+```
+
+## 1.7) Networking Recap
 
 each Node has an IP address (e.g. for ssh etc)
 each Pod has its own internal dynamic IP address, but for multiple Node clusters each Node/Pod gets the same IP address and this will cause networking conflicts. 
 k8s does not setup any networking to handle networking conflicts, you must do that yourself with an external application (e.g calico) this network manager will manage networking within the cluster and assign different IP addresses to each node and thus each Pod
 
-# Services
+### 1.7.1) Services
 
 enable communications between various cluster components.
 helps us connect applications/users together by loosely coupling them together
 
-## NodePort
+#### NodePort
 
 how do external users access a k8s application externally through a browser? connect to the external Node IP and a Service (NodePort) will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod
 3 ports involved here
@@ -375,6 +470,7 @@ spec:
 
 # Create a Service
 # kubectl create -f service-definition.yml
+kubectl expose pod redis --port=6379 --name redis-service
 
  # Delete Service
 # kubectl delete service my-service
@@ -387,10 +483,10 @@ spec:
 
 # Update Existing Pod
 # Using this file= kubectl replace -f mypod-definition.yml
-# Update this file= kubectl edit pod my-pod
+# Update this file= kubectl edit pod $POD_NAME
 ```
 
-## ClusterIP
+#### ClusterIP
 
 the Service creates a virtual IP within the cluster and that is used for network communications
 this can used when you have multiple Pods.
@@ -437,9 +533,9 @@ spec:
 
 # Update Existing Pod
 # Using this file= kubectl replace -f mypod-definition.yml
-# Update this file= kubectl edit pod my-pod
+# Update this file= kubectl edit pod $POD_NAME
 ```
 
-## LoadBalancer
+#### LoadBalancer
 
 Delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent
