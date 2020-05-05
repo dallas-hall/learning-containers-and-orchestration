@@ -36,6 +36,15 @@
 
 ## 1.2) Container Orchestration
 
+* The process of automatically deploying and managing containers is called Container Orchestration. This can provide:
+  * Fault tolerance by using multiple compute nodes.
+  * Simple application scaling as demand changes.
+  * Simple cluster scaling as demand changes.
+* Kubernetes (aka k8s) is a container orchestration technology from Google, but others exist like Docker Swarm and Mesos for Apache.
+  * Docker Swarm is easy to set up but lacks features
+  * Apache Mesos is hard to set up
+* k8s supports cloud platforms like Google Cloud Platform (GCP), Amazon Web Services (AWS), and Microsoft Azure.
+
 ## 1.3) k8s Architecture Recap
 
 ![cluster](cluster.png)
@@ -63,6 +72,17 @@
   * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
   * kubectl - the command line tool used to deploy and manage clusters
 
+* Minikube is a way to quickly install a single node k8s cluster.
+* kubeadm is a way to quickly install a multi-node k8s cluster.
+  1. Need multiple machines or VMs available.
+  1. Install a container runtime environment (CRE) like Docker
+  1. Install kubeadm onto all of the nodes.
+  1. Initialise a master node and worker node(s).
+  1. Install networking layer between master and worker(s).
+  1. Add worker(s) to the master.
+
+![kubeadm](kubeadm-steps.png)
+
 ```bash
 # Deploy an application
 kubectl run myapp
@@ -78,6 +98,8 @@ kubcetl get nodes
 
 ## 1.4) k8s Pod Recap
 
+![pods](pods.png)
+
 * To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
 * Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
 * k8s doesn't deploy containers directly onto Nodes, they are deployed into Pods.
@@ -92,6 +114,8 @@ kubcetl get nodes
   * kind = the type of k8s object you are creating
   * metadata = data about the object, in the form of a dictionary.
   * spec = the objects we are going to run, as a list of dictionaries
+
+![pods](pods2.png)
 
 ```yaml
 # https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates
