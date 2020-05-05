@@ -27,7 +27,16 @@
 
 ![container v vm](container-vs-vm.png)
 
-## 1.2) Architecture Recap
+* A Docker Image is a template used to create a Docker Container. Thus like in OOP, the Docker Image is the blueprint and the Docker Container is the running instance.
+
+![image v container](image-v-container.png)
+
+* A Dockerfile is a file has the necessary steps to build a Docker Image and subsequent Containers.
+* Traditionally a developer would hand over the operations team the compiled application and a list of instructions on how to deploy it. This would change with each environment and become complicated quickly. Now a developer just hads the operations team the Dockerfile and they are able to build the Docker Container the same way in each environment.
+
+## 1.2) Container Orchestration
+
+## 1.3) k8s Architecture Recap
 
 ![cluster](cluster.png)
 
@@ -67,7 +76,7 @@ kubcetl get nodes
 
 * The ultimate aim is to deploy an application in the form of containers on a set of machines configured as a k8s Cluster.
 
-## 1.3) Pod Recap
+## 1.4) k8s Pod Recap
 
 * To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
 * Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
@@ -145,12 +154,12 @@ kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
 kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
 ```
 
-## 1.4) Controller Recap
+## 1.5) k8s Controller Recap
 
 * These are the brains behind k8s.
 * Controllers are processes that monitor k8s objects and respond to accordingly to events.
 
-### 1.4.1) Replication Controller
+### 1.5.1) Replication Controller
 
 * Helps us run multiple instances of a single pod in a Cluster.
 * It provides high availability by ensuring that the specified number of Pods is running at all times.
@@ -182,7 +191,7 @@ spec:
           image: some-container-image-2
 ```
 
-### 1.4.2) ReplicaSet
+### 1.5.2) ReplicaSet
 
 * Very similar to ReplicationController but it is not the same. The ReplicaSet is the modern and recommended replacement. 
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
@@ -262,7 +271,7 @@ kubectl scale --replicas=6 -f replicaset-definition.yml
 kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 ```
 
-## 1.5) Deployments Recap
+## 1.6) k8s Deployments Recap
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
@@ -354,7 +363,7 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 * https://kubernetes.io/docs/reference/kubectl/overview/
 * https://kubernetes.io/docs/reference/kubectl/cheatsheet/
 
-### 1.5.1) Deployment Updates and Rollbacks
+### 1.6.1) Deployment Updates and Rollbacks
 
 each time a Deployment is run, a Rollout is triggered. a version (i.e. revision) of the Rollout is kept, which can be used later to Rollback to
 2 types of Deployment strategies
@@ -364,7 +373,7 @@ updates to version numbers are applied in the Deployment YAML file, by specifyin
 a new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
 you can undo a Deployment and rollback to a previous Rollout version.
 
-## 1.6) Namespaces
+## 1.7) k8s Namespaces
 
 * Namespaces are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
   * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
@@ -420,13 +429,13 @@ kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
 kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
 ```
 
-## 1.7) Networking Recap
+## 1.8) k8s Networking Recap
 
 each Node has an IP address (e.g. for ssh etc)
 each Pod has its own internal dynamic IP address, but for multiple Node clusters each Node/Pod gets the same IP address and this will cause networking conflicts. 
 k8s does not setup any networking to handle networking conflicts, you must do that yourself with an external application (e.g calico) this network manager will manage networking within the cluster and assign different IP addresses to each node and thus each Pod
 
-### 1.7.1) Services
+### 1.8.1) k8s Services
 
 enable communications between various cluster components.
 helps us connect applications/users together by loosely coupling them together
