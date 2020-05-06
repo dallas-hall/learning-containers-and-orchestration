@@ -185,6 +185,8 @@ kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yam
 
 ### 1.5.1) Replication Controller
 
+![Replicaiton controller](replication-controller.png)
+
 * Helps us run multiple instances of a single pod in a Cluster.
 * It provides high availability by ensuring that the specified number of Pods is running at all times.
 * It provides load balancing and scaling, by creating Pods across Nodes in the Cluster and spans across mutiple Nodes in a Cluster.
@@ -216,6 +218,8 @@ spec:
 ```
 
 ### 1.5.2) ReplicaSet
+
+![Labels and Selectors](labels-and-selectors.png)
 
 * Very similar to ReplicationController but it is not the same. The ReplicaSet is the modern and recommended replacement. 
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
@@ -296,6 +300,10 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 ```
 
 ## 1.6) k8s Deployments Recap
+
+![Deployements](deployment.png)
+
+
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
@@ -389,6 +397,10 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 
 ### 1.6.1) Deployment Updates and Rollbacks
 
+![Rollouts and Versioning](rollout-and-versioning.png)
+
+![Deploy strategy](deployment-strategy.png)
+
 each time a Deployment is run, a Rollout is triggered. a version (i.e. revision) of the Rollout is kept, which can be used later to Rollback to
 2 types of Deployment strategies
 * Recreate strategy = delete all at once and create all at once, this means there will be an outage
@@ -396,6 +408,10 @@ each time a Deployment is run, a Rollout is triggered. a version (i.e. revision)
 updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version. or do it from the command line, but doesn't update the YAML file
 a new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
 you can undo a Deployment and rollback to a previous Rollout version.
+
+![Upgrades](upgrades.png)
+
+![Rollback](rollback.png)
 
 ## 1.7) k8s Namespaces
 
@@ -455,16 +471,27 @@ kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yam
 
 ## 1.8) k8s Networking Recap
 
+![IP address clash](ip-address-clash.png)
+
+![Custom network layer](networking-layer.png)
+
 each Node has an IP address (e.g. for ssh etc)
 each Pod has its own internal dynamic IP address, but for multiple Node clusters each Node/Pod gets the same IP address and this will cause networking conflicts. 
 k8s does not setup any networking to handle networking conflicts, you must do that yourself with an external application (e.g calico) this network manager will manage networking within the cluster and assign different IP addresses to each node and thus each Pod
 
 ### 1.8.1) k8s Services
 
+![Services overview](services-overview.png)
+
 enable communications between various cluster components.
 helps us connect applications/users together by loosely coupling them together
 
 #### NodePort
+
+![NodePort](nodeport-1.png)
+![NodePort](nodeport-2.png)
+![NodePort](nodeport-3.png)
+
 
 how do external users access a k8s application externally through a browser? connect to the external Node IP and a Service (NodePort) will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod
 3 ports involved here
@@ -472,6 +499,12 @@ how do external users access a k8s application externally through a browser? con
 * the port running on the Service, called the Port
 * the port running on the Node, called the NodePort, 30000-32767 default range
 the Pod label is used by Service selector to find all pods to apply the NodePort to and when Pods are on multipe Nodes in the cluster, the Service automatically spans across the Nodes.
+
+![NodePort](nodeport-label-and-selector.png)
+
+for multiple nodes, the service will provides access to each node via its own IP and the same port.
+![NodePort](nodeport-multinodes.png)
+
 
 ```yaml
 # https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
@@ -520,6 +553,8 @@ kubectl expose pod redis --port=6379 --name redis-service
 ```
 
 #### ClusterIP
+
+![ClusterIP](clusterip.png)
 
 the Service creates a virtual IP within the cluster and that is used for network communications
 this can used when you have multiple Pods.
@@ -570,5 +605,7 @@ spec:
 ```
 
 #### LoadBalancer
+
+![Cloud LoadBalancer](loadbalancer.png)
 
 Delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent
