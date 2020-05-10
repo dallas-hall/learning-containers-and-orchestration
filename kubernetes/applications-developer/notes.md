@@ -9,7 +9,7 @@
 
 ## 1.1) Containers
 
-* Containers are an isolated environment with its own resources (e.g. processes, network interfaces, storage etc) within an operating system but all containers within the same O/S share the same kernel.
+* **Containers** are an isolated environment with its own resources (e.g. processes, network interfaces, storage etc) within an operating system but all containers within the same O/S share the same kernel.
 
 ![container example](container-example.png)
 
@@ -27,11 +27,11 @@
 
 ![container v vm](container-vs-vm.png)
 
-* A Docker Image is a template used to create a Docker Container. Thus like in OOP, the Docker Image is the blueprint and the Docker Container is the running instance.
+* A **Docker Image** is a template used to create a **Docker Container**. Thus like in OOP, the Docker Image is the blueprint and the Docker Container is the running instance.
 
 ![image v container](image-v-container.png)
 
-* A Dockerfile is a file has the necessary steps to build a Docker Image and subsequent Containers.
+* A **Dockerfile** is a file has the necessary steps to build a Docker Image and subsequent Containers.
 
 ![Dockerfile](Dockerfile.png)
 
@@ -45,9 +45,9 @@
   * Fault tolerance by using multiple compute nodes.
   * Simple application scaling as demand changes.
   * Simple cluster scaling as demand changes.
-* Kubernetes (aka k8s) is a container orchestration technology from Google, but others exist like Docker Swarm and Mesos for Apache.
-  * Docker Swarm is easy to set up but lacks features
-  * Apache Mesos is hard to set up
+* **Kubernetes** (aka k8s) is a container orchestration technology from Google, but others exist like Docker Swarm and Mesos for Apache.
+  * **Docker Swarm** is easy to set up but lacks features
+  * **Apache Mesos** is hard to set up
 * k8s supports cloud platforms like Google Cloud Platform (GCP), Amazon Web Services (AWS), and Microsoft Azure.
 
 ![Container orchestration](container-orchestration-technologies.png)
@@ -56,31 +56,30 @@
 
 ![cluster](cluster.png)
 
-* A Node is physical or virtual machine where k8s is installed. A Node is used as a k8s worker. Also known as a Minion in the past. This is where applications and their containers run. It has:
-  * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
-  * container runtime - the software (e.g docker) used to run containers
-* A Cluster is a set of Nodes grouped together. Which provides the ability to deploy applications across multiple Nodes and provide high availability and load balancing.
-* The Master is another Node in the Cluster. The Master monitors and controls the worker Nodes. It has:
-  * kube-apiserver - allows interaction with the k8s cluster. kube-apiserver
-  * kubelet - an agent that runs on each Node in the cluster. The Master and Node(s) talk to each other through this.
-  * etcd - a distributed key value store which has data to manage the cluster
-  * controller - make the decisions whether to bring up new containers
-  * scheduler - distributes work or containers across the nodes
-  * kubectl - an agent that runs on each Node in the cluster
+* A **Node** is physical or virtual machine where k8s is installed. A Node is used as a k8s worker. Also known as a Minion in the past. This is where applications and their containers run. It has:
+  * kubelet
+  * container runtime
+* A **Cluster** is a set of Nodes grouped together. Which provides the ability to deploy applications across multiple Nodes and provide high availability and load balancing.
+* The **Master** is another Node in the Cluster. The Master monitors and controls the worker Nodes. It has:
+  * kube-apiserver
+  * kubelet
+  * etcd
+  * controller
+  * scheduler
+  * kubectl
 
 ![k8s components](k8s-components.png)
 
 * k8s cluster components
-  * api server - allows interaction with the k8s cluster. kube-apiserver
-  * etcd - a distributed key value store which has data to manage the cluster
-  * container runtime - the software (e.g docker) used to run containers
-  * controller - make the decisions whether to bring up new containers
-  * scheduler - distributes work or containers across the nodes
-  * kubelet - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
-  * kubectl - the command line tool used to deploy and manage clusters
-
-* Minikube is a way to quickly install a single node k8s cluster.
-* kubeadm is a way to quickly install a multi-node k8s cluster.
+  * **api server** - allows interaction with the k8s cluster. kube-apiserver
+  * **etcd** - a distributed key value store which has data to manage the cluster
+  * **container runtime** - the software (e.g docker) used to run containers
+  * **controller** - make the decisions whether to bring up new containers
+  * **scheduler** - distributes work or containers across the nodes
+  * **kubelet** - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
+  * **kubectl** - the command line tool used to deploy and manage clusters
+* **Minikube** is a way to quickly install a single node k8s cluster.
+* **kubeadm** is a way to quickly install a multi-node k8s cluster.
   1. Need multiple machines or VMs available.
   1. Install a container runtime environment (CRE) like Docker
   1. Install kubeadm onto all of the nodes.
@@ -107,15 +106,15 @@ kubcetl get nodes
 
 ![pods](pods.png)
 
-* To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
-* Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
-* k8s doesn't deploy containers directly onto Nodes, they are deployed into Pods.
-* A Pod
+* A **Pod**
   * Is a single instance of an application. But multiple instances can be run by creating additional Pods.
   * Is the smallest object that can be created in k8s. This object is where containers are run.
   * Can have one or multiple containers. If running multiple containers, the containers are unique applications that are all related (e.g. main container and helper containers). These are created and destroyed together.
   * Multiple containers within a Pod can refer to each other via `localhost` as they share the same network space, they also share the same storage.
   * Are created by YAML files.
+* To create Pods, we need access to container images (e.g. a Docker Registry like Docker Hub) and a working k8s Cluster.
+* Pods can run in a single Node or Cluster (i.e. multiple Nodes) k8s environment.
+* k8s doesn't deploy containers directly onto Nodes, they are deployed into Pods.
 * k8s objects are created by YAML files. Each YAML file must contain 4 parts
   * apiVersion = controls what objects you can create. Versions support different types of objects.
   * kind = the type of k8s object you are creating
@@ -188,13 +187,13 @@ kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yam
 ## 1.5) k8s Controller Recap
 
 * These are the brains behind k8s.
-* Controllers are processes that monitor k8s objects and respond to accordingly to events.
+* **Controllers** are processes that monitor k8s objects and respond to accordingly to events.
 
 ### 1.5.1) Replication Controller
 
 ![Replicaiton controller](replication-controller.png)
 
-* Helps us run multiple instances of a single pod in a Cluster.
+* A **ReplicationContoller** helps us run multiple instances of a single pod in a Cluster.
 * It provides high availability by ensuring that the specified number of Pods is running at all times.
 * It provides load balancing and scaling, by creating Pods across Nodes in the Cluster and spans across mutiple Nodes in a Cluster.
 * But it is an older technology being replaced by Replica Set
@@ -228,7 +227,7 @@ spec:
 
 ![Labels and Selectors](labels-and-selectors.png)
 
-* Very similar to ReplicationController but it is not the same. The ReplicaSet is the modern and recommended replacement. 
+* Very similar to ReplicationController but it is not the same. The **ReplicaSet** is the modern and recommended replacement. 
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
 * The ReplicaSet is in a different apiVersion to the ReplicationController. 
 * The ReplicaSet is a process that knows which Pods to monitor by the Labels provided during Pod creation.
@@ -311,7 +310,7 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 ![Deployements](deployment.png)
 
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
-* A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
+* A **Deployment** object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
 * The Deployment object provides a way to do updates and rollbacks to Pod application versions.
 
@@ -407,13 +406,14 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 
 ![Deploy strategy](deployment-strategy.png)
 
-each time a Deployment is run, a Rollout is triggered. a version (i.e. revision) of the Rollout is kept, which can be used later to Rollback to
-2 types of Deployment strategies
-* Recreate strategy = delete all at once and create all at once, this means there will be an outage
-* Rolling Update = delete old Pods and replace with new Pods 1 by 1, this means no outage. DEFAULT
-updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version. or do it from the command line, but doesn't update the YAML file
-a new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
-you can undo a Deployment and rollback to a previous Rollout version.
+* Each time a Deployment is run, a **Rollout** is triggered. A version (i.e. **Revision**) of the Rollout is kept, which can be used later to rollback to.
+* There are 2 types of Deployment strategies
+  * Recreate strategy = delete all at once and create all at once, this means there will be an outage
+  * Rolling Update = delete old Pods and replace with new Pods 1 by 1, this means no outage. DEFAULT
+* Updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version.
+  * If you do it from the command line, the running Deployment is updated but this doesn't update the YAML file.
+* A new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
+* A **Rollback** is when you undo a Deployment and go back to a previous Rollout version.
 
 ![Upgrades](upgrades.png)
 
@@ -421,16 +421,16 @@ you can undo a Deployment and rollback to a previous Rollout version.
 
 ## 1.7) k8s Namespaces
 
-* Namespaces are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
+* **Namespaces** are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
   * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
 
 ![Namespace DNS](namespace.png)
 
 * All objects within k8s are created within a namespace.
 * 3 namespaces are automatically created by k8s
-  1. Default - all user created objects will go here by default unless another namespace is created and used.
-  1. kube-system - a namespace used by k8s for system level objects (e.g. networking).
-  1. kube-public - a namespace that can be used for objects that will be available to all users.
+  1. **Default** - all user created objects will go here by default unless another namespace is created and used.
+  1. **kube-system** - a namespace used by k8s for system level objects (e.g. networking).
+  1. **kube-public** - a namespace that can be used for objects that will be available to all users.
 * Namespaces can have policies which will define who can do what. Such as compute resource allocation.
 
 ![Namespace resource allocation](namespace-resource-limits.png)
