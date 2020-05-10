@@ -32,9 +32,14 @@
 ![image v container](image-v-container.png)
 
 * A Dockerfile is a file has the necessary steps to build a Docker Image and subsequent Containers.
+
+![Dockerfile](Dockerfile.png)
+
 * Traditionally a developer would hand over the operations team the compiled application and a list of instructions on how to deploy it. This would change with each environment and become complicated quickly. Now a developer just hads the operations team the Dockerfile and they are able to build the Docker Container the same way in each environment.
 
 ## 1.2) Container Orchestration
+
+![Container orchestration](container-orchestration.png)
 
 * The process of automatically deploying and managing containers is called Container Orchestration. This can provide:
   * Fault tolerance by using multiple compute nodes.
@@ -44,6 +49,8 @@
   * Docker Swarm is easy to set up but lacks features
   * Apache Mesos is hard to set up
 * k8s supports cloud platforms like Google Cloud Platform (GCP), Amazon Web Services (AWS), and Microsoft Azure.
+
+![Container orchestration](container-orchestration-technologies.png)
 
 ## 1.3) k8s Architecture Recap
 
@@ -303,7 +310,6 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 
 ![Deployements](deployment.png)
 
-
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A Deployment object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
@@ -417,12 +423,26 @@ you can undo a Deployment and rollback to a previous Rollout version.
 
 * Namespaces are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
   * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
+
+![Namespace DNS](namespace.png)
+
 * All objects within k8s are created within a namespace.
 * 3 namespaces are automatically created by k8s
   1. Default - all user created objects will go here by default unless another namespace is created and used.
   1. kube-system - a namespace used by k8s for system level objects (e.g. networking).
   1. kube-public - a namespace that can be used for objects that will be available to all users.
 * Namespaces can have policies which will define who can do what. Such as compute resource allocation.
+
+![Namespace resource allocation](namespace-resource-limits.png)
+
+* All resources within a Namespace can refer to each simply by their names. This is because a DNS entry is added into each host.
+  * To access resource within another namespace, you must use `resource-name.namespace-name.svc.cluster.local`
+
+![Namespace DNS](namespace-dns.png)
+![Namespace DNS](namespace-dns-2.png)
+
+* All commands by default use the default Namespace, you can use the `--namespace` option to look at other namespaces.
+  * You can change this permanently by using `kubectl config set-context $(kubectl config current-context) --namespace=$NAMESPACE`
 
 ```yaml
 # https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
@@ -439,34 +459,45 @@ metadata:
   name: my-namespace
 ```
 
+```yaml
+# https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates
+# There is always 4 root elements
+# The version depends on what you are doing
+apiVersion: v1
+
+# The type of object, dictates the type of version
+kind: Pod
+
+# Must have name and labels inside of it, the name is the pod name
+metadata:
+  name: my-nginx-pod
+  # Always create in this namespace
+  namespace: my-namespace
+  # Can have any key/value pair here
+  labels:
+    app: my-nginx-app
+    type: front-end
+    
+# Which container(s) will be running
+spec:
+  # Can have multiple containers, but usually 1 container per pod.
+  containers:
+    - name: nginx-container
+```
+
 ```bash
-# Run a Pod from CLI
-kubectl run --generator=run-pod/v1 $POD_NAME --image=$IMAGE_NAME -l $LABEL_KEY=$LABEL_VALUE
+# List all Pods from a specific Namespace
+kubectl get pods --namespace=$NAMESPACE
+
+# List all Pods from all Namespaces
+kubectl get pods --all-namespaces
 
 # Create a Pod
-kubectl create -f pod-definition.yml
+kubectl create -f pod-definition.yml --namespace=$NAMESPACE
 
-# Delete Pod
-kubectl delete pod $POD_NAME
-
-# Get Pods information
-kubectl get pods
-kubectl get pods -o wide
-kubectl get all
-kubectl describe pods
-
-# Get Pod specific information
-kubectl get pod $POD_NAME
-
-# Update Existing Pod With File - remember to delete the existing Pods for the changes to apply
-kubectl replace -f mypod-definition.yml
-
-# Update Existing Pod Without File - remember to delete the existing Pods for the changes to apply
-kubectl edit pod $POD_NAME
-
-# Extract Pod Definition From Running Pod
-kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
-kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
+# Create a Namespace
+kubectl create -f namespace.yml
+kubectl create namespace $NAMESPACE
 ```
 
 ## 1.8) k8s Networking Recap
