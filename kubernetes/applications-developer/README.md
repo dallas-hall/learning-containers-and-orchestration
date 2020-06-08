@@ -502,13 +502,31 @@ kubectl create namespace $NAMESPACE
 
 ## 1.8) k8s Networking Recap
 
+https://kubernetes.io/docs/concepts/cluster-administration/networking/
+
+* Each Node has it own IP address. This can be used to `ssh` into the Node.
+* Each Pod is has its own dynamic IP address as well. This address changes and should never be used for accessing a Pod as the IP address will change when Pods are recreated.
+* All Pods get the IP addresses from the same internal private k8s network. This private internal network is created when the k8s cluster is configured.
+
+![Single Node Cluster](single-pod-on-single-node-networking.png)
+
+![Multiple Node Cluster](multiple-pods-on-single-node-networking.png)
+
+* In multiple Node clusters there will be IP address clashes by default. This is because by default each private internal network within each Node has the same IP address range. Nodes and Pods will have IP address conflicts.
+
 ![IP address clash](ip-address-clash.png)
+
+* k8s does not natively supply any networking tools to handle the networking conflicts. When installing k8s, you must choose an external application (e.g. Calico) to handle the networking within the k8s cluster.
+* The custom network manager creates a virtual network where all Pods and Nodes are assigned a unique IP address. It also manages the routing within this network.
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network
 
 ![Custom network layer](networking-layer.png)
 
-each Node has an IP address (e.g. for ssh etc)
-each Pod has its own internal dynamic IP address, but for multiple Node clusters each Node/Pod gets the same IP address and this will cause networking conflicts. 
-k8s does not setup any networking to handle networking conflicts, you must do that yourself with an external application (e.g calico) this network manager will manage networking within the cluster and assign different IP addresses to each node and thus each Pod
+* Some rules of k8s networking which are implemented by the external networking solution..
+  * All Containers / Pods can communicate with one another without NAT.
+  * All Nodes can communicate with all Containers / Pods without NAT.
+  * All Containers / Pods can communicate with all Nodes without NAT.
 
 ### 1.8.1) k8s Services
 
