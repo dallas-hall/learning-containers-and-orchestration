@@ -530,29 +530,31 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
 
 ### 1.8.1) k8s Services
 
+* k8s **Services** is a k8s object that enable communications between various cluster components. They help us connect applications/users together by loosely coupling them together.
+
 ![Services overview](services-overview.png)
 
-enable communications between various cluster components.
-helps us connect applications/users together by loosely coupling them together
-
 #### NodePort
+
+* A **NodePort Service** makes an internal Pod accessible to external users by mapping a port on the Node to a port on the Pod.
+* How do external users access a k8s application externally through a browser? They will connect to the external Node IP and a the listening **NodePort Service** will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod. There are 3 ports involved here
+  1. the port running on the Pod, called the TargetPort
+  1. the port running on the Service, called the Port
+  1. the port running on the Node, called the NodePort, 30000-32767 default range
 
 ![NodePort](nodeport-1.png)
 ![NodePort](nodeport-2.png)
 ![NodePort](nodeport-3.png)
 
-
-how do external users access a k8s application externally through a browser? connect to the external Node IP and a Service (NodePort) will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod
-3 ports involved here
-* the port running on the Pod, called the TargetPort
-* the port running on the Service, called the Port
-* the port running on the Node, called the NodePort, 30000-32767 default range
-the Pod label is used by Service selector to find all pods to apply the NodePort to and when Pods are on multipe Nodes in the cluster, the Service automatically spans across the Nodes.
+* The Pod label is used by Service Selector to find all Pods to apply the NodePort to. The Service uses a a random algorithm to select which Pod to send traffic to from all the Pods matched by the label.
 
 ![NodePort](nodeport-label-and-selector.png)
 
-for multiple nodes, the service will provides access to each node via its own IP and the same port.
+* For multiple Nodes, the Service is created across all the Nodes which will provide access to each Node via its own IP and the same port.
+
 ![NodePort](nodeport-multinodes.png)
+
+* Thus the Service is always created exactly the same no matter how many Pods or Nodes are involved. The Service is automatically updated if Pods and Nodes are removed.
 
 
 ```yaml
@@ -582,33 +584,31 @@ spec:
   selector:
     # These are from pod|replicaset|deployment-definition.yml -> metadata: labels: and must match exactly.
     app: my-app
+```
 
+```bash
 # Create a Service
-# kubectl create -f service-definition.yml
+kubectl create -f service-definition.yml
 kubectl expose pod redis --port=6379 --name redis-service
 
  # Delete Service
-# kubectl delete service my-service
+kubectl delete service $SERVICE_NAME
 
 # Get Service information
-# kubectl get services
-# kubectl get service my-service
-# kubectl get all
-# kubectl describe service
-
-# Update Existing Pod
-# Using this file= kubectl replace -f mypod-definition.yml
-# Update this file= kubectl edit pod $POD_NAME
+kubectl get services
+kubectl get service $SERVICE_NAME
+kubectl get all
+kubectl describe service
 ```
 
 #### ClusterIP
 
-![ClusterIP](clusterip.png)
+* The **ClusterIP Service** creates a virtual IP within the cluster and that is used for network communications. This can used when you have multiple Pods.
+* A fullstack application typically has a multiple set of Pods running different tiers of the application (e.g, frontend web app, backend databases, messaging services, etc).
+  * The ClusterIP Service helps up group Pods together and provides a single interface to access the different tiers of Pods.
+  * Each ClusterIP Service gets a name and IP address and that is what is used to access the Pods grouped with the Service. The ClusterIP also handles scaling.
 
-the Service creates a virtual IP within the cluster and that is used for network communications
-this can used when you have multiple Pods.
-a fullstack application typically has a multiple set of Pods running different tiers of the application (e.g, frontend web app, backend databases, messaging services, etc) - the ClusterIP Service helps up group Pods together and provides a single interface to access the different tiers of Pods
-each Service gets a name and IP address and that is what is used to access the Pods grouped with the Service.
+![ClusterIP](clusterip.png)
 
 ```yaml
 # https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
@@ -635,26 +635,25 @@ spec:
     # These are from pod|replicaset|deployment-definition.yml -> metadata: labels: and must match exactly.
     app: my-app
     type: backend
+```
 
+```bash
 # Create a Service
-# kubectl create -f service-definition.yml
+kubectl create -f service-definition.yml
+kubectl expose pod redis --port=6379 --name redis-service
 
  # Delete Service
-# kubectl delete service my-service
+kubectl delete service $SERVICE_NAME
 
 # Get Service information
-# kubectl get services
-# kubectl get service my-service
-# kubectl get all
-# kubectl describe service
-
-# Update Existing Pod
-# Using this file= kubectl replace -f mypod-definition.yml
-# Update this file= kubectl edit pod $POD_NAME
+kubectl get services
+kubectl get service $SERVICE_NAME
+kubectl get all
+kubectl describe service
 ```
 
 #### LoadBalancer
 
-![Cloud LoadBalancer](loadbalancer.png)
+* The **LoadBalancer Service** delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent. It can only be used when you are within a cloud envrionemnt that has this capability.
 
-Delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent
+![Cloud LoadBalancer](loadbalancer.png)
