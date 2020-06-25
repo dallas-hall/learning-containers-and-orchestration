@@ -823,21 +823,12 @@ spec:
 ### ConfigMaps
 
 * ConfigMaps are used to help manage lots of environment variables. Instead of storing them in lots of Pod definition files, you can store them centrally into a ConfigMap object. You then inject the values from the ConfigMap into the Pod definition files.
+* There are 2 steps when working with ConfigMaps.
+  1. Create the ConfigMap
+  1. Inject it into a Pod
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: webapp-color
-spec:
-  containers:
-    - image: webapp-color
-      ports:
-        - containerPort: 8080
-      envFrom:
-        - configMapRef:
-            name: webapp-color-configmap
-```
+#### Creation
+
 * Like all k8s objects, you can create ConfigMaps imperatively or declaratively. The imperative way : `kubectl create configmap --from-literal='APP_COLOR=green' --from-literal='APP_ENV=prod'` or `kubectl create configmap --from-file=$PATH_TO_FILE`
 
 ```yaml
@@ -860,4 +851,211 @@ data:
   APP_ENV: prod
 ```
 
+* Here are some common `kubectl` options for ConfigMaps.
+
+```bash
+# View all ConfigMaps
+kubectl get configmaps
+
+# Get detailed information about all ConfigMaps, such as key: value pairs
+kubeclt describe configmaps
+
+# View a specific ConfigMap
+kubectl get configmaps $CONFIG_MAP_NAME
+
+# Get detailed information about a ConfigMap, such as key: value pairs
+kubeclt describe configmaps $CONFIG_MAP_NAME
+```
+
+#### Injection
+
+* Injecting  a single environment variable.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      # A list where each item is a ConfigMap item.
+      env:
+        - name: APP_COLOR
+          valueFrom:
+          configMapKeyRef:
+            # The name of the ConfigMap
+            name: webapp-color-configmap
+            # The key inside the ConfigMap
+            key: APP_COLOR
+```
+
+* Injecting multiple environment variables
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      # A list where each item is a ConfigMap item.
+      envFrom:
+        - configMapRef:
+            # The name of the ConfigMap
+            name: webapp-color-configmap
+```
+
+```yaml
+# Using a volume
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      # A list where each item is a ConfigMap item.
+      volumes:
+        # The name of the volume
+        - name: webapp-color-volume
+          # The name of the ConfigMap
+          configMap: webapp-color-configmap
+```
+
 ### Secrets
+
+* Secrets are used to help manage lots of environment variables that need obfuscating. Instead of storing them in plain text in lots of Pod definition files, you can store them centrally in base64 into a Secret object. You then inject the values from the Secret into the Pod definition files.
+* There are 2 steps when working with Secret.
+  1. Create the ConfigMap
+  1. Inject it into a Pod
+* **Secrets are NOT encrypted. They are encoded as base64 only. For better security you need to use something else.**
+
+#### Creation
+
+* Like all k8s objects, you can create Secrets imperatively or declaratively. The imperative way : `kubectl create secret generic --from-literal='APP_COLOR=green' --from-literal='APP_ENV=prod'` or `kubectl create secret generic --from-file=$PATH_TO_FILE`
+  * The values provided here in plain text will automatically be encoded as base64. The file format is.
+
+```yaml
+# File contents, key: value
+APP_COLOR: blue
+APP_MODE: prod
+```
+
+* The declarative way: `kubectl create configmap --from-file=$PATH_TO_FILE`
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  # Give a meaningful name so its easier to undertand and use them later
+  name: webapp-color-secret
+# Key: value paits of the Secret
+data:
+  # These are in base64, therefore plain text.
+  APP_COLOR: Ymx1ZQo=
+  APP_ENV: cHJvZAo=
+```
+
+* Linux has a command called `base64` which can be used to encode and decode data.
+
+```bash
+# Get the base64 encoding
+echo 'blue' | base64
+Ymx1ZQo=
+# Decode the base64 encoded string
+echo 'Ymx1ZQo=' | base64 --decode
+blue
+echo 'prod' | base64
+cHJvZAo=
+echo 'cHJvZAo=' | base64 --decode
+prod
+```
+
+* Here are some common `kubectl` options for Secrets.
+
+```bash
+# View all Secrets
+kubectl get secrets
+
+# Get detailed information about all Secrets, such as key: value pairs
+kubeclt describe secrets
+
+# View a specific Secrets with no values
+kubectl get secrets $SECRET_NAME
+
+# View a specific Secrets with values
+kubectl get secrets $SECRET_NAME -o yaml
+
+# Get detailed information about a Secrets, such as key: value pairs
+kubeclt describe secrets $SECRET_NAME
+```
+
+#### Injection
+
+* Injecting  a single environment variable.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      env:
+        - name: APP_COLOR
+          valueFrom:
+            secretKeyRef:
+              name: webapp-color-secret
+              key: APP_COLOR
+```
+
+* Injecting multiple environment variables
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      # A list where each item is a Secret item.
+      envFrom:
+        - secretRef:
+          # Read all key value pairs from this Secret
+          name: webapp-color-secret
+```
+
+```yaml
+# Using a volume
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      # A list where each item is a Secret item.
+      volumes:
+        # The name of the volume
+        - name: webapp-color-secret-volume
+          # The name of the Secret
+          configMap: webapp-color-secret
+```
+
+* When using volumes, every key in the Secret has a file created with the key as the filename and the value as the file contents.
