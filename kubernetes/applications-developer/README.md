@@ -657,3 +657,117 @@ kubectl describe service
 * The **LoadBalancer Service** delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent. It can only be used when you are within a cloud envrionemnt that has this capability.
 
 ![Cloud LoadBalancer](loadbalancer.png)
+
+## 1.9) Imperative Commands
+
+When doing the exam certification it is a good idea to use one time imperative commands rather than the declarative style of creating a YAML file.
+
+```bash
+# Create and run a Pod
+kubectl run nginx-pod --image=nginx:alpine
+
+# Create and run a Pod with a label
+kubectl run redis --image=redis:alpine --labels='tier=db'
+
+# Create a Service that exposes a port on an existing Pod
+kubectl expose pod redis --port=6379 --name redis-service
+
+# Create a deployment and scale it
+kubectl create deployment webapp --image=kodekloud/webapp-color
+kubectl scale --replicas=3 deployment webapp
+
+# Create a Pod with a custom port
+kubectl run custom-nginx --image=nginx --port=8080
+
+# Create a Namespace
+kubectl create namespace dev-ns
+
+# Create a Deployment in a custom Namespace and scale it
+kubectl create deployment redis-deploy --image=redis --namespace=dev-ns
+kubectl scale deployment redis-deploy --replicas=2 --namespace=dev-ns
+
+# Create a Pod with a custom port and a Service that exposes that port
+kubectl run httpd --image=httpd:alpine --port=80 --expose
+
+kubectl run httpd --image=httpd:alpine --port=80
+kubectl expose pod httpd --port=80 --name=httpd
+
+# Dump Pod YAML template to file
+kubectl run nginx --image=nginx  --dry-run=client -o yaml > pod.yml
+
+# Dump Deployment YAML template to file
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > deployment.yaml
+
+# Dump ClusterIP Service YAML template to file, you will need to manually add the Node Port in the YAML
+kubectl expose pod redis --port=6379 --name redis-service --dry-run=client -o yaml > clusterip.yml
+
+# Dump NodePort Service YAML template to file, you will need to manually add the Node Port in the YAML
+kubectl expose pod nginx --port=80 --name nginx-service --type=NodePort --dry-run=client -o yaml > nodeport.yml
+```
+# 2) Configuration
+
+## 2.1) Docker Commands & Arguments
+
+* Why do some Docker containers exit immediately? They are meant to run applications and not O/S. So an O/S image will exit immediately as nothing is running. The container lives only as long as the process it is running inside of it is alive.
+* The `CMD` part of the Dockerfile determines what is running inside the container. The Ubuntu image has `CMD ["bash"]` which runs the bash shell. Bash will listen for a terminal and if none is found, it will exit. Docker doesn't attach a termianal by default.
+
+```bash
+# Run an Ubuntu container, which will exit immediately.
+docker run ubuntu
+
+# Show only running containers
+docker ps 
+
+# Show all containers, included the stopped on
+docker ps -a
+
+# Run the Ubuntu container and attach a terminal so bash won't exit
+# -i to allow an interactive terminal and -t to attach the terminal
+docker -it run ubuntu
+
+# Run the Ubuntu container with a custom command
+docker run ubuntu sleep 5
+```
+
+* Can create your own Dockerfile to update an existing image for custom commands. Use `docker build -t $MY_IMAGE_NAME $DOCKERFILE_PATH` to build it.
+* Hard coding the command `CMD` to be run using JSON array format. The first argument must be the command to run.
+
+```dockerfile
+# Image to create a new layer from.
+FROM ubuntu
+# Command to run
+CMD ["sleep", "5"]
+```
+
+* Hard coding the command `CMD` to be run using shell syntax.
+
+```dockerfile
+# Image to create a new layer from.
+FROM ubuntu
+# Command to run
+CMD sleep 5
+```
+
+* Passing in a value from the command line, which will be appended to the `ENTRYPOINT` command. But a value must be passed in or an error will occur.
+
+```dockerfile
+# Image to create a new layer from.
+FROM ubuntu
+# Command to run
+ENTRYPOINT ["sleep"]
+```
+
+* Passing in a value from the command line, which will be appended to the `ENTRYPOINT` command. A value is optional as a default value is hard coded to fall back onto when nothing is passed in.
+
+```dockerfile
+# Image to create a new layer from.
+FROM ubuntu
+# Command to run
+ENTRYPOINT ["sleep"]
+# Default value
+CMD ["5"]
+```
+
+* You can use `docker run --entrypoint $NEW_COMMAND $IMAGE_NAME` to override the `ENTRYPOINT` command in a Dockerfile.
+
+## 2.2) k8s Commands & Arguments
