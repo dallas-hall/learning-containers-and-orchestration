@@ -706,7 +706,9 @@ kubectl expose pod nginx --port=80 --name nginx-service --type=NodePort --dry-ru
 ```
 # 2) Configuration
 
-## 2.1) Docker Commands & Arguments
+## 2.1) Commands & Arguments
+
+### Docker
 
 * Why do some Docker containers exit immediately? They are meant to run applications and not O/S. So an O/S image will exit immediately as nothing is running. The container lives only as long as the process it is running inside of it is alive.
 * The `CMD` part of the Dockerfile determines what is running inside the container. The Ubuntu image has `CMD ["bash"]` which runs the bash shell. Bash will listen for a terminal and if none is found, it will exit. Docker doesn't attach a termianal by default.
@@ -770,4 +772,92 @@ CMD ["5"]
 
 * You can use `docker run --entrypoint $NEW_COMMAND $IMAGE_NAME` to override the `ENTRYPOINT` command in a Dockerfile.
 
-## 2.2) k8s Commands & Arguments
+### k8s
+
+* You can pass aurgments into Docker via k8s.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu-sleeper
+spec:
+  containers:
+    - name: ubuntu-sleeper
+      image: ubuntu-sleeper
+      command: ["sleep2.0"] # The new entry point command passed in to Docker, overriding ENTRYPOINT
+      args: ["10"] # The argument passed in to Docker, overriding CMD
+```
+
+* Run this with `kubectl create -f pod.yml`
+
+## 2.2) Enviroinment Variables
+
+### Docker
+
+* You can pass in environment variables to Docker with `docker run -e $ENV_NAME=$ENV_VALUE $IMAGE_NAME`
+
+### k8s
+
+* You can pass in environment variables to k8s and Docker with
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - name:  webapp-color
+      image: webapp-color
+      ports:
+        - containerPort: 8080
+      env:
+        - name: APP_COLOR
+          value: green
+```
+* You can also use ConfigMaps and Secrets to pass in environment variables.
+
+## 2.3) ConfigMaps and Secrets
+
+### ConfigMaps
+
+* ConfigMaps are used to help manage lots of environment variables. Instead of storing them in lots of Pod definition files, you can store them centrally into a ConfigMap object. You then inject the values from the ConfigMap into the Pod definition files.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - image: webapp-color
+      ports:
+        - containerPort: 8080
+      envFrom:
+        - configMapRef:
+            name: webapp-color-configmap
+```
+* Like all k8s objects, you can create ConfigMaps imperatively or declaratively. The imperative way : `kubectl create configmap --from-literal='APP_COLOR=green' --from-literal='APP_ENV=prod'` or `kubectl create configmap --from-file=$PATH_TO_FILE`
+
+```yaml
+# File contents, key: value
+APP_COLOR: blue
+APP_MODE: prod
+```
+
+* The declarative way: `kubectl create configmap --from-file=$PATH_TO_FILE`
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Give a meaningful name so its easier to undertand and use them later
+  name: webapp-color-configmap
+# Key: value paits of the ConfigMap
+data:
+  APP_COLOR: blue
+  APP_ENV: prod
+```
+
+### Secrets
