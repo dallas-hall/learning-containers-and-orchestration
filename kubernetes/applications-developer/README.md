@@ -1059,3 +1059,35 @@ spec:
 ```
 
 * When using volumes, every key in the Secret has a file created with the key as the filename and the value as the file contents.
+
+## 2.4) Security
+
+### Docker Security
+
+#### Process Isolation
+
+* The host that has the Docker daemon installed on it has a variety of its own processes, including the Docker daemon. These are running in a variety of namespaces.
+* The host and the Docker container share the same Linux kernel and use namespaces to separate each other.
+
+![Namespaces](host-v-container-namespace.png)
+
+* Whenever a Docker container is running, it is running inside of its own namespace. The Docker container can only see processes within its container namespace. These processes will have their own process IDs, starting with PID 1. This PID is only relative to the container and the PID 1 inside a Docker container is not the PID 1 (initial process) of the host.
+* The host will be able to see the processes running within the Docker container but will have a different process ID. This PID is only relative to the host. This is the 'real' PID as the Docker container is running within the host.
+
+![Container PID](container-PID.png)
+![
+   PID](container-PID.png)
+
+#### Users
+
+* By default Docker runs its processes as the root user. This can be seen inside and outside the container.
+* Docker uses Linux Capabilities to restrict what the root user can do inside and outside the Docker container.
+  * The full list of Linux Capabilities can be seen at `/usr/include/linux/capability.h`
+* You can adjust Linux Capabilities at run time via:
+  * Add a Linux capability with `docker run --cap-add $CAPABILITY $IMAGE`
+  * Remove a Linux capability with `docker run --cap-drop $CAPABILITY $IMAGE`
+  * Use all Linux Capabilities with `docker run --privileged $IMAGE`
+* You can change the runtime user that Docker uses from root to any other user. This can be done in the Docker Image or at runtime.
+  * `docker run --user=$USER_ID $IMAGE`
+
+![Users](host-v-container-PID.png)
