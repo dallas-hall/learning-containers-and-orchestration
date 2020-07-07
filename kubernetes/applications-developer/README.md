@@ -23,7 +23,7 @@
 
 * Containers are not new but Docker is a high level tool that has made them very popular.
 * Docker uses LXC containers.
-* Containers are more resource friendly than VMs. They are typically 100s of MB in size whereas VMs are typically GBs in size.  It is common to run containers within VMs.
+* Containers are more resource friendly than VMs. They are typically 10s or 100s of MB in size whereas VMs are typically GBs in size.  It is common to run containers within VMs.
 
 ![container v vm](container-vs-vm.png)
 
@@ -41,7 +41,7 @@
 
 ![Container orchestration](container-orchestration.png)
 
-* The process of automatically deploying and managing containers is called Container Orchestration. This can provide:
+* The process of automatically deploying and managing containers is called **Container Orchestration**. This can provide:
   * Fault tolerance by using multiple compute nodes.
   * Simple application scaling as demand changes.
   * Simple cluster scaling as demand changes.
@@ -120,6 +120,15 @@ kubcetl get nodes
   * kind = the type of k8s object you are creating
   * metadata = data about the object, in the form of a dictionary.
   * spec = the objects we are going to run, as a list of dictionaries
+
+```yaml
+apiVersion: # What k8s objects can be created
+kind: # The tyoe of k8s object being created
+metadata: # Data about the k8s object
+  ...
+spec: # The stuff the k8s object will be doing
+  ...
+```
 
 ![pods](pods2.png)
 
@@ -309,7 +318,7 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 
 ![Deployements](deployment.png)
 
-* Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installationrequirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
+* Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installation requirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A **Deployment** object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
 * The Deployment object provides a way to do updates and rollbacks to Pod application versions.
@@ -408,8 +417,8 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 
 * Each time a Deployment is run, a **Rollout** is triggered. A version (i.e. **Revision**) of the Rollout is kept, which can be used later to rollback to.
 * There are 2 types of Deployment strategies
-  * Recreate strategy = delete all at once and create all at once, this means there will be an outage
-  * Rolling Update = delete old Pods and replace with new Pods 1 by 1, this means no outage. DEFAULT
+  * **Recreate strategy** will delete all at once and create all at once, this means there will be an outage
+  * **Rolling Update** will delete old Pods and replace with new Pods 1 by 1, this means no outage. This is the default.
 * Updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version.
   * If you do it from the command line, the running Deployment is updated but this doesn't update the YAML file.
 * A new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
@@ -421,7 +430,7 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 
 ## 1.7) k8s Namespaces
 
-* **Namespaces** are names that are used to group objects together and provides each object within the group a unique name to all other objects outside the group, even if they have the same name. These are method of providing isolation (i.e. variable scope) to objects.
+* **Namespaces** are named containers that are used to group objects together and provide each object within the group a unique name to all other objects outside the group. Namespace objects will be unique even if they have the same name as objects from another Namespace. For example, in Java there is `java.util.Date` and `java.sql.Date`. Thus Namespaces are a method of providing isolation (i.e. variable scope) to objects.
   * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
 
 ![Namespace DNS](namespace.png)
@@ -441,7 +450,7 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 ![Namespace DNS](namespace-dns.png)
 ![Namespace DNS](namespace-dns-2.png)
 
-* All commands by default use the default Namespace, you can use the `--namespace` option to look at other namespaces.
+* By default all commands use the default Namespace, you can use the `--namespace` option to look at other namespaces.
   * You can change this permanently by using `kubectl config set-context $(kubectl config current-context) --namespace=$NAMESPACE`
 
 ```yaml
@@ -537,7 +546,7 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
 #### NodePort
 
 * A **NodePort Service** makes an internal Pod accessible to external users by mapping a port on the Node to a port on the Pod.
-* How do external users access a k8s application externally through a browser? They will connect to the external Node IP and a the listening **NodePort Service** will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod. There are 3 ports involved here
+* How do external users access a k8s application externally through a browser? They will connect to the external Node IP and the listening **NodePort Service** will forward the request to a Node's internal IP address by mapping a port on the Node to a port on a Pod. There are 3 ports involved here, from the perspective of the NodePort Service
   1. the port running on the Pod, called the TargetPort
   1. the port running on the Service, called the Port
   1. the port running on the Node, called the NodePort, 30000-32767 default range
@@ -759,7 +768,7 @@ FROM ubuntu
 ENTRYPOINT ["sleep"]
 ```
 
-* Passing in a value from the command line, which will be appended to the `ENTRYPOINT` command. A value is optional as a default value is hard coded to fall back onto when nothing is passed in.
+* Passing in a value from the command line, which will be appended to the `ENTRYPOINT` command. A value is optional as a default value is hard coded into `CMD` to fall back onto when nothing is passed in.
 
 ```dockerfile
 # Image to create a new layer from.
@@ -1072,11 +1081,12 @@ spec:
 ![Namespaces](host-v-container-namespace.png)
 
 * Whenever a Docker container is running, it is running inside of its own namespace. The Docker container can only see processes within its container namespace. These processes will have their own process IDs, starting with PID 1. This PID is only relative to the container and the PID 1 inside a Docker container is not the PID 1 (initial process) of the host.
-* The host will be able to see the processes running within the Docker container but will have a different process ID. This PID is only relative to the host. This is the 'real' PID as the Docker container is running within the host.
 
 ![Container PID](container-PID.png)
-![
-   PID](container-PID.png)
+
+* The host will be able to see the processes running within the Docker container but will have a different process ID. This PID is only relative to the host. This is the 'real' PID as the Docker container is running within the host.
+
+![Host PID](host-PID.png)
 
 #### Users
 
@@ -1091,3 +1101,79 @@ spec:
   * `docker run --user=$USER_ID $IMAGE`
 
 ![Users](host-v-container-PID.png)
+
+### Security Contexts
+
+```bash
+# Which user is running the command in the pod
+kubectl exec ubuntu-sleeper -- whoami # root
+
+# Get Pod YAML, edit it and replace it
+kubectl get pod ubuntu-sleeper -o yaml > my-pod.yml
+vi my-pod.yml
+```
+
+```
+spec:
+  securityContext:
+    runAsUser: 1010
+```
+
+```bash
+master $ kubectl replace --force -f my-pod.yml
+kubectl exec ubuntu-sleeper -- whoami # 1010
+
+
+```
+
+```yaml
+spec:
+  securityContext:
+    runAsUser: 1010
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-pod
+spec:
+  securityContext: # Pod level
+    runAsUser: 1001
+  containers:
+  -  image: ubuntu # This container will have 1002
+     name: web
+     command: ["sleep", "5000"]
+     securityContext: # Container level
+      runAsUser: 1002 
+
+  -  image: ubuntu # This container will have user 1001
+     name: sidecar
+     command: ["sleep", "5000"]
+```
+
+```bash
+master $ kubectl exec ubuntu-sleeper -- date -s '19 APR 2012 11:14:00'
+date: cannot set date: Operation not permitted
+Thu Apr 19 11:14:00 UTC 2012
+command terminated with exit code 1
+
+
+```
+
+```yaml
+spec:
+  securityContext:
+    runAsUser: 0 # Needed to change this to be root, uid 0 is root.
+  ...
+  containers:
+  ...
+    securityContext:
+      capabilities: # Can only be set at the container level, must be run as root user
+        add: ["SYS_TIME"]
+```
+
+```bash
+master $ kubectl exec ubuntu-sleeper -- date -s '19 APR 2012 11:14:00'
+Thu Apr 19 11:14:00 UTC 2012
+```
