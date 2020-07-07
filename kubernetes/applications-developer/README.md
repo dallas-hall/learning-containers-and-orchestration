@@ -1104,33 +1104,19 @@ spec:
 
 ### Security Contexts
 
-```bash
-# Which user is running the command in the pod
-kubectl exec ubuntu-sleeper -- whoami # root
+* **Security Contexts** are the k8s way of implementing some Docker security features. Such as which use will run the process inside the container, and what Linux capabilities it has.
 
-# Get Pod YAML, edit it and replace it
-kubectl get pod ubuntu-sleeper -o yaml > my-pod.yml
-vi my-pod.yml
-```
+![Docker / k8s security mapping](docker-to-k8s-security-mapping.png)
 
-```
-spec:
-  securityContext:
-    runAsUser: 1010
-```
+* Security Contexts can be configured at the Pod level or the container level.
+  * If configured at the Pod level, all containers within the Pod will inherit these security settings.
+  * If configured at the containter level, only those containers will have the security settings applied to them. This will override the settings on the Pod. Linux capabilities can only be set at the container level.
 
-```bash
-master $ kubectl replace --force -f my-pod.yml
-kubectl exec ubuntu-sleeper -- whoami # 1010
+![pod-v-container-level-security.png](pod-v-container-level-security.png)
 
-
-```
-
-```yaml
-spec:
-  securityContext:
-    runAsUser: 1010
-```
+* Security Contexts are defined inside the Pod definition file.
+* Pod level Security Context is inside the `spec:` section.
+* Container level Security Context is inside the `containers:` section. Linux capabilities can only be set at the container level.
 
 ```yaml
 apiVersion: v1
@@ -1153,12 +1139,25 @@ spec:
 ```
 
 ```bash
+# Which user is running the command in the pod
+kubectl exec ubuntu-sleeper -- whoami # root
+
+# Get Pod YAML, edit it and replace it
+kubectl get pod ubuntu-sleeper -o yaml > my-pod.yml
+vi my-pod.yml
+```
+
+```bash
+# Check which user is currently being used inside the container to launch processes
+kubectl exec ubuntu-sleeper -- whoami
+```
+
+```
+# Example update of Linux capability
 master $ kubectl exec ubuntu-sleeper -- date -s '19 APR 2012 11:14:00'
 date: cannot set date: Operation not permitted
 Thu Apr 19 11:14:00 UTC 2012
 command terminated with exit code 1
-
-
 ```
 
 ```yaml
@@ -1176,4 +1175,86 @@ spec:
 ```bash
 master $ kubectl exec ubuntu-sleeper -- date -s '19 APR 2012 11:14:00'
 Thu Apr 19 11:14:00 UTC 2012
+```
+
+* **When recreating a Pod from the `-o yaml` output, remember that everything exists in the file in alphabetical order. When I was trying to set a Security Context it was being overriden further down the file.**
+
+### Service Accounts
+
+* This concept is linked to other k8s security concepts, but they are covered in the CKA course and are out of scope here.
+* There are 2 types of accounts in k8s:
+  1. **User Accounts** are used by people - e.g. an admin / developer logging in to the k8s cluster.
+  1. **Service Accounts** are used by an application to interact with the k8s cluster. - e.g. the monitoring application Prometheus uses a Service Account to query the k8s metrics API. Jenkins uses a Service Account to deploy applications to the cluster.
+
+![2-types-of-accounts.png](2-types-of-accounts.png)
+
+* When a Service Account is created an access token is automatically created and associated with it. This is used by internal and external cluster applications to authenticate with the k8s API.
+
+![token-authentication.png](token-authentication.png)
+
+* The token is stored as a k8s Secret object.
+
+![service-account-token-link.png](service-account-token-link.png)
+
+* The token can be supplied as an authentication bearer token in `curl` when an external application is communicating with the k8s API. `curl $URL --header "Authorization: Bearer "$TOKEN`
+* When using Service Account tokens with applications inside the k8s cluster, the token secret is mounted inside the Pod.
+* For every namespace in k8s a Service Account named default is automatically created.
+  * k8s automatically mounts the default Service Account if you don't specify a custom Service Account. The default Service Account can only do basic k8s API queries.
+  * You can disable this by setting `automountServiceAccountToken: false` inside `containers:` in the POD definition file.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+  automountServiceAccountToken: false # Don't mount the default Service Account automatically.
+```
+
+* You cannot edit a Service Account of an existing Pod, you must delete and recreate the Pod. Remember that Deployments will do this automatically for you.
+
+```yaml
+# Use a custom Service Account within the Pod definition file.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+  serviceAccount: nginx-service-account # Specify custom Service Account
+```
+
+```bash
+# Create a Service Account and an access Token
+kubectl create serviceaccount $SERVICE_ACCOUNT_NAME
+
+# View all Service Accounts
+kubectl get serviceaccount
+
+# View details about a Service Account
+kubectl describe serviceaccount $SERVICE_ACCOUNT_NAME
+
+# View the Service Account token
+kubectl describe secret $SERVICE_ACCOUNT_TOKEN_NAME
+
+# View the Pod's Service Account token details
+kubectl describe pod $POD_NAME
+
+# Look inside the container's filesystem to see the Service Account Token files
+kubectl exec -it $POD_NAME ls /var/run/secrets/kubernetes.io/serviceaccount
+ca.crt namespace token
+
+# Display the container's Service Account Token
+kubectl exec -it $POD_NAME cat /var/run/secrets/kubernetes.io/serviceaccount/token
 ```
