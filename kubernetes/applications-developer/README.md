@@ -1,7 +1,46 @@
-# k8s Application Developer Notes
+# k8s Application Developer Notes <!-- omit in toc -->
 
 * Second course in a series [beginner, developer, administrator]
 * Can do the exam if you want
+
+# Tables Of Contents <!-- omit in toc -->
+- [1) Core Concepts](#1-core-concepts)
+  - [1.1) Containers](#11-containers)
+  - [1.2) Container Orchestration](#12-container-orchestration)
+  - [1.3) k8s Architecture Recap](#13-k8s-architecture-recap)
+  - [1.4) k8s Pod Recap](#14-k8s-pod-recap)
+  - [1.5) k8s Controller Recap](#15-k8s-controller-recap)
+    - [1.5.1) Replication Controller](#151-replication-controller)
+    - [1.5.2) ReplicaSet](#152-replicaset)
+  - [1.6) k8s Deployments Recap](#16-k8s-deployments-recap)
+    - [1.6.1) Deployment Updates and Rollbacks](#161-deployment-updates-and-rollbacks)
+  - [1.7) k8s Namespaces](#17-k8s-namespaces)
+  - [1.8) k8s Networking Recap](#18-k8s-networking-recap)
+    - [1.8.1) k8s Services](#181-k8s-services)
+      - [NodePort](#nodeport)
+      - [ClusterIP](#clusterip)
+      - [LoadBalancer](#loadbalancer)
+  - [1.9) Imperative Commands](#19-imperative-commands)
+- [2) Configuration](#2-configuration)
+  - [2.1) Commands & Arguments](#21-commands--arguments)
+    - [Docker](#docker)
+    - [k8s](#k8s)
+  - [2.2) Enviroinment Variables](#22-enviroinment-variables)
+    - [Docker](#docker-1)
+    - [k8s](#k8s-1)
+  - [2.3) ConfigMaps and Secrets](#23-configmaps-and-secrets)
+    - [ConfigMaps](#configmaps)
+      - [Creation](#creation)
+      - [Injection](#injection)
+    - [Secrets](#secrets)
+      - [Creation](#creation-1)
+      - [Injection](#injection-1)
+  - [2.4) Security](#24-security)
+    - [Docker Security](#docker-security)
+      - [Process Isolation](#process-isolation)
+      - [Users](#users)
+    - [Security Contexts](#security-contexts)
+    - [Service Accounts](#service-accounts)
 
 # 1) Core Concepts
 
