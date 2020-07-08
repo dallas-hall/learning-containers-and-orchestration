@@ -3,20 +3,20 @@
 * Second course in a series [beginner, developer, administrator]
 * Can do the exam if you want
 
-# Tables Of Contents <!-- omit in toc -->
+## Tables Of Contents <!-- omit in toc -->
 - [1) Core Concepts](#1-core-concepts)
   - [1.1) Containers](#11-containers)
   - [1.2) Container Orchestration](#12-container-orchestration)
   - [1.3) k8s Architecture Recap](#13-k8s-architecture-recap)
   - [1.4) k8s Pod Recap](#14-k8s-pod-recap)
   - [1.5) k8s Controller Recap](#15-k8s-controller-recap)
-    - [1.5.1) Replication Controller](#151-replication-controller)
-    - [1.5.2) ReplicaSet](#152-replicaset)
+    - [Replication Controller](#replication-controller)
+    - [ReplicaSet](#replicaset)
   - [1.6) k8s Deployments Recap](#16-k8s-deployments-recap)
     - [1.6.1) Deployment Updates and Rollbacks](#161-deployment-updates-and-rollbacks)
   - [1.7) k8s Namespaces](#17-k8s-namespaces)
   - [1.8) k8s Networking Recap](#18-k8s-networking-recap)
-    - [1.8.1) k8s Services](#181-k8s-services)
+    - [k8s Services](#k8s-services)
       - [NodePort](#nodeport)
       - [ClusterIP](#clusterip)
       - [LoadBalancer](#loadbalancer)
@@ -41,6 +41,10 @@
       - [Users](#users)
     - [Security Contexts](#security-contexts)
     - [Service Accounts](#service-accounts)
+  - [2.5) Resources](#25-resources)
+    - [Scheduler](#scheduler)
+    - [CPU](#cpu)
+    - [RAM](#ram)
 
 # 1) Core Concepts
 
@@ -237,7 +241,7 @@ kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yam
 * These are the brains behind k8s.
 * **Controllers** are processes that monitor k8s objects and respond to accordingly to events.
 
-### 1.5.1) Replication Controller
+### Replication Controller
 
 ![Replicaiton controller](replication-controller.png)
 
@@ -271,7 +275,7 @@ spec:
           image: some-container-image-2
 ```
 
-### 1.5.2) ReplicaSet
+### ReplicaSet
 
 ![Labels and Selectors](labels-and-selectors.png)
 
@@ -576,7 +580,7 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
   * All Nodes can communicate with all Containers / Pods without NAT.
   * All Containers / Pods can communicate with all Nodes without NAT.
 
-### 1.8.1) k8s Services
+### k8s Services
 
 * k8s **Services** is a k8s object that enable communications between various cluster components. They help us connect applications/users together by loosely coupling them together.
 
@@ -1296,4 +1300,104 @@ ca.crt namespace token
 
 # Display the container's Service Account Token
 kubectl exec -it $POD_NAME cat /var/run/secrets/kubernetes.io/serviceaccount/token
+```
+
+## 2.5) Resources
+
+* All Nodes have CPU, memory, and disk available. Whenever a Pod is placed on a Node it consumes some or all of these resources.
+
+![pod-resource-usage.png](pod-resource-usage.png)
+
+### Scheduler
+
+* The k8s Scheduler decides which Node a Pod will run on.
+* It takes into consideration how much Node resources are available and how much resource the Pod needs.
+
+![pod-to-node-placement.png](pod-to-node-placement.png)
+
+* If a Pod's resource needs exceed the available resource of a Node, the schedular will try to place it eleswhere.
+* If it cannot find a Node with enough resources available, the Pod will not be run and it will be in a Pending state.
+
+![scheduler-blocking-pod.png](scheduler-blocking-pod.png)
+
+* You can specifiy how much CPU your Pod needs.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 8080
+      resources:
+        requests:
+          cpu: 1 # 1 hyperthread
+          memory: 512Mi # binary, base 1024
+```
+
+### CPU
+
+* The lowest decimal number is 0.1 and the maximum number is the available CPU threads.
+* 100m is equal to 0.1, the lowest number is 1m.
+* 1 CPU is equivalent to:
+  * 1 AWS vCPU
+  * 1 GCP Core
+  * 1 Azure Core
+  * 1 hyperthread
+* When a running Pod tries to exceed the CPU limit it will be throttled.
+* You can set the default CPU limit with a LimitRange
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-limit-range
+spec:
+  limits:
+  - default:
+      cpu: 1 # 1 hyperthread
+    defaultRequest:
+      cpu: 0.5
+    type: Container
+```
+
+### RAM
+
+* Memory can be specified in decimal (base 1000), binary (base 1024), or plain old bytes.
+* In decimal:
+  * 8 bits = 1 byte (B) 
+  * 1000 B = 1 kilobyte (kB)
+  * 1000 kB = 1 megabyte (MB)
+  * 1000 MB = 1 gigabyte (GB)
+  * 1000 GB = 1 terabyte (TB)
+  * etcetera
+* In binary:
+  * 8 bits = 1 byte (B) 
+  * 1024 bytes = 1 kibibyte (KiB)
+  * 1024 KiB = 1 mebibyte (MiB)
+  * 1024 MiB = 1 gibibyte (GiB)
+  * 1024 GiB = 1 tebibyte (TiB)
+  * etcetera
+* When a running Pod tries to exceed the RAM limit it will be terminated, but only if it continually tries to exceed RAM usage.
+* You can set the default RAM limit with a LimitRange
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+spec:
+  limits:
+  - default:
+      memory: 512Mi # binary, base 1024
+    defaultRequest:
+      memory: 256Mi
+    type: Container
 ```
