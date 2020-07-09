@@ -43,8 +43,14 @@
     - [Service Accounts](#service-accounts)
   - [2.5) Resources](#25-resources)
     - [Scheduler](#scheduler)
-    - [CPU](#cpu)
-    - [RAM](#ram)
+      - [CPU](#cpu)
+      - [RAM](#ram)
+    - [Taints & Tolerations](#taints--tolerations)
+      - [Taints](#taints)
+      - [Tolerants](#tolerants)
+    - [Assigning Pods To Nodes](#assigning-pods-to-nodes)
+      - [Node Selectors](#node-selectors)
+      - [Node Affinity](#node-affinity)
 
 # 1) Core Concepts
 
@@ -1342,7 +1348,7 @@ spec:
           memory: 512Mi # binary, base 1024
 ```
 
-### CPU
+#### CPU
 
 * The lowest decimal number is 0.1 and the maximum number is the available CPU threads.
 * 100m is equal to 0.1, the lowest number is 1m.
@@ -1368,7 +1374,7 @@ spec:
     type: Container
 ```
 
-### RAM
+#### RAM
 
 * Memory can be specified in decimal (base 1000), binary (base 1024), or plain old bytes.
 * In decimal:
@@ -1401,3 +1407,98 @@ spec:
       memory: 256Mi
     type: Container
 ```
+
+### Taints & Tolerations
+
+* Taints and Tolerations are used to set restrictions on what Pods can be scheduled on a Node.
+* This does not guarentee that the Pod will be placed into the Tainted Node.
+
+#### Taints
+
+* **Taints** are set on Nodes. These stop Pods from being scheduled here, unless they are manually set as Tolerant to the Taint.
+* 3 Taint effects.
+  1. **NoSchedule** - Pods will not be scheduled on the Node.
+  2. **PreferNoSchedule** - Scheduler will try to avoid placing a Pod on a Tainted Node, but it may get placed there.
+  3. **NoExecute** - New Pods will not be placed onto the Node and any existing Pods will be evicted from the Node if they do not tolerate the Taint.
+* A Taint is automatically set on the Master Node when k8s is intiailly set up. This is what stops the Master from accepting Pods. `kubectl describe node kubemaster | grep Taint` will show this taint.
+
+![tainted-master.png](tainted-master.png)
+
+```bash
+# https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+# Add a Taint
+kubectl taint nodes $NODE_NAME $KEY=$VALUE:$TAINT_EFFECT
+kubectl taint nodes node1 app=blue:NoSchedule
+
+# Remove a Taint
+kubectl taint nodes $NODE_NAME $KEY:$TAINT_EFFECT-
+kubectl taint nodes node1 app:NoSchedule-
+```
+
+#### Tolerants
+
+* **Tolerants** are set on Pods. By deffault Pods have no Tolerants, these must be created manually in the Pod definition file.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 8080
+  # Add Tolerations to the Pod, must be double quoted. This matches previously created Taint.
+  tolerations:
+    - key: "app" # Taint key to tolerate
+      operator: "Equal" # Taint matching criteria, default is Equal
+      value: "blue" # Taint value to tolerate
+      effect: "NoSchedule" # Taint effect
+```
+
+### Assigning Pods To Nodes
+
+#### Node Selectors
+
+* **Node Selectors** are a basic way to select which Node a Pod will be assigned to. It uses Labels and Selectors.
+
+![node-label.png](node-label.png)
+
+* A Node Selector must be created before a Pod can use it.
+
+```bash
+# https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+# Add a Node Label
+kubectl label nodes $NODE_NAME $KEY=$VALUE
+kubectl taint nodes node1 size=Large
+
+# Remove a Node Label
+kubectl label nodes $NODE_NAME $KEY=$VALUE-
+kubectl taint nodes node1 size=Large-
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 8080
+  nodeSelector:
+    size: Large # Matches the key/value pair from the create Node Label
+```
+
+#### Node Affinity
+
