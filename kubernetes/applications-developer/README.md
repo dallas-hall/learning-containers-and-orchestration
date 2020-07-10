@@ -45,13 +45,15 @@
     - [Scheduler](#scheduler)
       - [CPU](#cpu)
       - [RAM](#ram)
-    - [Taints & Tolerations](#taints--tolerations)
-      - [Taints](#taints)
-      - [Tolerants](#tolerants)
     - [Assigning Pods To Nodes](#assigning-pods-to-nodes)
+      - [Taints & Tolerations](#taints--tolerations)
+        - [Taints](#taints)
+        - [Tolerants](#tolerants)
       - [Node Labels](#node-labels)
       - [Node Selectors](#node-selectors)
       - [Node Affinity](#node-affinity)
+      - [Combining Taints, Tolerants, & Node Affinity](#combining-taints-tolerants--node-affinity)
+        - [Example](#example)
 
 # 1) Core Concepts
 
@@ -1409,12 +1411,14 @@ spec:
     type: Container
 ```
 
-### Taints & Tolerations
+### Assigning Pods To Nodes
+
+#### Taints & Tolerations
 
 * Taints and Tolerations are used to set restrictions on what Pods can be scheduled on a Node.
 * This does not guarentee that the Pod will be placed into the Tainted Node.
 
-#### Taints
+##### Taints
 
 * **Taints** are set on Nodes. These stop Pods from being scheduled here, unless they are manually set as Tolerant to the Taint.
 * 3 Taint effects.
@@ -1436,7 +1440,7 @@ kubectl taint nodes $NODE_NAME $KEY:$TAINT_EFFECT-
 kubectl taint nodes node1 app:NoSchedule-
 ```
 
-#### Tolerants
+##### Tolerants
 
 * **Tolerants** are set on Pods. By deffault Pods have no Tolerants, these must be created manually in the Pod definition file.
 
@@ -1461,8 +1465,6 @@ spec:
       value: "blue" # Taint value to tolerate
       effect: "NoSchedule" # Taint effect
 ```
-
-### Assigning Pods To Nodes
 
 #### Node Labels
 
@@ -1587,3 +1589,23 @@ spec:
                 values:
                 - blue
 ```
+
+#### Combining Taints, Tolerants, & Node Affinity
+
+* Taints and Tolerants don't gaurentee a Pod being placed onto the Tainted Node.
+* Node Affinity doesn't gaurentee that unlabelled Pods won't be placed onto a labelled Node.
+* Combining these 2 concepts together can gaurentee Pod placement.
+
+##### Example
+
+* We have 5 Nodes, we want 3 to be blue, red, and green, and others default.
+* We only want coloured Pods to run on their matching coloured Node. All uncoloured Pods must run on uncoloured Nodes.
+
+![combine-taints-tolerants-and-node-affinity-1.png](combine-taints-tolerants-and-node-affinity-1.png)
+
+* To do this, do these 3 steps:
+  1. Use Node Tainting to ensure the Node only accepts the correct Tolerant Pod.
+  2. Use Pod Tolerants to ensure the Pod can be accepted by the correct Tainted Node.
+  3. Use Node Affinity to Label the Nodes and Node Selectors on the Pods to ensure the Pods go to the desired Nodes.
+
+![combine-taints-tolerants-and-node-affinity-2.png](combine-taints-tolerants-and-node-affinity-2.png)
