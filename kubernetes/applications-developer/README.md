@@ -49,6 +49,7 @@
       - [Taints](#taints)
       - [Tolerants](#tolerants)
     - [Assigning Pods To Nodes](#assigning-pods-to-nodes)
+      - [Node Labels](#node-labels)
       - [Node Selectors](#node-selectors)
       - [Node Affinity](#node-affinity)
 
@@ -1463,26 +1464,35 @@ spec:
 
 ### Assigning Pods To Nodes
 
-#### Node Selectors
+#### Node Labels
 
-* **Node Selectors** are a basic way to select which Node a Pod will be assigned to. It uses Labels and Selectors.
+* **Node Labels** are just Labels attached to Nodes that can be used by the Selector to identify which Nodes to use.
 
 ![node-label.png](node-label.png)
 
-* A Node Selector must be created before a Pod can use it.
-
 ```bash
-# https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+# https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/#add-a-label-to-a-node
+# Show all labels
+kubectl get nodes --show-labels
+
 # Add a Node Label
 kubectl label nodes $NODE_NAME $KEY=$VALUE
 kubectl taint nodes node1 size=Large
 
 # Remove a Node Label
 kubectl label nodes $NODE_NAME $KEY=$VALUE-
-kubectl taint nodes node1 size=Large-
+kubectl label nodes node1 size=Large-
 ```
 
+* These are used by Node Selectors and Node Affinity, which are detailed below.
+
+#### Node Selectors
+
+* **Node Selectors** are a basic way to select which Node a Pod will be assigned to. It uses Labels and Selectors.
+* A Node Selector must be created before a Pod can use it.
+
 ```yaml
+# https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1502,3 +1512,78 @@ spec:
 
 #### Node Affinity
 
+* The primary feature of **Node Affinity** is to ensure Pods are hosted on particular Nodes.
+* It provides advanced capaibilities for limiting Pod placement, but this increases complexity. This is provided by the `operator`, which can have:
+  * In - use any Node(s) that matches the key/values.
+  * NotIn - use any Node(s) that doesn't match the key/values.
+  * Exists - use any Node(s) that have labels.
+  * DoesNotExist - use any Node(s) that don't have labels.
+  * Gt
+  * Lt
+
+```yaml
+# https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-nginx-pod
+  labels:
+    app: my-nginx-app
+    type: front-end
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 8080
+  affinity:
+    nodeAffinity:
+      # There are 2 different things you can use here. required/preferred
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: size # Match key from Node Label
+            operator: In
+            values:
+            - Large # Match value from Node Label
+            - Medium # Multiple items equals OR
+```
+
+* There are 2 types of Node Affinity.
+  1. `requiredDuringSchedulingIgnoredDuringExecution` - rules must be met during scheduling, otherwise don't place the Pod. Do nothing if the label changes during execution.
+  2. `preferredDuringSchedulingIgnoredDuringExecution` - rules may be met during scheduling, if not place the Pod anywhere it can. Do nothing if the label changes during execution.
+* There is a new one coming but it hasn't been released yet.
+
+![node-affinity-types.png](node-affinity-types.png)
+
+* Can be used on Deployments too.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blue
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+```
