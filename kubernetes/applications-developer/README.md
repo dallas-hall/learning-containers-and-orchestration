@@ -45,15 +45,28 @@
     - [Scheduler](#scheduler)
       - [CPU](#cpu)
       - [RAM](#ram)
-    - [Assigning Pods To Nodes](#assigning-pods-to-nodes)
-      - [Taints & Tolerations](#taints--tolerations)
-        - [Taints](#taints)
-        - [Tolerants](#tolerants)
-      - [Node Labels](#node-labels)
-      - [Node Selectors](#node-selectors)
-      - [Node Affinity](#node-affinity)
-      - [Combining Taints, Tolerants, & Node Affinity](#combining-taints-tolerants--node-affinity)
-        - [Example](#example)
+  - [2.6) Assigning Pods To Nodes](#26-assigning-pods-to-nodes)
+    - [Taints & Tolerations](#taints--tolerations)
+      - [Taints](#taints)
+      - [Tolerants](#tolerants)
+    - [Node Labels](#node-labels)
+    - [Node Selectors](#node-selectors)
+    - [Node Affinity](#node-affinity)
+    - [Combining Taints, Tolerants, & Node Affinity](#combining-taints-tolerants--node-affinity)
+      - [Example](#example)
+- [3) Multi-Container Pods](#3-multi-container-pods)
+  - [3.1) Applicaiton Types](#31-applicaiton-types)
+    - [Monolithic Applications](#monolithic-applications)
+    - [Microservices](#microservices)
+  - [3.2) k8s Implementation](#32-k8s-implementation)
+  - [3.3) Observability](#33-observability)
+    - [Pod Lifecycle](#pod-lifecycle)
+      - [Pod Statuses](#pod-statuses)
+      - [Pod Conditions](#pod-conditions)
+    - [Readiness Probes](#readiness-probes)
+    - [Liveness Probes](#liveness-probes)
+  - [3.4) Logging](#34-logging)
+  - [3.5) Monitoring](#35-monitoring)
 
 # 1) Core Concepts
 
@@ -1411,14 +1424,14 @@ spec:
     type: Container
 ```
 
-### Assigning Pods To Nodes
+## 2.6) Assigning Pods To Nodes
 
-#### Taints & Tolerations
+### Taints & Tolerations
 
 * Taints and Tolerations are used to set restrictions on what Pods can be scheduled on a Node.
 * This does not guarentee that the Pod will be placed into the Tainted Node.
 
-##### Taints
+#### Taints
 
 * **Taints** are set on Nodes. These stop Pods from being scheduled here, unless they are manually set as Tolerant to the Taint.
 * 3 Taint effects.
@@ -1440,7 +1453,7 @@ kubectl taint nodes $NODE_NAME $KEY:$TAINT_EFFECT-
 kubectl taint nodes node1 app:NoSchedule-
 ```
 
-##### Tolerants
+#### Tolerants
 
 * **Tolerants** are set on Pods. By deffault Pods have no Tolerants, these must be created manually in the Pod definition file.
 
@@ -1466,7 +1479,7 @@ spec:
       effect: "NoSchedule" # Taint effect
 ```
 
-#### Node Labels
+### Node Labels
 
 * **Node Labels** are just Labels attached to Nodes that can be used by the Selector to identify which Nodes to use.
 
@@ -1488,7 +1501,7 @@ kubectl label nodes node1 size=Large-
 
 * These are used by Node Selectors and Node Affinity, which are detailed below.
 
-#### Node Selectors
+### Node Selectors
 
 * **Node Selectors** are a basic way to select which Node a Pod will be assigned to. It uses Labels and Selectors.
 * A Node Selector must be created before a Pod can use it.
@@ -1512,7 +1525,7 @@ spec:
     size: Large # Matches the key/value pair from the create Node Label
 ```
 
-#### Node Affinity
+### Node Affinity
 
 * The primary feature of **Node Affinity** is to ensure Pods are hosted on particular Nodes.
 * It provides advanced capaibilities for limiting Pod placement, but this increases complexity. This is provided by the `operator`, which can have:
@@ -1590,13 +1603,13 @@ spec:
                 - blue
 ```
 
-#### Combining Taints, Tolerants, & Node Affinity
+### Combining Taints, Tolerants, & Node Affinity
 
 * Taints and Tolerants don't gaurentee a Pod being placed onto the Tainted Node.
 * Node Affinity doesn't gaurentee that unlabelled Pods won't be placed onto a labelled Node.
 * Combining these 2 concepts together can gaurentee Pod placement.
 
-##### Example
+#### Example
 
 * We have 5 Nodes, we want 3 to be blue, red, and green, and others default.
 * We only want coloured Pods to run on their matching coloured Node. All uncoloured Pods must run on uncoloured Nodes.
@@ -1609,3 +1622,140 @@ spec:
   3. Use Node Affinity to Label the Nodes and Node Selectors on the Pods to ensure the Pods go to the desired Nodes.
 
 ![combine-taints-tolerants-and-node-affinity-2.png](combine-taints-tolerants-and-node-affinity-2.png)
+
+# 3) Multi-Container Pods
+
+## 3.1) Applicaiton Types
+
+### Monolithic Applications
+
+* **Monolithic application** describes a software application where everything is bundled together into a single application.
+
+![monolithic-app.png](monolithic-app.png)
+
+### Microservices
+
+* **Microservices** is the concept of decoupling a single monolithic application into separate independent smaller services. This architecture makes it easier to manage, deploy, and scale.
+
+![microservices-app-1.png](microservices-app-1.png)
+
+* When using microservices you will often need to use multiple services together, for example, a webserver and a logging server. These services need to be started and stopped together. This is where multiple container Pods comes into play.
+
+![microservices-app-1.png](microservices-app-2.png)
+![multi-container-pod-1.png](multi-container-pod-1.png)
+
+## 3.2) k8s Implementation
+
+* The `containers` section inside a Pod definition file is an array. By adding multiple items to the array you are adding multiple containers to the Pod.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-color
+spec:
+  containers:
+    - name: webapp-color
+      image: webapp-color
+      ports:
+        - containerPort: 8080
+
+    - name: log-agent
+      image: log-agent
+```
+
+* Multi-container Pods:
+  * Have the same lifecycle, they are created and destroyed together.
+  * Share the same network space, they can refer to each other via `localhost`
+  * Have access to the same storage volumes.
+
+![multi-container-pod-2.png](multi-container-pod-2.png)
+
+* 3 different patterns can be used to assign multiple containers to a single Pod. The YAML file is always the same though.
+  1. **Sidecar** - the container's main app is extended by a helper app. ![sidecar.png](sidecar.png)
+  2. **Ambassador** - proxy a local connection to the world. ![ambassador.png](ambassador.png)
+  3. **Adaptor** - standardise and normalise output. ![adaptor.png](adaptor.png)
+* All 3 can be combined. For example, we might have 3 different apps using sidecar with a logging agent. They all produce different log output foramts. An Adaptor can parse and translate them into a single format. An Ambassador can proxy the localhost connection to an external centralised logging server.
+
+## 3.3) Observability
+
+### Pod Lifecycle
+
+#### Pod Statuses
+
+![pod-running-status.png](pod-running-status.png)
+
+* There are only 3 Pod statuses that tell us where abouts in the lifecycle the Pod is. Use the `kubectl get pods` command to see the Pod's status.
+1. **Pending** is when the Pod is first created. The Schedulor is trying to find a Node to place the Pod onto. If it can't, the Pod will remain in this state. Run `kubectl describe $POD_NAME` to find out why a Pod is stuck in a pending state.
+2. **ContainerCreating** is when the Pod has been scheduled and the container images needed to run the Pod are being pulled and created.
+3. **Running** is when all the container images for the Pod have been pulled and created and they are now running.
+
+#### Pod Conditions
+
+![pod-ready-condition.png](pod-ready-condition.png)
+
+* Pod Conditions provide additional information to Pod Statues. There are 4 Pod Conditions that have a boolean value. Use the `kubectl describe pods` command to view the Conditions of Pods.
+1. **PodScheduled** is set to true when the Pod is scheduled onto a Node.
+2. **Initialized** is set to true when a Pod is initialised
+3. **ContainersReady** is set to true when all the containers in the Pod are ready.
+4. **Ready** is set to true when everything else is set to true. You can see this with `kubectl get pods`
+* The problem with the Ready condition is it just means the containers are running, this doesn't mean that the applications within the containers are actually running yet.
+* For example, a webserver may a few minutes to start up after the container is started. The status would be Ready but the application is still offline until the webserver has finished starting up.
+
+![pod-ready-but-app-is-not.png](pod-ready-but-app-is-not.png)
+
+* Once a Pod is in the Ready state, a Service will start routing traffic to it. If the application ins't online yet, users will get errors. This can be solved with Readiness and Liveness Probes.
+
+![pod-ready-but-app-is-not2.png](pod-ready-but-app-is-not2.png)
+
+### Readiness Probes
+
+* The developer of the application will know what it means for the application to be ready to use. The developer then ties the containers ready state to the application ready state, so that k8s knows when the application is alive.
+* There are 3 Readiness Probes.
+1. **HTTP test** will test a HTTP service on a specifc port. Useful whne testing if an API server is up and running.
+2. **TCP test** will test a TCP service on a specifrc port. Useful when testing if a database is up and running.
+3. **Command test** will run a command within the container that has its own success and failure logic.
+
+![readiness-probe-yaml.png](readiness-probe-yaml.png)
+
+* The `initialDelaySeconds` tells the Readiness Probe to wait this amount of time before proding the Pod.
+* The `periodSeconds` tells the Readiness Probe how often to probe the Pod.
+* The `failureThreshold` tells the Readiness Probe how often to probe the Pod unsuccessfully before giving up. The default is 3.
+
+![readiness-probe-yaml-all-3.png](readiness-probe-yaml-all-3.png)
+
+* The k8s Service will not direct any traffic to the Pod until its Readiness Probe has passed successfully. This will stop users experiencing a service outage because the container is ready but the application isn't.
+
+![multi-pod-without-readiness-probe.png](multi-pod-without-readiness-probe.png)
+
+### Liveness Probes
+
+* When a Pod crashes k8s will try to restart the Pod. You can see the restart count in `kubeclt get pods`
+* But k8s won't restart the Pod if the Pod hasn't crashed and the application isn't working. Use Liveness Probes to cater for this scenario.
+* A Liveness Probe will periodically test the application within a Pod to see if it is healthy. If it isn't healthy, the Pod is destroyed and recreated. The application developer defines what it means for the application to be healthy.
+* There are 3 Liveness Probes.
+1. **HTTP test** will test a HTTP service on a specifc port. Useful whne testing if an API server is up and running.
+2. **TCP test** will test a TCP service on a specifrc port. Useful when testing if a database is up and running.
+3. **Command test** will run a command within the container that has its own success and failure logic.
+
+![readiness-probe-yaml.png](readiness-probe-yaml.png)
+
+* The `initialDelaySeconds` tells the Readiness Probe to wait this amount of time before proding the Pod.
+* The `periodSeconds` tells the Readiness Probe how often to probe the Pod.
+* The `failureThreshold` tells the Readiness Probe how often to probe the Pod unsuccessfully before giving up. The default is 3.
+
+![liveness-probe-yaml-all-3.png](liveness-probe-yaml-all-3.png)
+
+## 3.4) Logging
+
+* In Docker you can view logs with `docker logs -f $CONTAINER_ID`
+
+![docker-logs.png](docker-logs.png)
+
+* In k8s you can view the logs for a single container Pod with `kubectl logs -f $POD_NAME`
+* But what about a Pod with multiple containers? You must specify with container logs you want to view. Use `kubectl logs -f $POD_NAME $IMAGE_NAME`
+
+![k8s-multiple-container-logs.png](k8s-multiple-container-logs.png)
+
+## 3.5) Monitoring
+
