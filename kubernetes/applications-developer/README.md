@@ -1759,3 +1759,39 @@ spec:
 
 ## 3.5) Monitoring
 
+* You can use third party tools to monitor a k8s Cluster. You can monitor things like:
+  * Node level metrics, such as current state of all Nodes and the CPU and memory performance of all Nodes.
+  * Pod level metrics, such as current state of all Pods and the CPU and memory performance of all Pods.
+
+![cluster-metrics.png](cluster-metrics.png)
+
+* There is a variety of monitoring tools, such as:
+  * **Metrics Server**, based off the original and now deprecated Heapster.
+  * **Prometheus**, covered in CKA.
+  * **Elastic Stack**, covered in CKA.
+  * **Data Dog** (paid), covered in CKA.
+  * **Dyantrace** (paid), covered in CKA.
+
+![k8s-monitoring-tools.png](k8s-monitoring-tools.png)
+
+* You can have one Metrics Server per k8s Cluster. It gathers information from Nodes and Pods and stores that data in memory. It provides no historical data.
+* The Kubelet Agent running on each Nodes is responsible for running Pods on the Nodes and receiving instructions from the master kube-apiserver. 
+  * A component of Kubelet called c**Advisor (Container Advistor)** is what is used to gather metrics and exposing them through the Kubelet API for the Metrics Server.
+* You can install Metrics Server with
+  * For Minikube only - `minikube addons enable metrics-server`
+  * For everything else
+
+```bash
+# Clone repo
+git clone https://github.com/kubernetes-incubator/metrics-server.git
+
+# Build the app
+cd metrics-server/
+kubectl create -f .
+```
+
+* The Metrics Server needs sometime to collect and process the data. You can view this data with:
+  * Nodes - `kubectl top node`
+  * Pods - `kubectl top pod`
+
+![metrics-server-stats.png](metrics-server-stats.png)
