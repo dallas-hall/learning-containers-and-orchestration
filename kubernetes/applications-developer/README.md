@@ -67,6 +67,18 @@
     - [Liveness Probes](#liveness-probes)
   - [3.4) Logging](#34-logging)
   - [3.5) Monitoring](#35-monitoring)
+- [4) Pod Design](#4-pod-design)
+  - [4.1) Labels & Selectors](#41-labels--selectors)
+    - [Labels](#labels)
+    - [Selectors](#selectors)
+  - [4.2) Deployment Updates & Rollbacks](#42-deployment-updates--rollbacks)
+    - [Additional Information](#additional-information)
+  - [4.2) Jobs & CronJobs](#42-jobs--cronjobs)
+    - [Adhoc Workloads](#adhoc-workloads)
+      - [Docker](#docker-2)
+      - [k8s](#k8s-2)
+    - [Jobs](#jobs)
+    - [CronJobs](#cronjobs)
 
 # 1) Core Concepts
 
@@ -386,6 +398,9 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installation requirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A **Deployment** object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
+
+![deployment-creating-replicaset-and-pods.png](deployment-creating-replicaset-and-pods.png)
+
 * The Deployment object provides a way to do updates and rollbacks to Pod application versions.
 
 ```yaml
@@ -459,11 +474,17 @@ kubectl scale $DEPLOYMENT_NAME --replicas=$REPLICA_AMOUNT
 kubectl rollout status deployment/$DEPLOYMENT_NAME
 kubectl rollout history deployment/$DEPLOYMENT_NAME
 
+# Save revision change history
+kubectl ... --record
+
+# View revisions
+kubectl rollout history deployment/$DEPLOYMENT_NAME --revision=$REVISION_NUMBER
+
 # Rollback An Update
 kubectl rollout undo deployment/$DEPLOYMENT_NAME
 
 # Create a YAML file
-kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry-run -o yaml > deployment.yaml
+kubectl create deployment --image=$IMAGE_NAME $DEPLOYMENT_NAME --replicas=$AMOUNT --dry-run -o yaml > deployment.yaml
 ```
 
 * `kubectl [command] [TYPE][NAME] -o $OUTPUT_FORMAT` has 4 types
@@ -484,14 +505,22 @@ kubectl create deployment --image=image-name $DEPLOYMENT_NAME --replicas=n --dry
 * There are 2 types of Deployment strategies
   * **Recreate strategy** will delete all at once and create all at once, this means there will be an outage
   * **Rolling Update** will delete old Pods and replace with new Pods 1 by 1, this means no outage. This is the default.
+
+![recreate-v-rolling-update.png](recreate-v-rolling-update.png)
+
 * Updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version.
   * If you do it from the command line, the running Deployment is updated but this doesn't update the YAML file.
 * A new ReplicaSet is created when upgrades are performed. Pods from the original ReplicaSet are destroyed and Pods in the new RepliceSet are created
 * A **Rollback** is when you undo a Deployment and go back to a previous Rollout version.
+  * When rolling back, the original revision number that was rolled back to is moved to the lastest revision number. e.g. we have revision 1 and revision 2. We roll back to revision 1, revision 1 is renamed revision 3 and we will only see revisions 2 and 3.
+
+![rollback-revisions.png](rollback-revisions.png)
 
 ![Upgrades](upgrades.png)
 
 ![Rollback](rollback.png)
+
+![deployment-rollout-status.png](deployment-rollout-status.png)
 
 ## 1.7) k8s Namespaces
 
@@ -1795,3 +1824,237 @@ kubectl create -f .
   * Pods - `kubectl top pod`
 
 ![metrics-server-stats.png](metrics-server-stats.png)
+
+# 4) Pod Design
+
+## 4.1) Labels & Selectors
+
+### Labels
+
+![label-and-selectors.png](label-and-selectors.png)
+
+* in k8s **Labels** are key/value pairs that are attached to objects. In general, labels are are a standard way of grouping things together. We can use single or multiple labels to filter items.
+* Labels are created by YAML files.
+
+![label-yml.png](label-yml.png)
+
+### Selectors
+
+* **Selectors** use Labels to perform object selection and filtering.
+* Can filter objects by type.
+
+![k8s-objects-unfiltered.png](k8s-objects-unfiltered.png)
+
+![k8s-objects-filtered-by-object-type.png](k8s-objects-filtered-by-object-type.png)
+
+* Can filter objects by application.
+
+![k8s-objects-filtered-by-app.png](k8s-objects-filtered-by-app.png)
+* Can filter objects by any type of Label.
+
+```bash
+# Use one Label in a Selector
+kubectl get $OBJECT --selector $KEY=$VALUE
+
+# Use multiple Labels in a Selector
+kubectl get $OBJECT --selector $KEY1=$VALUE1,$KEY2=$VALUE2
+```
+
+![selector-command.png](selector-command.png)
+
+* k8s internally uses Labels and Selectors to group objects together, such as a ReplicaSet and Pods. In this example there are 2 labels in the YAML defintion file, the ReplicaSet Label and the Pod Label.
+
+![replicaset-labels.png](replicaset-labels.png)
+
+## 4.2) Deployment Updates & Rollbacks
+
+See [1.6) k8s Deployments Recap](#16-k8s-deployments-recap)
+
+### Additional Information
+
+* A deployment update is any change to the current Deployment. For example, a container image version has changed.
+* You can use `kubectl describe deployment $DEPLOYMENT` to see the differences between the update strategies.
+* Rollout error troubleshooting steps.
+
+```bash
+# Update the Rollout
+kubectl apply -f deployment-definition.yml
+
+# Rollout doesn't finish, see why.
+kubectl get deployment
+
+# Our desired, current, up-to-date, and available pods aren't matching. This is a clue to why the Rollout failed.
+kubectl get pods
+
+# Old versions are still working, the new ones have failed. Stop the Rollout.
+kubectl rollout undo deployment/$DEPLOYMENT_NAME
+```
+
+## 4.2) Jobs & CronJobs
+
+
+### Adhoc Workloads
+
+#### Docker
+
+* In docker an adhoc workload would run inside a container and the container will exit once its finished.
+
+![docker-adhoc-job.png](docker-adhoc-job.png)
+
+#### k8s
+
+* In k8s an adhoc workload would run inside a Pod and when the Pod has finished, k8s will try to restart it. This will happen until a threshold is reached. This behaviour is undesirable for this type of workload. You can see this in the below screenshot by looking at RESTARTS.
+
+![k8s-adhoc-job.png](k8s-adhoc-job.png)
+
+* This is because `restartPolicy: Always` is set by default for a container. Other options are `Never` and `Failure`.
+
+![restart-policy.png](restart-policy.png)
+
+### Jobs
+
+* https://kubernetes.io/docs/concepts/workloads/controllers/job/
+* **Jobs** create one or more Pods and ensure that a specified number of them complete successfully. 
+* Jobs are used for workloads that aren't expect to run continually forever like a web server, and they are run at adhoc times.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: adder-job
+spec:
+  # How many Pods must complete successfully.
+  completions: 3
+  # How many Pods to run concurrently.
+  parallelism: 3
+  template:
+    # Move everything from the Pod definition spec section here.
+    spec:
+      containers:
+      - name: adder
+        image: ubuntu
+        command: ["expr", "3", "+", "5"]
+      restartPolicy: Never
+```
+
+* By default:
+  * A Jobs output is stored in the Pods standard output. That can be redirected elsewhere.
+  * Jobs don't run in parallel.
+  * Jobs will run until a single completion.
+
+![jobs-commands.png](jobs-commands.png)
+
+* Be careful of Jobs with a high completion rate, high failure rate, and no parallelism. These Jobs may take a long time to reach their goal. Solve this by using parallelism.
+
+![job-completion-changed.png](job-completion-changed.png)
+
+```bash
+# Create a Job
+kubectl create -f job-definition.yml
+
+# View the Pods created by a Job
+kubectl get pods
+
+# View Pod log to view Job stdout
+kubectl logs $POD_NAME
+
+# Delete Job
+kubectl delete job $JOB_NAME
+
+# Get Jobs information
+kubectl get jobs
+kubectl get jobs -o wide
+kubectl get all
+kubectl describe jobs
+
+# Get Job specific information
+kubectl get job $JOB_NAME
+
+# Update Existing Job With File - remember to delete the existing Jobs for the changes to apply
+kubectl replace -f job-definition.yml
+
+# Update Existing Job Without File - remember to delete the existing Jobs for the changes to apply
+kubectl edit job $JOB_NAME
+
+# Extract Job Definition From Running Job
+kubectl get job $JOB_NAME -o yaml > job-definition.yaml
+```
+
+### CronJobs
+
+* https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
+* **CronJobs** are Jobs but can be repeated via schedules. The use the `crontab` syntax.
+
+```bash
+# ┌───────────── minute (0 - 59)
+# │ ┌───────────── hour (0 - 23)
+# │ │ ┌───────────── day of the month (1 - 31)
+# │ │ │ ┌───────────── month (1 - 12)
+# │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
+# │ │ │ │ │                                   7 is also Sunday on some systems)
+# │ │ │ │ │
+# │ │ │ │ │
+# * * * * * <command to execute>
+```
+
+* https://crontab.guru/ useful site for crontab scheduling.
+
+```yaml
+apiVersion: batch/v1beta
+kind: CronJob
+metadata:
+  name: adder-cronjob
+# CronJob spec
+spec:
+  # crontab entry for every minute
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    # Job spec
+    # Move everything from the Job definition spec section here.
+    spec:
+      # How many Pods must complete successfully.
+      completions: 3
+      # How many Pods to run concurrently.
+      parallelism: 3
+      template:
+        # Pod spec
+        # Move everything from the Pod definition spec section here.
+        spec:
+          containers:
+          - name: adder
+            image: ubuntu
+            command: ["expr", "3", "+", "5"]
+          restartPolicy: Never
+```
+
+```bash
+# Create a CronJob
+kubectl create -f cronjob-definition.yml
+
+# View the Pods created by a CronJob
+kubectl get pods
+
+# View Pod log to view CronJob stdout
+kubectl logs $POD_NAME
+
+# Delete Job
+kubectl delete cronjob $JOB_NAME
+
+# Get CronJob information
+kubectl get cronjob
+kubectl get cronjob -o wide
+kubectl get all
+kubectl describe cronjob
+
+# Get CronJob specific information
+kubectl get cronjob $JOB_NAME
+
+# Update Existing CronJob With File - remember to delete the existing CronJob for the changes to apply
+kubectl replace -f cronjob-definition.yml
+
+# Update Existing CronJob Without File - remember to delete the existing CronJob for the changes to apply
+kubectl edit cronjob $JOB_NAME
+
+# Extract CronJob Definition From Running CronJob
+kubectl get cronjob $JOB_NAME -o yaml > job-definition.yaml
+```
