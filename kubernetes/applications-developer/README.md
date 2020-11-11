@@ -79,6 +79,21 @@
       - [k8s](#k8s-2)
     - [Jobs](#jobs)
     - [CronJobs](#cronjobs)
+- [5) Services & Networking](#5-services--networking)
+  - [5.1) Services](#51-services)
+  - [5.2) Ingress](#52-ingress)
+    - [Example Website](#example-website)
+      - [Initial Setup](#initial-setup)
+      - [Scaling The App](#scaling-the-app)
+      - [URL:port Instead Of IP:port](#urlport-instead-of-ipport)
+      - [Website URL Only](#website-url-only)
+      - [Google Cloud Provider](#google-cloud-provider)
+      - [Adding Another App And SSL](#adding-another-app-and-ssl)
+      - [Replacing With Ingress](#replacing-with-ingress)
+    - [How Does Ingress Work](#how-does-ingress-work)
+    - [Ingress Controller](#ingress-controller)
+    - [Ingress Resources](#ingress-resources)
+  - [5.3) Network Policy](#53-network-policy)
 
 # 1) Core Concepts
 
@@ -225,7 +240,7 @@ metadata:
   labels:
     app: my-nginx-app
     type: front-end
-    
+
 # Which container(s) will be running
 spec:
   # Can have multiple containers, but usually 1 container per pod.
@@ -313,9 +328,9 @@ spec:
 
 ![Labels and Selectors](labels-and-selectors.png)
 
-* Very similar to ReplicationController but it is not the same. The **ReplicaSet** is the modern and recommended replacement. 
+* Very similar to ReplicationController but it is not the same. The **ReplicaSet** is the modern and recommended replacement.
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
-* The ReplicaSet is in a different apiVersion to the ReplicationController. 
+* The ReplicaSet is in a different apiVersion to the ReplicationController.
 * The ReplicaSet is a process that knows which Pods to monitor by the Labels provided during Pod creation.
 * The Selector tells the RepliceSet what labels to watch. If any of the Pods matching the watched labels fail, the ReplicaSet will create new ones.
 * The Selector tells the ReplicaSet what Pods it can control, even if they weren't created by the ReplicaSet. Thus the ReplicaSet can create its own Pods to monitor or monitor existing Pods.
@@ -324,7 +339,7 @@ spec:
 
 ```yaml
 # basically same as ReplicationController but the object is now ReplicaSet and has selector property.
-# https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#example### 1.3.1) 
+# https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#example### 1.3.1)
 apiVersion: apps/v1
 
 # ReplicaSet is the new technology, compared to ReplicationController
@@ -580,7 +595,7 @@ metadata:
   labels:
     app: my-nginx-app
     type: front-end
-    
+
 # Which container(s) will be running
 spec:
   # Can have multiple containers, but usually 1 container per pod.
@@ -670,7 +685,7 @@ kind: Service
 
 metadata:
   name: my-app-service
-    
+
 # The networking configuration of the Service
 spec:
   # 3 types available here, NodePort, ClusterIP, LoadBalancer
@@ -723,7 +738,7 @@ kind: Service
 
 metadata:
   name: backend
-    
+
 # The networking configuration of the Service
 spec:
   # 3 types available here, NodePort, ClusterIP, LoadBalancer
@@ -821,7 +836,7 @@ kubectl expose pod nginx --port=80 --name nginx-service --type=NodePort --dry-ru
 docker run ubuntu
 
 # Show only running containers
-docker ps 
+docker ps
 
 # Show all containers, included the stopped on
 docker ps -a
@@ -1225,7 +1240,7 @@ spec:
      name: web
      command: ["sleep", "5000"]
      securityContext: # Container level
-      runAsUser: 1002 
+      runAsUser: 1002
 
   -  image: ubuntu # This container will have user 1001
      name: sidecar
@@ -1423,14 +1438,14 @@ spec:
 
 * Memory can be specified in decimal (base 1000), binary (base 1024), or plain old bytes.
 * In decimal:
-  * 8 bits = 1 byte (B) 
+  * 8 bits = 1 byte (B)
   * 1000 B = 1 kilobyte (kB)
   * 1000 kB = 1 megabyte (MB)
   * 1000 MB = 1 gigabyte (GB)
   * 1000 GB = 1 terabyte (TB)
   * etcetera
 * In binary:
-  * 8 bits = 1 byte (B) 
+  * 8 bits = 1 byte (B)
   * 1024 bytes = 1 kibibyte (KiB)
   * 1024 KiB = 1 mebibyte (MiB)
   * 1024 MiB = 1 gibibyte (GiB)
@@ -1804,7 +1819,7 @@ spec:
 ![k8s-monitoring-tools.png](k8s-monitoring-tools.png)
 
 * You can have one Metrics Server per k8s Cluster. It gathers information from Nodes and Pods and stores that data in memory. It provides no historical data.
-* The Kubelet Agent running on each Nodes is responsible for running Pods on the Nodes and receiving instructions from the master kube-apiserver. 
+* The Kubelet Agent running on each Nodes is responsible for running Pods on the Nodes and receiving instructions from the master kube-apiserver.
   * A component of Kubelet called c**Advisor (Container Advistor)** is what is used to gather metrics and exposing them through the Kubelet API for the Metrics Server.
 * You can install Metrics Server with
   * For Minikube only - `minikube addons enable metrics-server`
@@ -1914,7 +1929,7 @@ kubectl rollout undo deployment/$DEPLOYMENT_NAME
 ### Jobs
 
 * https://kubernetes.io/docs/concepts/workloads/controllers/job/
-* **Jobs** create one or more Pods and ensure that a specified number of them complete successfully. 
+* **Jobs** create one or more Pods and ensure that a specified number of them complete successfully.
 * Jobs are used for workloads that aren't expect to run continually forever like a web server, and they are run at adhoc times.
 
 ```yaml
@@ -2058,3 +2073,100 @@ kubectl edit cronjob $JOB_NAME
 # Extract CronJob Definition From Running CronJob
 kubectl get cronjob $JOB_NAME -o yaml > job-definition.yaml
 ```
+
+# 5) Services & Networking
+
+## 5.1) Services
+
+See [1.8) k8s Networking Recap](#18-k8s-networking-recap)
+
+## 5.2) Ingress
+
+* https://kubernetes.io/docs/concepts/services-networking/ingress/
+* Ingress exposes HTTP and HTTPS routes from outside the cluster to services within the cluster. Think of it as a layer 7 load balancer within k8s that can be configured to handle SSL, load balancing, authentication, and URL based routing. The Ingress needs to be exposed,
+
+### Example Website
+
+Why do we need an Ingress? Lets look at an example.
+
+#### Initial Setup
+
+* We have a simple web app running in a Deployment with one Pod on one Node.
+* There is a database running in a Pod on a Node.
+* There is a ClusterIP Service between the app and database.
+* There is a NodePort exposing the Node to the internet.
+* Users can connect to this directly to the Nodes via the Node IP address and NodePort port.
+
+![app-setup-1.png](app-setup-1.png)
+
+#### Scaling The App
+
+* We scale the app by increasing the Deployments Replica amount which will increase the amount of Pods. The NodePort Service handles load balancing between the Pods.
+
+![app-setup-2.png](app-setup-2.png)
+
+#### URL:port Instead Of IP:port
+
+* We don't want users to have to type an IP address. So the Website domain DNS is now mapped to the IP addresses of the Nodes.
+
+![app-setup-3.png](app-setup-3.png)
+
+#### Website URL Only
+
+* We don't want users to have to type a port either. So the website domain DNS points to a proxy address listening on port 80. The proxy server will forward requests to the Nodes on the NodePort.
+
+![app-setup-4.png](app-setup-4.png)
+
+#### Google Cloud Provider
+
+* For a web application hosted on a cloud provider, you can replace the NodePort with a LoadBalancer. This will automatically configure a proxy to route traffice to your LoadBalancer. The website domain DNS now points to the IP address of the Google Cloud proxy load balancer.
+
+![app-setup-5.png](app-setup-5.png)
+
+#### Adding Another App And SSL
+
+* An additional application can easily be added by using Deployments, a new LoadBalancer, and a new Google Cloud proxy load balancer. SSL Can be added by yet another proxy.
+
+![app-setup-6.png](app-setup-6.png)
+
+#### Replacing With Ingress
+
+**Ingress can replace:**
+* SSL Proxy
+* Proxy and proxy load balancers
+* NortPort or GCP LoadBalancer
+
+![without-ingress.png](without-ingress.png)
+
+becomes
+
+![with-ingress.png](with-ingress.png)
+
+### How Does Ingress Work
+
+A k8s Ingress needs 2 things to work:
+1. An **Ingress Controller**
+2. And **Ingress resource(s)**
+
+### Ingress Controller
+
+* https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/
+* https://kubernetes.github.io/ingress-nginx/deploy/
+* In order for the Ingress resource to work, the cluster must have an ingress controller running.
+* This is not installed by default with k8s, you need to install it manually. To create one, you must
+  * Create a blank ConfigMap that can be confingured later for log location, SSL, etc.
+  * Use a Deployment YAML file using the image `ngnix-ingress-controller`. The Deployment must have:
+    * An argument `nginx-ingress-controller` to start the special version of k8s Nginx.
+    * The ConfigMap
+    * 2 environment variables that cover the Pod's name and namespace to be deployed.
+    * The ports used by the Ingress Controller.
+
+* It is either and Nginx proxy that is specially configured for k8s, or it is a GCP LoadBalancer.
+* These special proxys monintor the cluster for new Ingress Resources and automatically configure themselves for them.
+
+### Ingress Resources
+
+* Traffic routing is controlled by rules defined on the Ingress resource. These are created with k8 YAML object files.
+
+## 5.3) Network Policy
+
