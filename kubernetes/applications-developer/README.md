@@ -92,6 +92,7 @@
       - [Replacing With Ingress](#replacing-with-ingress)
     - [How Does Ingress Work](#how-does-ingress-work)
     - [Ingress Controller](#ingress-controller)
+      - [Creating An Ingress Controller](#creating-an-ingress-controller)
     - [Ingress Resources](#ingress-resources)
   - [5.3) Network Policy](#53-network-policy)
 
@@ -2142,6 +2143,8 @@ becomes
 
 ![with-ingress.png](with-ingress.png)
 
+Notice that the ingress is exposed as well.
+
 ### How Does Ingress Work
 
 A k8s Ingress needs 2 things to work:
@@ -2153,20 +2156,36 @@ A k8s Ingress needs 2 things to work:
 * https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/
 * https://kubernetes.github.io/ingress-nginx/deploy/
 * In order for the Ingress resource to work, the cluster must have an ingress controller running.
-* This is not installed by default with k8s, you need to install it manually. To create one, you must
-  * Create a blank ConfigMap that can be confingured later for log location, SSL, etc.
-  * Use a Deployment YAML file using the image `ngnix-ingress-controller`. The Deployment must have:
-    * An argument `nginx-ingress-controller` to start the special version of k8s Nginx.
-    * The ConfigMap
-    * 2 environment variables that cover the Pod's name and namespace to be deployed.
-    * The ports used by the Ingress Controller.
-
+* This is not installed by default with k8s, you need to install it manually.
 * It is either and Nginx proxy that is specially configured for k8s, or it is a GCP LoadBalancer.
 * These special proxys monintor the cluster for new Ingress Resources and automatically configure themselves for them.
 
+#### Creating An Ingress Controller
+
+* You need multiple components to create an Ingress Controller.
+1. A blank ConfigMap that can be confingured later for log location, SSL, etc. This will be added into the Deployment so the nginx configruation details are decoupled from the Deployment file.
+1. A Deployment ising the image `ngnix-ingress-controller`. The Deployment must have:
+  * 2 arguments:
+    1. An argument `nginx-ingress-controller` to start the special version of k8s Nginx.
+    1. The ConfigMap object contains all the nginx configuration data. A blank ConfigMap can be used but it must exist for the Ingress Controller to work.
+ * 2 environment variables
+    1. The Pod's name
+    1. The namespace to be deployed into.
+  * The ports used by the Ingress Controller, which are standard http port 80 and https 443.
+1. A Service of type NodePort is needed to expose the Ingress Controller to the world.
+2. A Service Account with the correct roles and bindings is needed. The Ingress Controller uses this when it detects Ingress Resources changes and updates the nginx configuration.
+
+![ingress-controller-components.png](ingress-controller-components.png)
+
 ### Ingress Resources
 
-* Traffic routing is controlled by rules defined on the Ingress resource. These are created with k8 YAML object files.
+* Traffic routing is controlled by rules defined on the Ingress resource. These are created with k8 YAML object files and are applied to the Ingress Controller.
+* Traffic routing can be done a number of different ways:
+  1. Forward all traffic to a single application.
+  2. Route traffic to different applications based on URL.
+  3. Route traffic to different applications based on the domain name.
+
+![ingress-resource-routing.png](ingress-resource-routing.png)
 
 ## 5.3) Network Policy
 
