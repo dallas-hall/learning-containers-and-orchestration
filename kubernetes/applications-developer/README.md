@@ -94,7 +94,15 @@
     - [Ingress Controller](#ingress-controller)
       - [Creating An Ingress Controller](#creating-an-ingress-controller)
     - [Ingress Resources](#ingress-resources)
+    - [Forward All Traffic To Single Application](#forward-all-traffic-to-single-application)
+    - [Route Traffic Based On URL](#route-traffic-based-on-url)
+    - [Route Traffic Based On Domain](#route-traffic-based-on-domain)
+    - [Useful Commands](#useful-commands)
   - [5.3) Network Policy](#53-network-policy)
+    - [Network Traffic Example](#network-traffic-example)
+    - [Ingress vs Egress Network Traffic](#ingress-vs-egress-network-traffic)
+    - [k8s Network Security](#k8s-network-security)
+- [6) State Persistence](#6-state-persistence)
 
 # 1) Core Concepts
 
@@ -284,6 +292,9 @@ kubectl edit pod $POD_NAME
 # Extract Pod Definition From Running Pod
 kubectl get pod $POD_NAME -o yaml > pod-definition.yaml
 kubectl run $POD_NAME--image $IMAGE_NAME --generator=run-pod/v1 --dry-run -o yaml
+
+# Run a pod, expose a port and create a service for it.
+kubectl run httpd --image=httpd:alpine --port=80 --expose
 ```
 
 ## 1.5) k8s Controller Recap
@@ -2172,14 +2183,15 @@ A k8s Ingress needs 2 things to work:
     1. The Pod's name
     1. The namespace to be deployed into.
   * The ports used by the Ingress Controller, which are standard http port 80 and https 443.
-1. A Service of type NodePort is needed to expose the Ingress Controller to the world.
-2. A Service Account with the correct roles and bindings is needed. The Ingress Controller uses this when it detects Ingress Resources changes and updates the nginx configuration.
+3. A Service of type NodePort is needed to expose the Ingress Controller to the world.
+4. A Service Account with the correct roles and bindings is needed. The Ingress Controller uses this when it detects Ingress Resources changes and updates the nginx configuration.
 
 ![ingress-controller-components.png](ingress-controller-components.png)
 
 ### Ingress Resources
 
 * Traffic routing is controlled by rules defined on the Ingress resource. These are created with k8 YAML object files and are applied to the Ingress Controller.
+* The traffic is routed to Services which then handles traffic routing to Pods.
 * Traffic routing can be done a number of different ways:
   1. Forward all traffic to a single application.
   2. Route traffic to different applications based on URL.
@@ -2187,5 +2199,178 @@ A k8s Ingress needs 2 things to work:
 
 ![ingress-resource-routing.png](ingress-resource-routing.png)
 
+* There are rules at the top for each domain and then rules for paths within the domain.
+
+![ingress-resource-rules.png](ingress-resource-rules.png)
+
+### Forward All Traffic To Single Application
+
+![ingress-service-routing-rule.png](ingress-service-routing-rule.png)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: service-routing-ingress
+spec:
+  backend:
+    serviceName: service-to-route-to
+    servicePort: 80
+```
+
+### Route Traffic Based On URL
+
+![ingress-path-routing-rule.png](ingress-path-routing-rule.png)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: url-routing-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /path-1
+          backend:
+            serviceName: path-1- service-to-route-to
+            servicePort: 80
+      - path: /path-2
+          backend:
+            serviceName: path-2- service-to-route-to
+            servicePort: 80
+```
+
+**Note:** We didn't specifiy `host:` here so it is defaulted to a *, i.e. all traffic is routed here.
+
+### Route Traffic Based On Domain
+
+![ingress-domain-routing-rule.png](ingress-domain-routing-rule.png)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: domain-routing-ingress
+spec:
+  rules:
+  - host: sub-domain-1.my-domain.com
+    http:
+      paths:
+        backend:
+          serviceName: sub-domain-1- service-to-route-to
+          servicePort: 80
+  - host: sub-domain-2.my-domain.com
+    http:
+      paths:
+        backend:
+          serviceName: sub-domain-2- service-to-route-to
+          servicePort: 80
+```
+
+**Note:** We didn't specifiy `path:` here so all traffic is routed to the service. We could use additional path routing rules here if we wanted to.
+
+### Useful Commands
+
+```bash
+# View all ingress objects
+kubectl get ingress --all-namespaces
+
+# Get specific ingress object
+kubectl -n $NAMESPACE get ingress $INGRESS_NAME
+
+# Get ingress controller pod
+kubectl -n $NAMESPACE get pods
+kubectl -n $NAMESPACE describe deployments.apps nginx-ingress-controller
+
+# View ingress resource yaml
+kubectl -n $NAMESPACEget ingress $INGRESS_NAME -o yaml
+```
+
 ## 5.3) Network Policy
+
+### Network Traffic Example
+
+This simple application accepts user data via a web server on port 80. An API request is sent on port 5000. The API server sends a request to the database on port 3306. The data is sent back to the user.
+
+![network-traffic-example-1.png](network-traffic-example-1.png)
+
+In k8s this would be implemented with pods and services possibly spanning across multiple nodes.
+
+![network-traffic-example-2.png](network-traffic-example-2.png)
+
+### Ingress vs Egress Network Traffic
+
+**Ingress network traffic** is external traffic coming into the destination pod.
+
+**Egress network traffic** is internal traffic going out of the source pod.
+
+![network-traffic-example-3.png](network-traffic-example-3.png)
+
+The above diagram shows ingress and egress traffic from the perspective of different services. This would require multiple k8s ingress and egress network policies on multiple pods.
+
+![network-traffic-example-4.png](network-traffic-example-4.png)
+
+### k8s Network Security
+
+https://kubernetes.io/docs/concepts/services-networking/network-policies/
+
+By default, if no policies exist in a namespace then all traffic is allowed between all pods in that namespace. They are implemented by the networking solution on the cluster and not all networking solutions support them.
+
+https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-policies
+
+![all-allow.png](all-allow.png)
+
+**Network policies** are k8s objects are used to allow or deny traffic to the pod they are applied to. Labels and selectors are used to link a network policy to a pod.
+
+![network-policy-1.png](network-policy-1.png)
+
+![network-policy-2.png](network-policy-2.png)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16 # Cluster external IP
+        except:
+        - 172.17.1.0/24
+    - namespaceSelector:
+        matchLabels:
+          project: myproject
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+```
+
+```bash
+kubectl create -f $MY_NETWORK_POLICY
+
+kubectl get networkpolicies.networking.k8s.io --all-namespaces
+
+kubectl -n default describe networkpolicies.networking.k8s.io payroll-policy
+```
+
+# 6) State Persistence
 
