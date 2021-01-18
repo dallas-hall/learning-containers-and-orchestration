@@ -103,6 +103,14 @@
     - [Ingress vs Egress Network Traffic](#ingress-vs-egress-network-traffic)
     - [k8s Network Security](#k8s-network-security)
 - [6) State Persistence](#6-state-persistence)
+  - [6.1) Volumes](#61-volumes)
+    - [Docker](#docker-3)
+    - [k8s](#k8s-3)
+  - [6.2) Persistent Volumes](#62-persistent-volumes)
+    - [Persistent Volume Claims](#persistent-volume-claims)
+  - [6.3) Storage Classes](#63-storage-classes)
+  - [6.4) Stateful Sets](#64-stateful-sets)
+  - [6.5)](#65)
 
 # 1) Core Concepts
 
@@ -2373,4 +2381,75 @@ kubectl -n default describe networkpolicies.networking.k8s.io payroll-policy
 ```
 
 # 6) State Persistence
+
+## 6.1) Volumes
+
+### Docker
+
+https://docs.docker.com/storage/volumes/
+
+Containers are transient in nature, i.e. they only last for a short period of time during execution before the container and everything within it is destroyed. How can you store data from a container permanently?
+
+One way is to use external storage Volumes. These are attached to the containers when they are created and allow data to be stored permanently. These can be accessed by any container they are mounted to.
+
+![docker-volume.png](docker-volume.png)
+
+### k8s
+
+https://kubernetes.io/docs/concepts/storage/volumes/
+
+Pods are transient in nature, i.e. they only last fort a short period of time during executio before the Pod and everything within it is destroyed. How can you store data for a Pod permanently?
+
+One way is to use external storage Volumes. These are attached to the Pods when they are created and allow data to be stored permanently. These can be accessed by any container they are mounted to. A k8s Volume requries Storage and a variety of Storage options are available.
+
+![k8s-volume.png](k8s-volume.png)
+
+![k8s-volume-2.png](k8s-volume-2.png)
+
+**Note:** In the above example a host path is used, this is only recommended to be used in a single Node cluster. Because the host path resides on the Node. You can get around this by using some kind of networked storage solution. k8s supports many different types.
+
+![k8s-volume-3.png](k8s-volume-3.png)
+
+```bash
+kubectl get volume
+```
+
+## 6.2) Persistent Volumes
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+
+One problem with the Volume approach is that the entire configuration options are within the Pod definition file. This means the users who are deploying Pods have to configure storage options on each individual Pod. This approach does not scale.
+
+![persistent-volume.png](persistent-volume.png)
+
+A **Persistent Volume** is a Cluster wide pool of storage Volumes configured by an administrator. Users can now select storage from this pool using **Persistent Volume Claims**.
+
+![persistent-volume-2.png](persistent-volume-2.png)
+
+Persistent Volumes have a variety of access modes. Access modes determine how the Volume should be mounted on the host. There is
+* **ReadOnlyMany (ROX)** means the Volume can be mounted as read only and accessed by many Nodes.
+* **ReadWriteOnce (RWO)** means the Volume can be mounted as read or write and accessed by one Node.
+* **ReadWriteMany (RWX)** means the Volume can be mounted as read or write and accessed by many Nodes.
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+
+The capacity and storage class for the Persistent Volume needs to be specified when creating it.
+
+https://kubernetes.io/docs/concepts/storage/storage-classes/
+
+![persistent-volume-3.png](persistent-volume-3.png)
+
+```bash
+kubectl get persistentvolume
+kubectl get pv
+```
+
+### Persistent Volume Claims
+
+
+## 6.3) Storage Classes
+
+## 6.4) Stateful Sets
+
+## 6.5)
 
