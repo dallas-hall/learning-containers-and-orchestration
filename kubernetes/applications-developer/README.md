@@ -102,6 +102,7 @@
     - [Network Traffic Example](#network-traffic-example)
     - [Ingress vs Egress Network Traffic](#ingress-vs-egress-network-traffic)
     - [k8s Network Security](#k8s-network-security)
+  - [Developing Network Policies](#developing-network-policies)
 - [6) State Persistence](#6-state-persistence)
   - [6.1) Volumes](#61-volumes)
     - [Docker](#docker-3)
@@ -2323,7 +2324,7 @@ The above diagram shows ingress and egress traffic from the perspective of diffe
 
 https://kubernetes.io/docs/concepts/services-networking/network-policies/
 
-By default, if no policies exist in a namespace then all traffic is allowed between all pods in that namespace. They are implemented by the networking solution on the cluster and not all networking solutions support them.
+By default, if no policies exist in a namespace then k8s allows traffic from all Pods to all destinations in the cluster. They are implemented by the networking solution on the cluster and not all networking solutions support them.
 
 https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-policies
 
@@ -2380,6 +2381,59 @@ kubectl get networkpolicies.networking.k8s.io --all-namespaces
 kubectl -n default describe networkpolicies.networking.k8s.io payroll-policy
 ```
 
+## Developing Network Policies
+
+From the perspective of the database Pod, this example's use case requirements are:
+
+* The database Pod to allow incoming traffic on TCP via port 3306 from the API pod.
+* The database Pod to allow incoming traffic from the backup server outside the cluster.
+* All other incoming and outgoing traffic to and from the database Pod is blocked.
+
+![netpol-scope.png](netpol-scope.png)
+
+When designing Network Policies, the key things to remember are:
+
+* The traffic flow is from the perspective of the object that is having the Network Policy applied to.
+  * Ingress means incoming traffic into the Pod with the Network Policy.
+  * Egress means outgoing traffic out of the Pod with the Network Policy.
+* When creating Network Policies, all response traffic is automatically allowed. So you don't need an extra rule for that.
+
+![return-traffic-allowed-by-default.png](return-traffic-allowed-by-default.png)
+
+* By default, k8s allows traffic from all Pods to all destinations in the cluster.
+* A Network Policy that doesn't have an ingress or egress `policyTypes` will block all traffic to the applied Pods.
+
+![netpol-block-all-traffic.png](netpol-block-all-traffic.png)
+
+* Using the `podSelector` property by itself will allow traffic to/from all Pods with the matching label. It doesn't matter what namespace they are in. The label must be set on the Pod for this to work.
+
+![pod-selector-many-namespaces.png](pod-selector-many-namespaces.png)
+
+* Using the `namespaceSelector` property by itself will allow traffic to/from all Pods within the namespaces with the matching label. The label must be set on the namespace for this to work.
+
+![namespace-selector.png](namespace-selector.png)
+
+* Using the `podSelector` and `namespaceSelector` properties together will allow traffic to/from all Pods with the matching label that are in namespaces with the matching label. The labels must be set on the Pods and namespaces for this to work.
+
+![pod-and-namespace-selector.png](pod-and-namespace-selector.png)
+
+* Using the `ipBlock` specifies which IP addresses outside of the k8s cluster are allowed to access the Pod. This is via CIDR addresses.
+
+![cidr-netpol.png](cidr-netpol.png)
+
+* All `[podSelector, namespaceSelector, ipBlock]` properties underneath the `ingress.from` and `egress.to` sections will either have AND or OR logic.
+  * Any rules underneath another rule with a `-` infront of it will apply AND logic with the original rule with the `-` above it. This means these rules are combined.
+
+  ![netpol-AND.png](netpol-AND.png)
+
+  * Any rules with a `-` infront of them will apply OR logic to other rules with `-` infront of them. This means these rules are separate.
+
+  ![netpol-OR-1.png](netpol-OR-1.png)
+
+* All of the above applies to egress traffic as well. In this example the database Pod is expecting external pull traffic from the backup server.
+
+![egress-example.png](egress-example.png)
+
 # 6) State Persistence
 
 ## 6.1) Volumes
@@ -2411,7 +2465,12 @@ One way is to use external storage Volumes. These are attached to the Pods when 
 ![k8s-volume-3.png](k8s-volume-3.png)
 
 ```bash
+# Get volume information
 kubectl get volume
+
+# Create and delete Volumes
+kubectl create -f my-volume.yaml
+kubectl delete volume $VOLUME_NAME
 ```
 
 ## 6.2) Persistent Volumes
@@ -2422,7 +2481,24 @@ One problem with the Volume approach is that the entire configuration options ar
 
 ![persistent-volume.png](persistent-volume.png)
 
-A **Persistent Volume** is a Cluster wide pool of storage Volumes configured by an administrator. Users can now select storage from this pool using **Persistent Volume Claims**.
+A **Persistent Volume** is a Cluster wide pool of storage Volumes that is created and configured by an administrator.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+```
 
 ![persistent-volume-2.png](persistent-volume-2.png)
 
@@ -2437,15 +2513,95 @@ The capacity and storage class for the Persistent Volume needs to be specified w
 
 https://kubernetes.io/docs/concepts/storage/storage-classes/
 
-![persistent-volume-3.png](persistent-volume-3.png)
 
 ```bash
+# Get PV information
 kubectl get persistentvolume
 kubectl get pv
+
+# Create and delete PVs
+kubectl create -f my-pvc.yaml
+kubectl delete pv $PV_NAME
 ```
 
 ### Persistent Volume Claims
 
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/#create-a-persistentvolumeclaim
+
+Users create **Persistent Volume Claims** so they can claim some storage from Persistent Volume. This is done in  2 steps:
+1. The user creating a PVC.
+
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+```
+
+2. The user using the PVC in a Deployment or other k8s object.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task-pv-pod
+spec:
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: task-pv-claim
+  containers:
+    - name: task-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: task-pv-storage
+```
+
+The Persistaent Volumes and Persistent Volume Claims are 2 seperate objects. The k8s cluster will bind PV's to PVC's based on the properties of both. Such as:
+* Size
+* Access modes
+* Volume Modes
+* Storage Class
+* Selector - You can use labels and selectors to force bindings.
+
+![pv-and-pvc-binding-1.png](pv-and-pvc-binding-1.png)
+
+Every PVC is bound to a single PV. There is a 1 to 1 mapping between the PV and PVC, so if a PVC doesn't use all the storage from a PV the rest of the PV will go unallocated.
+
+![pv-and-pvc-binding-2.png](pv-and-pvc-binding-2.png)
+
+PVC's are in a Pending state when there aren't any PVs available for binding.
+
+![pvc.png](pvc.png)
+
+```bash
+# Get PVC information
+kubectl get persistentvolumeclaim
+kubectl get pvc
+
+# Create and delete PVC
+kubectl create -f my-pvc.yaml
+kubectl delete pvc $PVC_NAME
+```
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
+
+There are 2 reclaim policies when a PVC is deleted.
+1. **Retain** - The default `persistentVolumeReclaimPolicy` policy. This allows for manual reclaiming of the resource when a PVC is deleted. This means the PV and the data on it still exists and an admin can manually claim this.
+2. **Delete** - This is the default for dynamic Storage Classes. This means that the PVC, the PV, and the data is deleted.
+3. **Recycle** - This is now deprecated. This would just do a `rm -rf` on the PV before releasing it.
 
 ## 6.3) Storage Classes
 
