@@ -109,9 +109,10 @@
     - [k8s](#k8s-3)
   - [6.2) Persistent Volumes](#62-persistent-volumes)
     - [Persistent Volume Claims](#persistent-volume-claims)
-  - [6.3) Storage Classes](#63-storage-classes)
-  - [6.4) Stateful Sets](#64-stateful-sets)
-  - [6.5)](#65)
+- [7) OPTIONAL CKAD TOPICS - NOT IN EXAM](#7-optional-ckad-topics---not-in-exam)
+  - [7.1) Storage Classes](#71-storage-classes)
+  - [7.2) Stateful Sets](#72-stateful-sets)
+  - [7.3) Headless Services](#73-headless-services)
 
 # 1) Core Concepts
 
@@ -2584,8 +2585,6 @@ Every PVC is bound to a single PV. There is a 1 to 1 mapping between the PV and 
 
 PVC's are in a Pending state when there aren't any PVs available for binding.
 
-![pvc.png](pvc.png)
-
 ```bash
 # Get PVC information
 kubectl get persistentvolumeclaim
@@ -2603,9 +2602,10 @@ There are 2 reclaim policies when a PVC is deleted.
 2. **Delete** - This is the default for dynamic Storage Classes. This means that the PVC, the PV, and the data is deleted.
 3. **Recycle** - This is now deprecated. This would just do a `rm -rf` on the PV before releasing it.
 
-## 6.3) Storage Classes
+# 7) OPTIONAL CKAD TOPICS - NOT IN EXAM
 
-## 6.4) Stateful Sets
+## 7.1) Storage Classes
 
-## 6.5)
+## 7.2) Stateful Sets
 
+## 7.3) Headless Services
