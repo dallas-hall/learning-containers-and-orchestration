@@ -185,7 +185,7 @@
   * **api server** - allows interaction with the k8s cluster. kube-apiserver
   * **etcd** - a distributed key value store which has data to manage the cluster
   * **container runtime** - the software (e.g docker) used to run containers
-  * **controller** - make the decisions whether to bring up new containers
+  * **controller** - a monitoring loop inside the cluster that makes the decisions whether to bring up new containers or make other changes.
   * **scheduler** - distributes work or containers across the nodes
   * **kubelet** - an agent that runs on each Node in the cluster. The worker Nodes commmunication to the Master's kube-apiserver through the kubelet agent.
   * **kubectl** - the command line tool used to deploy and manage clusters
@@ -683,7 +683,9 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
   1. the port running on the Node, called the NodePort, 30000-32767 default range
 
 ![NodePort](nodeport-1.png)
+
 ![NodePort](nodeport-2.png)
+
 ![NodePort](nodeport-3.png)
 
 * The Pod label is used by Service Selector to find all Pods to apply the NodePort to. The Service uses a a random algorithm to select which Pod to send traffic to from all the Pods matched by the label.
@@ -985,7 +987,7 @@ kind: ConfigMap
 metadata:
   # Give a meaningful name so its easier to undertand and use them later
   name: webapp-color-configmap
-# Key: value paits of the ConfigMap
+# Key: value pairs of the ConfigMap
 data:
   APP_COLOR: blue
   APP_ENV: prod
@@ -1074,7 +1076,7 @@ spec:
 
 * Secrets are used to help manage lots of environment variables that need obfuscating. Instead of storing them in plain text in lots of Pod definition files, you can store them centrally in base64 into a Secret object. You then inject the values from the Secret into the Pod definition files.
 * There are 2 steps when working with Secret.
-  1. Create the ConfigMap
+  1. Create the Secret
   1. Inject it into a Pod
 * **Secrets are NOT encrypted. They are encoded as base64 only. For better security you need to use something else.**
 
@@ -1089,7 +1091,7 @@ APP_COLOR: blue
 APP_MODE: prod
 ```
 
-* The declarative way: `kubectl create configmap --from-file=$PATH_TO_FILE`
+* The declarative way: `kubectl create secret generic --from-file=$PATH_TO_FILE`
 
 ```yaml
 apiVersion: v1
@@ -1293,12 +1295,11 @@ command terminated with exit code 1
 
 ```yaml
 spec:
-  securityContext:
-    runAsUser: 0 # Needed to change this to be root, uid 0 is root.
-  ...
   containers:
   ...
+    # Container level, overrides the Pod level.
     securityContext:
+      runAsUser: 0
       capabilities: # Can only be set at the container level, must be run as root user
         add: ["SYS_TIME"]
 ```
@@ -2488,11 +2489,11 @@ A **Persistent Volume** is a Cluster wide pool of storage Volumes that is create
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: task-pv-volume
+  name: my-hostpath-pv
   labels:
     type: local
 spec:
-  storageClassName: manual
+  storageClassName: manual # PVC must match this to they can bind
   capacity:
     storage: 10Gi
   accessModes:
@@ -2537,9 +2538,9 @@ Users create **Persistent Volume Claims** so they can claim some storage from Pe
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: task-pv-claim
+  name: my-pvc
 spec:
-  storageClassName: manual
+  storageClassName: manual # Must match PV so they can bind
   accessModes:
     - ReadWriteOnce
   resources:
@@ -2553,21 +2554,21 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: task-pv-pod
+  name: my-pv-pod
 spec:
   volumes:
-    - name: task-pv-storage
+    - name:  mv-pv-storage
       persistentVolumeClaim:
-        claimName: task-pv-claim
+        claimName: my-pvc
   containers:
-    - name: task-pv-container
+    - name: my-pv-container
       image: nginx
       ports:
         - containerPort: 80
           name: "http-server"
       volumeMounts:
         - mountPath: "/usr/share/nginx/html"
-          name: task-pv-storage
+          name: mv-pv-storage
 ```
 
 The Persistaent Volumes and Persistent Volume Claims are 2 seperate objects. The k8s cluster will bind PV's to PVC's based on the properties of both. Such as:
