@@ -112,6 +112,7 @@
 - [7) OPTIONAL CKAD TOPICS - NOT IN EXAM](#7-optional-ckad-topics---not-in-exam)
   - [7.1) Storage Classes](#71-storage-classes)
   - [7.2) Stateful Sets](#72-stateful-sets)
+    - [7.2.1) Storage within Stateful Sets](#721-storage-within-stateful-sets)
   - [7.3) Headless Services](#73-headless-services)
 
 # 1) Core Concepts
@@ -1429,6 +1430,9 @@ spec:
         requests:
           cpu: 1 # 1 hyperthread
           memory: 512Mi # binary, base 1024
+        limits:
+          memory: 1Gi # binary, base 1024
+          cpu: 2 # 2 hyperthreads
 ```
 
 #### CPU
@@ -2244,11 +2248,11 @@ spec:
       paths:
       - path: /path-1
           backend:
-            serviceName: path-1- service-to-route-to
+            serviceName: path-1-service-to-route-to
             servicePort: 80
       - path: /path-2
           backend:
-            serviceName: path-2- service-to-route-to
+            serviceName: path-2-service-to-route-to
             servicePort: 80
 ```
 
@@ -2269,13 +2273,13 @@ spec:
     http:
       paths:
         backend:
-          serviceName: sub-domain-1- service-to-route-to
+          serviceName: sub-domain-1-service-to-route-to
           servicePort: 80
   - host: sub-domain-2.my-domain.com
     http:
       paths:
         backend:
-          serviceName: sub-domain-2- service-to-route-to
+          serviceName: sub-domain-2-service-to-route-to
           servicePort: 80
 ```
 
@@ -2607,6 +2611,65 @@ There are 2 reclaim policies when a PVC is deleted.
 
 ## 7.1) Storage Classes
 
+https://kubernetes.io/docs/concepts/storage/storage-classes/
+
+* **Storage classes** provide dynamic storage provisioning. Instead of manually creating a Persistent Volume, you just use the Storage Class object instead. When a user submits a PVC against a Storage Class, the Storage Class handles the creation of a PV for you.
+* There are many types of storage provisioners that can be used as Storage Classes. They can be on-premesis or in the cloud.
+  * Each provisioner has specific configuration parameters that are required when creating the Storage Class.
+
+![static-provisioning.png](static-provisioning.png)
+
+![dynamic-provisioning.png](dynamic-provisioning.png)
+
+```bash
+kubectl get storageclass -A
+kubectl get sc -A
+```
+
 ## 7.2) Stateful Sets
 
+https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+
+* **Stateful sets** are very similar to Deployments, but Pods are created in a sequential order and can have a stable network identity. They are useful for stateful applications and distributed systems.
+  * They are assign a unique ordinal index to each Pod, which increments by 1.
+  * The Pod names are always based off of the name of the Stateful Set and the unique ordinal index number. The first Pod is always named `"$STATEFUL_SET_NAME"-0`
+* A good example of this is a database in a master and slave configuration, that has continuous data replication from the master to the slave.
+
+![stateful-set-1.png](stateful-set-1.png)
+
+![stateful-set-2.png](stateful-set-2.png)
+
+* A Stateful Set is created just like a Deployment. The YAML file is almost identical, but the `kind:` is StatefulSet and it also requires a `serviceName:` field which requires a headless service.
+* Scaling up a Stateful set will increment the ordinal index by one.
+* Scaling down a Stateful set will decrement the ordinal index by one.
+* You can stop the ordered Pod deployment by using `/spec/podManagementPolicy` as Parallel.
+
+```bash
+kubectl get statefulset -A
+```
+
+### 7.2.1) Storage within Stateful Sets
+
+* A **Volume Claim Template** allows you to have a separate Volume per Pod that is easy to configure. It is the entire Persistent Storage Claim `/metadata` and `/spec` section moved into the Stateful Set's `/spec/volumeClaimTemplate/[i]`. This stops the need of having to manually create a PVC and adding it into the Stateful Set.
+* Stateful Sets don't automatically delete the PVC or the associated Volume. So if a Pod crashes and is recreated the existing PVC and Volume with the data still intact can be used again.
+
+![volume-claim-template.png](volume-claim-template.png)
+
 ## 7.3) Headless Services
+
+https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+
+* A **Headless Service** doesn't provide load balancing like other Services, but still provides a DNS entry to each Pod via the Pod name and a sub-domain.
+  * The sub-domain is `$POD_NAME.$HEADLESS_SERVICE_NAME.$NAMESPACE.svc.cluster.local`
+ 
+![headless-service.png](headless-service.png)
+
+* It does not have an IP address of its own. Use `/spec/clusterIP` as None to create a Headless Service.
+* The Pod definition must have `/spec/subdomain` with `$HEADLESS_SERVICE_NAME` and `/spec/hostname` with a name.
+
+![headless-service-2.png](headless-service-2.png)
+
+* If you use `/spec/template/subdomain` or `/spec/template/spec/hostname` with a Deployment then all of your Pods will get the same DNS name. This isn't useful.
+* You do not need to use `/spec/template/subdomain` or `/spec/template/spec/hostname` with a Stateful Set as it will automatically do this for you. You muse use `/spec/serviceName` with the Headless Service here and all Pods within the Stateful Set will get a unique DNS record recreated.
+
+![headless-service-3.png](headless-service-3.png)
