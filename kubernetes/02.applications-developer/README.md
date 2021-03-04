@@ -849,6 +849,8 @@ kubectl expose pod nginx --port=80 --name nginx-service --type=NodePort --dry-ru
 ```
 # 2) Configuration
 
+**Note:** This is the start of the developer course.
+
 ## 2.1) Commands & Arguments
 
 ### Docker
