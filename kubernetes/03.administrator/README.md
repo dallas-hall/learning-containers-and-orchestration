@@ -1,6 +1,6 @@
-# k8s Administrator (CKAD) Notes <!-- omit in toc -->
+# k8s Administrator (CKA) Notes <!-- omit in toc -->
 
-* Third course in a series [[beginner](../02.applications-developer/README.md#1-core-concepts), [developer](../02.applications-developer/README.md#2-configuration), administrator]
+* Third course in a series [[beginner](../02.applications-developer/README.md#1-core-concepts), [developer](../02.applications-developer/README.md#2-configuration), administrator, security]
 * Can do the exam if you want.
 
 ## Tables Of Contents <!-- omit in toc -->
