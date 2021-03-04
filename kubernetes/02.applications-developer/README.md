@@ -1,6 +1,6 @@
 # k8s Application Developer Notes <!-- omit in toc -->
 
-* Second course in a series [beginner, developer, administrator]
+* Second course in a series [[beginner](#1-core-concepts), [beginner](#2-configuration), [administrator](../03.administrator/README.md)]
 * Can do the exam if you want
 
 ## Tables Of Contents <!-- omit in toc -->
