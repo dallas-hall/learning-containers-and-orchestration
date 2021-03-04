@@ -1,4 +1,4 @@
-# k8s Application Developer Notes <!-- omit in toc -->
+# k8s Application Developer (CKAD) Notes <!-- omit in toc -->
 
 * Second course in a series [[beginner](#1-core-concepts), [developer](#2-configuration), [administrator](../03.administrator/README.md)]
 * Can do the exam if you want
