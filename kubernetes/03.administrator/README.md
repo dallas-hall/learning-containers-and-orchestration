@@ -19,12 +19,16 @@
 
 * This is the entire [beginners course](../02.applications-developer/README.md#1-core-concepts) recapped, with some of the [developers course](../02.applications-developer/README.md#2-configuration) recapped, and a couple of new sections of new topics or additional details of existing topics.
 
+**Note:** For simplicity I have merged everything from the beginners course into [developers course](..02.applications-developer/README.md#1-core-concepts)
+
 * Master - manage, plan, schedule, and monitor nodes
   * Every component together is called the control plane.
 * Workers - host applications as containers
 
 * Container runtime engine (CRE) must be installed on all Nodes in the Cluster. By default this is Docker, it can be others though like containerd or rkt.
   * Some control plane components can be run as containers instead of system binaries. For example DNS and networking solutions. This is why the CRE must be installed onto the master nodes.
+
+![cluster-architecture.png](cluster-architecture.png)
 
 ## 1.1) ETCD
 
