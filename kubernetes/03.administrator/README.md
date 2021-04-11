@@ -18,6 +18,9 @@
   - [2.2) Automatic Scheduling](#22-automatic-scheduling)
   - [2.3) Resource Requests & Limits](#23-resource-requests--limits)
   - [2.4) Daemon Sets](#24-daemon-sets)
+  - [2.5) Static Pods](#25-static-pods)
+  - [2.6) Multiple Schedulers](#26-multiple-schedulers)
+  - [2.7) Configuring The Scheduler](#27-configuring-the-scheduler)
 
 # 1) Core Concepts
 
@@ -170,8 +173,82 @@ The topics Labels & Selectors, Taints & Tolerants, and Node Selector and Node Af
 
 ## 2.3) Resource Requests & Limits
 
-The default resource request is .5 CPU and 256 MiB of RAM.
-Extra details for this can be found in in the developer's course under the section [Resources](../02.applications-developer/README.md##25-resources)
+The details for this can be found in in the developer's course under the section [Resources](../02.applications-developer/README.md##25-resources)
 
 ## 2.4) Daemon Sets
 
+https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
+
+* A **Daemon Set** ensure that all Nodes in the cluster run a copy of a Pod. As new Nodes are added to the cluster, the Daemon Set runs the desired Pod on the new Node. It does using the default scheduler and node affinity rules. Obviously when Nodes are removed from the cluster the Daemon Set Pod will be removed too. Daemon sets are ignored by the Kube Scheduler.
+
+![daemon-set-v1.png](daemon-set-v1.png)
+
+* Some typical use cases are:
+  * Running a cluster management Pods (e.g. kube-proxy Pod in the kube-system namespace) on every node.
+  * Running log collection daemon on every node.
+  * Running node monitoring daemon on every node.
+
+![daemon-set-v2.png](daemon-set-v2.png)
+![daemon-set-v3.png](daemon-set-v3.png)
+
+* The DaemonSet YAML definition file is almost identical to a Deployment YAML definition file.
+
+![daemon-set-v4.png](daemon-set-v4.png)
+
+```bash
+kubectl get daemonsets
+kubectl get ds
+kubectl describe ds $NAME
+# Create a deployment and then edit the YAML and change it to a DaemonSet
+# Need to remove replicas, strategy, and any extra fields.
+kubectl create deployment $NAME --image=$NAME --dry-run -o yaml > $YAML_FILE
+```
+
+## 2.5) Static Pods
+
+https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/
+
+* **Static Pods** are automatically created by the kubelet daemon using a filesystem based or web hosted based YAML definition file, rather than one supplied via the kube-apiserver. The Static Pod is only created for the Node that the YAML defintion file is associated with. The Statics Pods are created outside of control plane management tools, and are available as read only objects within the cluster. To delete the Static Pod, just delete the YAML defintion file. Static Pods are completely ignored by the Kube Scheduler.
+
+![static-pods-v1.png](static-pods-v1.png)
+
+* The location of the filesystem or web hosted based YAML defintion file is passed in to the kubelet daemon through its O/S service file. The `--pod-manifest-path=$PATH` or `--pod-manifest-path=$CONFIG_FILE` option is used for filesystem YAML defintion files and `--manifest-url=$URL` is used for web hosted YAML definition files.
+  * In older versions it can be found at `--config=$PATH` or `--config=$CONFIG_FILE`
+
+
+![static-pods-v4.png](static-pods-v2.png)
+![static-pods-v2.png](static-pods-v3.png)
+
+* Static Pods will typically have a Node name in their name as a suffix, something like `$POD_NAME-$NODE_NAME`. So you can use the `kubectl get po -A | grep '$NODE_NAME'` to look for Static Pods.
+* A typical use case for using Static Pods is to deploy the control plane componenets on each Node. This is how kubeadm sets up control plane components in the cluster.
+
+![static-pods-v3.png](static-pods-v4.png)
+
+* If you want to view the running containers of a Static Pod before the other cluster components are avaiable, you need to use `docker ps` to see them.
+
+```bash
+# Find the path or config file that has the path to where static pod YAML definition files are stored
+ps aux | grep kubelet | grep config
+```
+
+```
+# Output
+root      4871  0.0  0.1 4151324 107740 ?      Ssl  07:56   1:07 /usr/bin/kubelet --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --config=/var/lib/kubelet/config.yaml --network-plugin=cni --pod-infra-container-image=k8s.gcr.io/pause:3.2
+```
+
+```bash
+# --config=/var/lib/kubelet/config.yaml
+grep static /var/lib/kubelet/config.yaml
+```
+
+```
+# Output
+staticPodPath: /etc/kubernetes/manifests
+```
+## 2.6) Multiple Schedulers
+
+## 2.7) Configuring The Scheduler
+
+
+
+Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment. 
