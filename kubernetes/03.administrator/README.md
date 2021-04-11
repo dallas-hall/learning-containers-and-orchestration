@@ -245,7 +245,36 @@ grep static /var/lib/kubelet/config.yaml
 # Output
 staticPodPath: /etc/kubernetes/manifests
 ```
+
 ## 2.6) Multiple Schedulers
+
+* You can create your custom scheduling algorithm and deploy it into the cluster. k8s allows for multiple schedulers running at the same time.
+* When installing the `kube-scheduler` for the first time, if you don't give it a name it will automatically be called `default-scheduler`. You can supply whatever name you like.
+
+![custom-scheduler-v1.png](custom-scheduler-v1.png)
+
+Note: This example is using the same scheduler in the example.
+
+* kubeadm deploys the scheduler as a Pod. You can find its Static Pod defintion at `/etc/kubernetes/manifests/` or the path you configured yourself.
+  * The `/spec/containers/[i]/command` array has all the command options. The `--leader-elect=true` option is used when there are multiple copies of the scheduler running on multiple Master Nodes in a HA setup. Only one scheduler can be active at a time, this option chooses the active scheduler.
+
+![custom-scheduler-v2.png](custom-scheduler-v2.png)
+
+* A Pod can manually choose its scheduler by using the `/spec/schedulerName/` option. If the custom scheduler isn't working properly, the Pod will be in a PENDING state.
+
+![custom-scheduler-v3.png](custom-scheduler-v3.png)
+
+* Use `kubectl get events` to find scheduler events which will tell you which scheduler was used for a Pod.
+
+![custom-scheduler-v4.png](custom-scheduler-v4.png)
+
+```bash
+# View k8s related events, useful for troubleshooting
+kubectl get events
+
+# View the scheduler logs
+kubectl -n kube-system logs $SCHEDULER_POD_NAME
+```
 
 ## 2.7) Configuring The Scheduler
 
