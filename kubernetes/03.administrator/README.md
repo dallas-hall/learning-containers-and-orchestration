@@ -14,12 +14,16 @@
   - [1.6) Imperative vs Declarative](#16-imperative-vs-declarative)
   - [1.7) Kubectl Apply Command](#17-kubectl-apply-command)
 - [2) Scheduling](#2-scheduling)
+  - [2.1) Manual Scheduling](#21-manual-scheduling)
+  - [2.2) Automatic Scheduling](#22-automatic-scheduling)
+  - [2.3) Resource Requests & Limits](#23-resource-requests--limits)
+  - [2.4) Daemon Sets](#24-daemon-sets)
 
 # 1) Core Concepts
 
 * This is the entire [beginners course](../02.applications-developer/README.md#1-core-concepts) recapped, with some of the [developers course](../02.applications-developer/README.md#2-configuration) recapped, and a couple of new sections of new topics or additional details of existing topics.
 
-**Note:** For simplicity I have merged everything from the beginners course into [developers course](..02.applications-developer/README.md#1-core-concepts)
+**Note:** For simplicity I have merged everything from the beginners course into [developers course](../02.applications-developer/README.md#1-core-concepts)
 
 * Master - manage, plan, schedule, and monitor nodes
   * Every component together is called the control plane.
@@ -138,4 +142,36 @@ https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/
 ![kubectl-apply-v2.png](kubectl-apply-v2.png)
 
 # 2) Scheduling
+
+
+```bash
+# check for a scheduler running as a pod
+kubectl get pods --namespace kube-system | fgrep scheduler
+# check for a scheduler running as a service
+ps aux | fgrep 'scheduler'
+
+# Using multiple labels
+kubectl get $K8s_OBJECT --selector='key1=value1,key2=value2,key3=value3'
+```
+
+## 2.1) Manual Scheduling
+
+`/spec/nodeName/$NODE_NAME` can be used to manually schedule a Pod to a Node. This is the simplest form of Pod assignment is rarely used. If this field isn't empty, the scheduler will try to place the Pod onto the specified Node only. This has 3 limitations:
+
+1. If the `nodeName` used doesn't exist then the Pod will never run.
+2. If the `nodeName` used doesn't have the required resources that the Pod needs then the Pod will never run.
+3. The `nodeName` in a cloud environment isn't stable and will change at some point in time.
+
+## 2.2) Automatic Scheduling
+
+The topics Labels & Selectors, Taints & Tolerants, and Node Selector and Node Affinity are covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#26-assigning-pods-to-nodes)
+
+![nodename-v1.png](nodename-v1.png)
+
+## 2.3) Resource Requests & Limits
+
+The default resource request is .5 CPU and 256 MiB of RAM.
+Extra details for this can be found in in the developer's course under the section [Resources](../02.applications-developer/README.md##25-resources)
+
+## 2.4) Daemon Sets
 
