@@ -20,7 +20,9 @@
   - [2.4) Daemon Sets](#24-daemon-sets)
   - [2.5) Static Pods](#25-static-pods)
   - [2.6) Multiple Schedulers](#26-multiple-schedulers)
-  - [2.7) Configuring The Scheduler](#27-configuring-the-scheduler)
+- [3) Monitoring & Logging](#3-monitoring--logging)
+  - [3.1) Monitoring](#31-monitoring)
+  - [3.2) Logging](#32-logging)
 
 # 1) Core Concepts
 
@@ -277,8 +279,16 @@ kubectl get events
 kubectl -n kube-system logs $SCHEDULER_POD_NAME
 ```
 
-## 2.7) Configuring The Scheduler
+# 3) Monitoring & Logging
 
+## 3.1) Monitoring
+
+
+Details previously covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#35-monitoring)
+
+## 3.2) Logging
+
+Details previously covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#34-logging)
 
 
 Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment. 
