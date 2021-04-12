@@ -257,6 +257,7 @@ Note: This example is using the same scheduler in the example.
 
 * kubeadm deploys the scheduler as a Pod. You can find its Static Pod defintion at `/etc/kubernetes/manifests/` or the path you configured yourself.
   * The `/spec/containers/[i]/command` array has all the command options. The `--leader-elect=true` option is used when there are multiple copies of the scheduler running on multiple Master Nodes in a HA setup. Only one scheduler can be active at a time, this option chooses the active scheduler.
+  * The `/spec/containers/[i]/command` array has all the command options. The `--leader-elect=false` option is used when there are multiple copies of the scheduler running on one Master Node. Only one scheduler can be active at a time, this option chooses the active scheduler.
 
 ![custom-scheduler-v2.png](custom-scheduler-v2.png)
 
