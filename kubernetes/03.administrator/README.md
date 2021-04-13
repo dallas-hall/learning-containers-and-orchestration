@@ -23,6 +23,16 @@
 - [3) Monitoring & Logging](#3-monitoring--logging)
   - [3.1) Monitoring](#31-monitoring)
   - [3.2) Logging](#32-logging)
+- [4) Application Lifecycle Management](#4-application-lifecycle-management)
+  - [4.1) Rolling Updates & Rollbacks](#41-rolling-updates--rollbacks)
+  - [4.2) Commands & Arguments](#42-commands--arguments)
+  - [4.3) Environment Variables](#43-environment-variables)
+  - [4.4) Secrets](#44-secrets)
+  - [4.5) Scaling Applications](#45-scaling-applications)
+  - [4.6) Multi-container Pods](#46-multi-container-pods)
+    - [4.6.2) Monolithic vs Microservices](#462-monolithic-vs-microservices)
+    - [4.6.1) Design Patterns](#461-design-patterns)
+  - [4.7) initContainers](#47-initcontainers)
 
 # 1) Core Concepts
 
@@ -284,11 +294,51 @@ kubectl -n kube-system logs $SCHEDULER_POD_NAME
 ## 3.1) Monitoring
 
 
-Details previously covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#35-monitoring)
+Details previously covered in the developer's course under the section [Monitoring](../02.applications-developer/README.md#35-monitoring)
 
 ## 3.2) Logging
 
-Details previously covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#34-logging)
+Details previously covered in the developer's course under the section [Logging](../02.applications-developer/README.md#34-logging)
+
+# 4) Application Lifecycle Management
+
+## 4.1) Rolling Updates & Rollbacks
+
+Details previously covered in the developer's course under the section [Deployment Updates and Rollbacks](../02.applications-developer/README.md#161-deployment-updates-and-rollbackss) and [Deployment Updates & Rollbacks](../02.applications-developer/README.md#42-deployment-updates--rollbacks)
+
+## 4.2) Commands & Arguments
+
+**Note:** This is not on CKA exam but good to understand.
+
+Details previously covered in the developer's course under the section [Commands & Arguments](../02.applications-developer/README.md#21-commands--arguments)
+
+## 4.3) Environment Variables
+
+Details previously covered in the developer's course under the section [Enviroinment Variables](../02.applications-developer/README.md#22-enviroinment-variables)
+
+**Note:** These should match POSIX environment variable naming conventions so they are created properly within the container and are viewable with `printenv`.
+
+## 4.4) Secrets
+
+Details previously covered in the developer's course under the section [Secrets](../02.applications-developer/README.md#secrets)
+
+## 4.5) Scaling Applications
+
+Details previously covered in the developer's course under the section [k8s Deployments Recap](../02.applications-developer/README.md#16-k8s-deployments-recap)
+
+## 4.6) Multi-container Pods
+
+### 4.6.2) Monolithic vs Microservices
+
+Details previously covered in the developer's course under the section [Multi-Container Pods](../02.applications-developer/README.md#3-multi-container-pods)
+
+### 4.6.1) Design Patterns
+
+Details previously covered in the developer's course under the section [k8s Implementation](../02.applications-developer/README.md#32-k8s-implementation)
 
 
-Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment. 
+## 4.7) initContainers
+
+Note: Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
+
+Note: In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
