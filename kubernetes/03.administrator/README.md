@@ -33,6 +33,7 @@
     - [4.6.2) Monolithic vs Microservices](#462-monolithic-vs-microservices)
     - [4.6.1) Design Patterns](#461-design-patterns)
   - [4.7) initContainers](#47-initcontainers)
+  - [4.8) Self Healing Applications](#48-self-healing-applications)
 
 # 1) Core Concepts
 
@@ -338,6 +339,54 @@ Details previously covered in the developer's course under the section [k8s Impl
 **Note:** CKA only uses sidecar containers. The other 2 patterns are for CKAD.
 
 ## 4.7) initContainers
+
+https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+
+**initContainer**s are containers that are run before the app containers are started. They always run to completion, if they dont complete successfully the Pod will be restarted. The restart policy of never can change this. Also, you can have multiple initContainers too, each initContainer is run one at a time in sequential order. Each initContainer must complete successfully before the next one starts. When all initContainers have completed successfully, the main application container will start. They are typically used for set up tasks.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: myapp-initcontainer
+    image: busybox
+    command: ['sh']
+    args: ['-c', 'git clone $REPO; done']
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
+  - name: init-mydb
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done"]
+```
+
+## 4.8) Self Healing Applications
+
+Note: Not covered in CKA, covered in CKAD. This using ReplicaSets and Liveness, Readiness, and Startup probes.
 
 
 
