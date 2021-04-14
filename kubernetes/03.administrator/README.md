@@ -293,7 +293,6 @@ kubectl -n kube-system logs $SCHEDULER_POD_NAME
 
 ## 3.1) Monitoring
 
-
 Details previously covered in the developer's course under the section [Monitoring](../02.applications-developer/README.md#35-monitoring)
 
 ## 3.2) Logging
@@ -336,9 +335,12 @@ Details previously covered in the developer's course under the section [Multi-Co
 
 Details previously covered in the developer's course under the section [k8s Implementation](../02.applications-developer/README.md#32-k8s-implementation)
 
+**Note:** CKA only uses sidecar containers. The other 2 patterns are for CKAD.
 
 ## 4.7) initContainers
 
-Note: Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
 
-Note: In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
+
+**Note: **Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
+
+**Note:** In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
