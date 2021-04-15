@@ -34,6 +34,13 @@
     - [4.6.1) Design Patterns](#461-design-patterns)
   - [4.7) initContainers](#47-initcontainers)
   - [4.8) Self Healing Applications](#48-self-healing-applications)
+- [5) Cluster Maintenance](#5-cluster-maintenance)
+  - [5.1) O/S Upgrades](#51-os-upgrades)
+  - [5.2) Software Versions](#52-software-versions)
+  - [5.2) Cluster Upgrades](#52-cluster-upgrades)
+    - [5.2.1) Master Upgrade](#521-master-upgrade)
+    - [5.2.1) Worker Upgrade](#521-worker-upgrade)
+  - [5.2) Backup & Restore Methods](#52-backup--restore-methods)
 
 # 1) Core Concepts
 
@@ -388,7 +395,177 @@ spec:
 
 Note: Not covered in CKA, covered in CKAD. This using ReplicaSets and Liveness, Readiness, and Startup probes.
 
+# 5) Cluster Maintenance
 
+## 5.1) O/S Upgrades
+
+* When a Node goes offline, by default the Master Node waits 5 minutes for an offline Worker Node to come back online before pronouncing it dead. This time limit is known as the pod evicition timeout and it set on the `kube-controller-manager` process when its starting.
+  * If it is pronounced dead after the pod eviction timelimt, eligible Pods (i.e. inside of a Deployment) will be placed onto other Worker Nodes. Ineligible Pods won't be recreated anywhere.
+  * If it comes back online before the pod eviction timelimit, the Pods will be recreated on that Node.
+* When you manually bring down a Worker Node, you can force the Pods on that Node to be recreated on other Nodes by using `kubectl drain $NODE`. A drained Node cannot be used by the Scheduler as it is cordoned off from other Nodes. When you bring the Node back online, you will need to manually uncordon it with `kubectl uncordon $NODE`. This doesn't mean Pods will be recreated back there, it just means the Node is available for scheduling again.
+* You can manually cordon off a node with `kubectl cordon $NODE` which will make the Node unavailable to the Scheduler but it doesn't evict all Pods from the Node.
+
+```bash
+# ignore daemonset pods when draining
+kubectl drain $NODE --ignore-daemonsets 
+
+# remove pods that won't automatically be rescheduled
+kubectl drain $NODE --force
+
+# stop pods being scheduled onto a node but don't evict any pods
+kubectl cordon $NODE
+
+# allow pods to be scheduled onto the node again, needed after a drain or cordon
+kubectl uncordon $NODE
+```
+
+## 5.2) Software Versions
+
+* Kubernetes follows [Semantic Versioning](https://semver.org/) which has `MAJOR.MINOR.PATCH` version numbers.
+  1. MAJOR version when you make incompatible API changes,
+  2. MINOR version when you add functionality in a backwards compatible manner, and
+  3. PATCH version when you make backwards compatible bug fixes.
+
+**Note:** Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format.
+
+![semantic-versioning-v1.png](semantic-versioning-v1.png)
+![semantic-versioning-v2.png](semantic-versioning-v2.png)
+
+* `kubectl get nodes -o wide` or `kubectl version --short` shows the k8s semantic version of `kubelet`.
+* The [k8s github repo release page](https://github.com/kubernetes/kubernetes/releases) has all the released versions of k8s. You can download the file which contains all the control plane components within it. All of the k8s supplied control plane components will have the same semantic version, but the third party supplied control plane components will have different semantic version numbers.
+
+![semantic-versioning-v3.png](semantic-versioning-v3.png)
+
+## 5.2) Cluster Upgrades
+
+* Searching for 'upgrading kubeadm' in the k8s documentation page brings up [upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) which has all the steps you need to upgrade via kubeadm.
+* The Kube API Server is the primary component in the control plane, no other core k8s control plane components can have a higher version than it. But they can be at lower versions, the rules are:
+  * The Controllers and Scheduler can be the same version or 1 behind.
+  * Kubelet and Kube Proxy can be the same version or up to 2 versions behind.
+  * `kubectl` can be the same version, 1 version behind, or 1 version ahead.
+
+![upgrading-cluster-v1.png](upgrading-cluster-v1.png)
+
+* This version differencing allows upgrading, component by component if desired. k8s only supports the 3 latest minor versions. You must upgrade 1 minor release version at a time, you cannot jump minor versions unless you completely reinstall.
+
+![upgrading-cluster-v2.png](upgrading-cluster-v2.png)
+
+* There are 3 high level steps to the `kubeadm` cluster upgrade process:
+  1. Upgrade a primary control plane node.
+  2. Upgrade additional control plane nodes.
+  3. Upgrade worker nodes.
+* The Master Node must be taken offline when upgrading it. This means the cluster has no management features avaiable, but Worker Node Pods will continue to run. But if one does there is no ReplicationController to bring the Pod back up.
+
+![upgrading-cluster-v3.png](upgrading-cluster-v3.png)
+
+* There are 3 strategies to use when upgrading Worker Nodes.
+  1. You can upgrade all Worker Nodes at once. But that has an outage for users.
+  2. You can upgrade the Worker Nodes one at a time. This has no outage for users.
+  3. You can add new Worker Nodes to the cluster that already have the desired k8s version and then remove old Worker Nodes from the cluster. This has no outage for users and is easily done in cloud environments.
+
+### 5.2.1) Master Upgrade
+
+https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrading-control-plane-nodes
+
+```bash
+# Plan the upgrade
+kubeadm upgrade plan
+
+# Upgrade kubeadm - https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#determine-which-version-to-upgrade-to
+# Find the version
+yum list --showduplicates kubeadm --disableexcludes=kubernetes
+
+# Upgrade, replace n with the version from above
+yum install -y kubeadm-1.21.n --disableexcludes=kubernetes
+
+# Verify the upgrade
+kubeadm version
+
+# Upgrade the rest of the control plane
+sudo kubeadm upgrade apply v1.21.n
+
+# Drain before upgrading kubelet & kubectl
+kubectl drain $MASTER_NODE --ignore-daemonsets
+
+# Upgrade kubelet & kubectl as kubeadm doesn't upgrade this
+yum install -y kubelet-1.21.n kubectl-1.21.n--disableexcludes=kubernetes
+
+# Restart kubelet service
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+# Allow scheduling again
+kubectl uncordon $MASTER_NODE
+```
+
+### 5.2.1) Worker Upgrade
+
+**Note:** When upgrading the cluster, all `kubectl` commands must be run on the Master Node. e.g. `kubectl drain $WORKER_NODE` must be run on the Master Node.
+
+https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrade-worker-nodes
+
+```bash
+# Upgrade, replace n with the version from above
+yum install -y kubeadm-1.21.n --disableexcludes=kubernetes
+
+# Upgrade worker node
+sudo kubeadm upgrade node
+
+# Drain before upgrading kubelet & kubectl - RUN THIS FROM THE MASTER
+kubectl drain $WORKER_NODE
+
+# Upgrade kubelet & kubectl as kubeadm doesn't upgrade this
+yum install -y kubelet-1.21.n kubectl-1.21.n--disableexcludes=kubernetes
+
+# Restart kubelet service
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+# Allow scheduling again - RUN THIS FROM THE MASTER
+kubectl uncordon $WORKER_NODE
+```
+
+## 5.2) Backup & Restore Methods
+
+```bash
+# k8s ETCD shiz
+# Only one API version can be used at a time, and some commands only exist in 1 API version
+export ETCDCTL_API=2
+export ETCDCTL_API=3
+
+# If ETCD database is TLS-Enabled, the following options are mandatory
+# --cacert # vertify TLS certificates using CA bundle
+# --cert # identify secure client using TLS cert
+# --endpoints=[127.0.0.1:2379] # default ETCD bind address and port
+# --key # the TLS key
+
+# Save a backup (only works with API 3): etcdctl snapshot save -h
+etcdctl snapshot save /opt/snapshot-pre-boot.db \
+--cert=/etc/kubernetes/pki/etcd/server.crt \
+--cacert=/etc/kubernetes/pki/etcd/ca.crt \
+--key=/etc/kubernetes/pki/etcd/server.key
+
+# Check the backup
+etcdctl snapshot status /opt/snapshot-pre-boot.db
+
+# # Restore from backup (only works with API 3), don't need keys as it is on the local filesystem: etcdctl snapshot restore -h
+etcdctl snapshot restore /opt/snapshot-pre-boot.db \
+--data-dir /var/lib/etcd-from-backup 
+
+# Update the ETCD static Pod data path
+cp /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml.old
+
+# Update the /volume/[i]/hostPath/ for ETCD so the new host path containing the backup is used inside the container
+sed -i -r 's|path: /var/lib/etcd|path: /var/lib/etcd-from-backup|g' /etc/kubernetes/manifests/etcd.yaml
+
+# Check ETCD is back up
+docker ps -a | grep etcd
+kubectl -n kube-system get pods
+```
+
+`--listen-client-urls` connect from current node (port 2379)
+`--listen-peer-urls` connect from other nodes (port 2380)
+`/etc/kubernetes/pki/etcd/` contains TLS files.
 
 **Note: **Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
 
