@@ -41,6 +41,12 @@
     - [5.2.1) Master Upgrade](#521-master-upgrade)
     - [5.2.1) Worker Upgrade](#521-worker-upgrade)
   - [5.2) Backup & Restore Methods](#52-backup--restore-methods)
+- [6) Security](#6-security)
+  - [6.1) Primitives](#61-primitives)
+  - [6.1) Authentication](#61-authentication)
+  - [6.1) Authorisation](#61-authorisation)
+  - [6.1) TLS Encryption](#61-tls-encryption)
+  - [6.1) Network Policies](#61-network-policies)
 
 # 1) Core Concepts
 
@@ -527,6 +533,13 @@ kubectl uncordon $WORKER_NODE
 
 ## 5.2) Backup & Restore Methods
 
+* There are 2 things to consider when backing up:
+  1. k8s objects
+     * These can be backed up via their YAML defintion files. The YAML defintion files should be stored in a code repo. They can be recreated at any time.
+     * You can also back up all of the resource manually by dumping their YAML defintions file. Tools like Velero can do this.
+     * You can also back up this via backing up ETCD.  The `--data-dir` is what you need to back up, or just use the inbuilt ETCD back up tools.
+  1. Persistent storage, the Pods` data needs to be backed up. There are third party tools for this, like Velero.
+
 ```bash
 # k8s ETCD shiz
 # Only one API version can be used at a time, and some commands only exist in 1 API version
@@ -548,7 +561,10 @@ etcdctl snapshot save /opt/snapshot-pre-boot.db \
 # Check the backup
 etcdctl snapshot status /opt/snapshot-pre-boot.db
 
-# # Restore from backup (only works with API 3), don't need keys as it is on the local filesystem: etcdctl snapshot restore -h
+# If running as a service, stop the kube-apiserver service as you need to restart the ETCD service
+systemctl stop kube-apiserver
+
+# Restore from backup (only works with API 3), don't need keys as it is on the local filesystem: etcdctl snapshot restore -h
 etcdctl snapshot restore /opt/snapshot-pre-boot.db \
 --data-dir /var/lib/etcd-from-backup 
 
@@ -558,14 +574,48 @@ cp /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml.old
 # Update the /volume/[i]/hostPath/ for ETCD so the new host path containing the backup is used inside the container
 sed -i -r 's|path: /var/lib/etcd|path: /var/lib/etcd-from-backup|g' /etc/kubernetes/manifests/etcd.yaml
 
+# If running as a service, restart the service daemon, ETCD service, and kube-apiserver service.
+systemctl daemon-reload
+systemctl restart etcd
+systemctl restart kube-apiserver
+
 # Check ETCD is back up
 docker ps -a | grep etcd
+docker logs $CONTAINER_ID -f
+
 kubectl -n kube-system get pods
+kubectl -n kube-system logs $ETCD_POD -f
 ```
 
 `--listen-client-urls` connect from current node (port 2379)
 `--listen-peer-urls` connect from other nodes (port 2380)
 `/etc/kubernetes/pki/etcd/` contains TLS files.
+
+# 6) Security
+
+## 6.1) Primitives
+
+* The hosts running k8s must be hardened. Things like:
+  * `ssh` hardening such as disabling root access, disabling passwords, using keys for authentication, etc.
+* From a k8s perspective, the `kube-apiserver` is the most important thing to defind. This is because all interactions within the cluster go through it.
+
+## 6.1) Authentication
+
+* Who can access the cluster?
+
+## 6.1) Authorisation
+
+* What can users who access the cluster do?
+
+## 6.1) TLS Encryption
+
+* All communication between the components in the cluster is secured using TLS encryption.
+
+## 6.1) Network Policies
+
+* Communication between applications in the cluster can be restricted with network policies.
+
+
 
 **Note: **Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
 
