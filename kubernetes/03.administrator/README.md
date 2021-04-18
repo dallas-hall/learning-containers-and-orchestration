@@ -44,9 +44,11 @@
 - [6) Security](#6-security)
   - [6.1) Primitives](#61-primitives)
   - [6.1) Authentication](#61-authentication)
-  - [6.1) Authorisation](#61-authorisation)
-  - [6.1) TLS Encryption](#61-tls-encryption)
-  - [6.1) Network Policies](#61-network-policies)
+  - [6.2) TLS Encryption](#62-tls-encryption)
+    - [6.2.1 ) TLS Baics](#621--tls-baics)
+    - [6.2.1 ) TLS In k8s](#621--tls-in-k8s)
+  - [6.3) Authorisation](#63-authorisation)
+  - [6.4) Network Policies](#64-network-policies)
 
 # 1) Core Concepts
 
@@ -601,17 +603,92 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ## 6.1) Authentication
 
-* Who can access the cluster?
+* Who can access the cluster? There are 2 types of users, humans and computers. Details previously covered in the developer's course under the section [Service Accounts](../02.applications-developer/README.md#service-accounts)
+* All requests to the cluster go through the `kube-apiserver` and the user making the request is authenicated before the request is fulfilled.
+* There are 4 authentication mechanisms to access the cluster via the `kube-apiserver`:
+  1. Basic authentication with passwords which are stored in a text file with 4 columns. Password,username,user id, and group. The username and password would be supplied with `curl -u $USER:$PASSWORD`
+     * **Note:** deprecated in v1.19
+  2. Basic authenticaiton with tokens which are stored in a text file with 4 columns. Token,username,user id, and group. The token would be supplied with `curl --header Authorization: Bearer $TOKEN`
+     * **Note:** deprecated in v1.19
+  3. Certificates.
+  4. Third party identity services, e.g. LDAP or Kerberos.
 
-## 6.1) Authorisation
+**Note:** Service Accounts are not in the CKA exam, they are in CKAD. They are mentioned here for information only.
+
+## 6.2) TLS Encryption
+
+* All communication between the components in the cluster is secured using TLS encryption. TLS certificates can also be used for user authentication.
+
+### 6.2.1 ) TLS Baics
+
+* A **certificate** is used to gaurentee trust between 2 parties in a transaction, e.g. between a client and web server, an SSL/TLS server certificate is used to ensure the communication is encrypted and the server is who it says it is. This provides HTTPS traffic.
+
+![certificates-v1.png](certificates-v1.png)
+
+* A certificate needs to be signed by a Certificate Authority for it to be considered trusted and valid. Self signed certificates cannot be trusted as anyone can create them. This signing and validation request is known as a **Certificate Signing Request (CSR).**
+* A **Certificate Authority (CA)** is a public, well known, and trusted organisation that will validate and sign certificates. They do this with their private key. Their public key is built into the browser and O/S and is used to validate a CA signed certificate.
+  * You can host your own private CA so you can validate internal websites. You must bundle your private CA's public key into the browser and O/S so your private CA signed certificates can be validated.
+
+![certificates-v2.png](certificates-v2.png)
+
+* There are 4 steps to an CSR:
+  1. The server generates an OpenSSL public/private key pair.
+  2. The server creates a Certificate Signing Request (CSR) based on its public key.
+  3. The Certificate Authority (CA) validates the information within the CSR and signs the certificate with its private key. The signed certificate is sent back to the server.
+  4. The server uses the signed certificate to establish HTTPS connections with others. It does this by sending sending the signed certificate to others for use in symetric key exchange.
+* A certificate contains important information about who owns the domain and the server's public key. Both are used to verify the server's identity. A CA will verify this information before signing it.
+  * e.g. the certificate's Subject and Subject Alternative Name defines what domains and IP addresses that the certificate is valid for.
+* SSL/TLS uses assyemtric encryption for secure symetric encryption key exchange. Symeteric encryption and the exchange key is used to create sessioned based encryption. There are 5 steps to establishing HTTPS:
+  1. **Client Hello** - The client sends a list of supported cipher suites.
+  2. **Server Hello** - The server chooses the best cipher it can support from the client's cipher suites. It replies with the cipher choice and its signed certificate.
+  3. **Client Key Exchange** - The client validates the server's certificate with a CA certificate bundled in its O/S or browser, and extracts the server's public key from the certificate. The client generates a pre-master key, encrypts that with the server's public key, and sends it back to the server.
+  4. **Change Cipher Suite** - The server decrypts the pre-master key with its private key, and uses the pre-master key to create a symmetric key. The symmetric key is used to encrypt a message sent back to the client.
+  5. **Establish Secure Connection** - The client uses the pre-master key to create the same symmetric key as the server did. It decrypts the message from the server and an encrypted session has been established between the client and server with the same symmetric key that both the client and server created from the pre-master key.
+
+![certificates-v3.png](certificates-v3.png)
+
+* Certificate naming conventions are typically:
+  * A public key file has is named `*.crt` or `*.pem`, i.e. the public key doesn't have the word key in its name or extension.
+  * A private key file has is named `*.key` or `*-key.pem`, i.e. the private key has the word key in its name or extension.
+
+![certificates-v4.png](certificates-v4.png)
+
+
+```bash
+# Create an RSA public and private key pair for ssh
+ssh-keygen
+id_rsa
+id_rsa.pub
+
+# Create an RSA public and private key pair for SSL/TLS
+openssl genrsa -out my-private.key 2048
+openssl rsa -in my-private.key -pubout > my-public-key.pem
+
+# Create a certificate signing request
+openssl req -new -key my-private.key -out my-certificate-signing-request.csr -subj "/C=$COUNTRY_CODE/ST=$STATE_CODE/O=$ORGANISATION_NAME/CN=$DOMAIN_NAME"
+my-certificate-signing-request.csr
+
+# Display the contents of a certificate
+openssl x509 -in file-path.crt -text -noout
+```
+
+### 6.2.1 ) TLS In k8s
+
+
+```
+https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
+
+
+kubectl get csr
+kubectl certificate deny $USER
+kubectl certificate approve $USER
+```
+
+## 6.3) Authorisation
 
 * What can users who access the cluster do?
 
-## 6.1) TLS Encryption
-
-* All communication between the components in the cluster is secured using TLS encryption.
-
-## 6.1) Network Policies
+## 6.4) Network Policies
 
 * Communication between applications in the cluster can be restricted with network policies.
 
