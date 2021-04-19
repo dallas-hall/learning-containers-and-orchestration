@@ -46,8 +46,9 @@
   - [6.1) Authentication](#61-authentication)
   - [6.2) TLS Encryption](#62-tls-encryption)
     - [6.2.1 ) TLS Basics](#621--tls-basics)
-    - [6.2.2 ) TLS In k8s](#622--tls-in-k8s)
-    - [6.2.3 ) Creating Digital Certificates For k8s](#623--creating-digital-certificates-for-k8s)
+    - [6.2.2) TLS In k8s](#622-tls-in-k8s)
+    - [6.2.2.1) Creating Digital Certificates For k8s](#6221-creating-digital-certificates-for-k8s)
+    - [6.2.2.2) Certificates API](#6222-certificates-api)
   - [6.3) Authorisation](#63-authorisation)
   - [6.4) Network Policies](#64-network-policies)
 
@@ -656,10 +657,10 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ![certificates-v4.png](certificates-v4.png)
 
-### 6.2.2 ) TLS In k8s
+### 6.2.2) TLS In k8s
 
 * From a k8s perspective, there are 3 types of certificates:
-  1. **Root certificates** which are installed on the CA server and also on the server and client. k8s supports mulitiple CAs, so you can have one CA for client certificates and one CA for server certificates.
+  1. **Root certificates** which are installed on the CA server and also on the server and client. k8s supports mulitiple CAs, so you can have one CA for client certificates and one CA for server certificates. 
   2. **Server certificates** which are installed on the k8s cluster and used by cluster components. These are verified by the cluster.
   3. **Client certificates** which are installed onto the clients and use when connecting to the cluster. These are verified by the cluster.
 * The following control plane components require their own server certificates:
@@ -680,7 +681,7 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 **Note:** In the diagrams above there have been new public/private key pairs created (e.g. Kube API server talking to ETCD server), but you can share the same one as well.
 
-### 6.2.3 ) Creating Digital Certificates For k8s
+### 6.2.2.1) Creating Digital Certificates For k8s
 
 **Note:** Using `kubeadm` will configure all the certificates for you. The certificates will be deployed inside of Static Pods, so you can view the YAML definition files in `/etc/manifests/kubernetes`. If the control plane components are configured as services, you can view the SystemD service files in `/etc/systemd/system`. You can also log into each Node and look in `/etc/kubernetes/pki`.
 
@@ -750,22 +751,46 @@ openssl x509 -in $ADMIN_CERTIFICATE -text -noout
 
 **Note:** Each Node also needs to have client certificates for Kubelet so they can talk to the Kube API Server. Since they are system components they need to have the name `system:node:$NODE_NAME`. These certificates go into the KUBECONFIG file and allow Kubectl to work.
 
-https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
-
-```bash
-# View certificate signing requests
-kubectl get csr
-
-# Allow or deny CSR requests
-kubectl certificate deny $USER
-kubectl certificate approve $USER
-```
-
 ![certificates-v13.png](certificates-v13.png)
 
 **Note:** When viewing the certificate's contents with `openssl x509 -in $CA_CERTIFICATE -text -noout` you need to pay attention to `Issuer`, `Validity`, `Subject`, and the `Subject Alternative Names`.
 
 **Note:** When troubleshooting certificates, you need to look at the logs. This will either be `journalctl -u $CONTROL_PLANE_SERVICE -l` or `kubectl -n kube-system logs $CONTROL_PLANE_POD`. If that isn't work, trying Docker with `docker logs $CONTAINER_ID -f`.
+
+### 6.2.2.2) Certificates API
+
+* The CA server can be any server, since it is just hosting the public/private key pair. `kubeadm` makes the Master Nodes the CA servers.
+* Instead of manually signing certificates through the command line, you can use the Certificates API and the CSR object.
+
+https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
+
+```bash
+# Generate OpenSSL private key
+openssl genrsa -out $PRIVATE_KEY 2048
+
+# Create CSR for new Admin, or use a CSR object
+openssl req -new -key $PRIVATE_KEY -subj "/CN=$USER/O=system:masters" -out $CSR
+```
+
+![csr-v1.png](csr-v1.png)
+
+```bash
+# View certificate signing requests
+kubectl get csr
+
+# Deny CSR requests
+kubectl certificate deny $USER
+
+# Approve the CSR and k8s will create new certificate for the user using the CA certificate.
+kubectl certificate approve $USER
+
+# Get the certificate to share to the user
+kubectl get csr $USER -o yaml
+```
+
+![csr-v2.png](csr-v2.png)
+
+**Note:** The Controller Manager is responsible for all certificate related operations.
 
 ## 6.3) Authorisation
 
