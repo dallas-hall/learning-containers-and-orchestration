@@ -45,8 +45,9 @@
   - [6.1) Primitives](#61-primitives)
   - [6.1) Authentication](#61-authentication)
   - [6.2) TLS Encryption](#62-tls-encryption)
-    - [6.2.1 ) TLS Baics](#621--tls-baics)
-    - [6.2.1 ) TLS In k8s](#621--tls-in-k8s)
+    - [6.2.1 ) TLS Basics](#621--tls-basics)
+    - [6.2.2 ) TLS In k8s](#622--tls-in-k8s)
+    - [6.2.3 ) Creating Digital Certificates For k8s](#623--creating-digital-certificates-for-k8s)
   - [6.3) Authorisation](#63-authorisation)
   - [6.4) Network Policies](#64-network-policies)
 
@@ -619,15 +620,17 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 * All communication between the components in the cluster is secured using TLS encryption. TLS certificates can also be used for user authentication.
 
-### 6.2.1 ) TLS Baics
+### 6.2.1 ) TLS Basics
 
-* A **certificate** is used to gaurentee trust between 2 parties in a transaction, e.g. between a client and web server, an SSL/TLS server certificate is used to ensure the communication is encrypted and the server is who it says it is. This provides HTTPS traffic.
+* A **digital certificate (X.509)** provides a trusted link between a public key and an entity (e.g. a business, domain name, etc). This is a trusted link because it has been verified (i.e. signed) by a trusted third party (i.e. a Certificate Authority).
 
 ![certificates-v1.png](certificates-v1.png)
 
-* A certificate needs to be signed by a Certificate Authority for it to be considered trusted and valid. Self signed certificates cannot be trusted as anyone can create them. This signing and validation request is known as a **Certificate Signing Request (CSR).**
-* A **Certificate Authority (CA)** is a public, well known, and trusted organisation that will validate and sign certificates. They do this with their private key. Their public key is built into the browser and O/S and is used to validate a CA signed certificate.
-  * You can host your own private CA so you can validate internal websites. You must bundle your private CA's public key into the browser and O/S so your private CA signed certificates can be validated.
+* A digital certificate needs to be signed by a Certificate Authority for it to be considered trusted and valid. Self signed certificates cannot be trusted as anyone can create them. This signing and validation request is known as a **Certificate Signing Request (CSR).**
+* A **Certificate Authority (CA)** is a public, well known, and trusted organisation that will validate the information within CSR's and sign certificates. They sign certificates with their private key. Their public key is built into the browser and O/S and is used to validate a CA signed certificate. There are 2 types of CA certificates:
+  1. A **root certificate** is used by CAs to issue other certificates called intermediates.
+  2. An **intermediate certificate** is by CAs to issue end user certificates for servers and clients.
+* You can host your own private CA so you can validate internal websites. You must bundle your private CA's public key into the browser and O/S so your private CA signed certificates can be validated.
 
 ![certificates-v2.png](certificates-v2.png)
 
@@ -653,6 +656,33 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ![certificates-v4.png](certificates-v4.png)
 
+### 6.2.2 ) TLS In k8s
+
+* From a k8s perspective, there are 3 types of certificates:
+  1. **Root certificates** which are installed on the CA server and also on the server and client. k8s supports mulitiple CAs, so you can have one CA for client certificates and one CA for server certificates.
+  2. **Server certificates** which are installed on the k8s cluster and used by cluster components. These are verified by the cluster.
+  3. **Client certificates** which are installed onto the clients and use when connecting to the cluster. These are verified by the cluster.
+* The following control plane components require their own server certificates:
+  * The Kube API Server
+  * The ETCD Server
+  * The Kubelet agents
+* The following clients require their own client certificates:
+  * Human Administrators
+  * The Kube Scheduler
+  * The Kube Controller Manager
+  * The Kube Proxy
+  * Kube API Server to Kubelet agent (optional, can reuse server certificate)
+  * Kube API Server to ETCD Server (optional, can reuse server certificate)
+
+![certificates-v5.png](certificates-v5.png)
+
+![certificates-v6.png](certificates-v6.png)
+
+**Note:** In the diagrams above there have been new public/private key pairs created (e.g. Kube API server talking to ETCD server), but you can share the same one as well.
+
+### 6.2.3 ) Creating Digital Certificates For k8s
+
+**Note:** Using `kubeadm` will configure all the certificates for you. The certificates will be deployed inside of Static Pods, so you can view the YAML definition files in `/etc/manifests/kubernetes`. If the control plane components are configured as services, you can view the SystemD service files in `/etc/systemd/system`. You can also log into each Node and look in `/etc/kubernetes/pki`.
 
 ```bash
 # Create an RSA public and private key pair for ssh
@@ -663,26 +693,79 @@ id_rsa.pub
 # Create an RSA public and private key pair for SSL/TLS
 openssl genrsa -out my-private.key 2048
 openssl rsa -in my-private.key -pubout > my-public-key.pem
+```
+
+```bash
+# Create a CA private key
+openssl genrsa -out $CA_PRIVATE_KEY 2048
+
+# Create a CA public key, optional as we can extract this from the certificate later
+openssl rsa -in $CA_PRIVATE_KEY -pubout > $CA_PUBLIC_KEY
 
 # Create a certificate signing request
-openssl req -new -key my-private.key -out my-certificate-signing-request.csr -subj "/C=$COUNTRY_CODE/ST=$STATE_CODE/O=$ORGANISATION_NAME/CN=$DOMAIN_NAME"
-my-certificate-signing-request.csr
+openssl req -new -key $CA_PRIVATE_KEY -out $CA_CSR -subj "CN=KUBERNETES-CA"
 
-# Display the contents of a certificate
-openssl x509 -in file-path.crt -text -noout
+# Self sign the CA certificate
+openssl x509 -req -in $CA_CSR -signkey $CA_PRIVATE_KEY -out $CA_CERTIFICATE
+
+# Display the contents of the CA certificate
+openssl x509 -in $CA_CERTIFICATE -text -noout
 ```
 
-### 6.2.1 ) TLS In k8s
+**Note:** This CA certificate needs to be used when generating all client and server certificates.
 
+```bash
+# Create an administrator privay key
+openssl genrsa -out $ADMIN_PRIVATE_KEY 2048
 
+# Create a certificate signing request, the CN can be anything but the O must have the admin group in it.
+openssl req -new -key $ADMIN_PRIVATE_KEY -out $ADMIN_CSR -subj "CN=kube-admin/O=system:masters"
+
+# Self sign the CA certificate
+openssl x509 -req -in $ADMIN_PRIVATE_KEY -CA $CA_CERTIFICATE -CAkey $CA_PRIVATE_KEY -out $ADMIN_CERTIFICATE
+
+# Display the contents of the CA certificate
+openssl x509 -in $ADMIN_CERTIFICATE -text -noout
 ```
+
+![certificates-v7.png](certificates-v7.png)
+
+**Note:** The user certificates can be moved into `KUBECONFIG` which is used to connect and authenticate with the server.
+
+![certificates-v8.png](certificates-v8.png)
+
+**Note:** All system components must have 'system' as the prefix in their certificate CN field, e.g. system:kube-controller-manager.
+
+![certificates-v9.png](certificates-v9.png)
+
+![certificates-v10.png](certificates-v10.png)
+
+**Note:** The Kube API Server must have Alternative Names present the certificate.
+
+![certificates-v11.png](certificates-v11.png)
+
+**Note:** There needs to be a certificate for Kubelet on each Node in the cluster. The certificates are named after the Node.
+
+![certificates-v12.png](certificates-v12.png)
+
+**Note:** Each Node also needs to have client certificates for Kubelet so they can talk to the Kube API Server. Since they are system components they need to have the name `system:node:$NODE_NAME`. These certificates go into the KUBECONFIG file and allow Kubectl to work.
+
 https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
 
-
+```bash
+# View certificate signing requests
 kubectl get csr
+
+# Allow or deny CSR requests
 kubectl certificate deny $USER
 kubectl certificate approve $USER
 ```
+
+![certificates-v13.png](certificates-v13.png)
+
+**Note:** When viewing the certificate's contents with `openssl x509 -in $CA_CERTIFICATE -text -noout` you need to pay attention to `Issuer`, `Validity`, `Subject`, and the `Subject Alternative Names`.
+
+**Note:** When troubleshooting certificates, you need to look at the logs. This will either be `journalctl -u $CONTROL_PLANE_SERVICE -l` or `kubectl -n kube-system logs $CONTROL_PLANE_POD`. If that isn't work, trying Docker with `docker logs $CONTAINER_ID -f`.
 
 ## 6.3) Authorisation
 
