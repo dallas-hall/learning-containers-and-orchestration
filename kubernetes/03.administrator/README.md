@@ -49,8 +49,10 @@
     - [6.2.2) TLS In k8s](#622-tls-in-k8s)
     - [6.2.2.1) Creating Digital Certificates For k8s](#6221-creating-digital-certificates-for-k8s)
     - [6.2.2.2) Certificates API](#6222-certificates-api)
-  - [6.3) Authorisation](#63-authorisation)
-  - [6.4) Network Policies](#64-network-policies)
+    - [6.2.2.3) Kube Config](#6223-kube-config)
+  - [6.3) API](#63-api)
+  - [6.4) Authorisation](#64-authorisation)
+  - [6.5) Network Policies](#65-network-policies)
 
 # 1) Core Concepts
 
@@ -772,6 +774,8 @@ openssl genrsa -out $PRIVATE_KEY 2048
 openssl req -new -key $PRIVATE_KEY -subj "/CN=$USER/O=system:masters" -out $CSR
 ```
 
+**Note:** The user's public key must be base64 encoded. Do this with `cat $PUBLIC_KEY |base64 | tr -d '\n' && echo`. We are using `tr` to delete all newlines as the CSR YAML definition file doesn't accept them. Use the script at https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#create-certificatesigningrequest and add `/metadata/name/$USERNAME`, `/spec/request/$BASE64_PUBLIC_KEY`, and the correct `/spec/groups/[i]/$USER_PERMISSION`.
+
 ![csr-v1.png](csr-v1.png)
 
 ```bash
@@ -792,11 +796,54 @@ kubectl get csr $USER -o yaml
 
 **Note:** The Controller Manager is responsible for all certificate related operations.
 
-## 6.3) Authorisation
+### 6.2.2.3) Kube Config
+
+* The **Kube Config file** is used instead of supplying the certificates with every `curl` or `kubectl` command.
+
+![kubeconfig-v1.png](kubeconfig-v1.png)
+
+* The default Kube Config file is located at `~/.kube/config` but can be named whatever you like. You can set this in the environment variable `KUBECONFIG` or `kubectl --config $FILE`.
+* The Kube Config file has 3 sections:
+  1. `/clusters/[i]` contains all the k8s clusters you can access. The server CA certificate and connectiong details goes here.
+  2. `/contexts/[i]` define which user account will be used to access which cluster. This uses the existing users and clusters within the
+  3. `/users/[i]` are the accounts that you use to access the clusters. The username, certificate, and key goes here.
+
+![kubeconfig-v2.png](kubeconfig-v2.png)
+![kubeconfig-v3.png](kubeconfig-v3.png)
+
+* The `/current-context` specifies which is the default context to use from the Kube Config file.
+* The `/contexts/[i]/context/namespace` specifies which is the default namespace to use for the context from the Kube Config file.
+
+```bash
+# There are a variety of Kube Config related commands with kubectl
+kubectl config $ARGS
+
+# View the default ~/.kube/config file
+kubectl config view
+
+# View a custom default ~/.kube/my-config file
+kubectl config view --kubeconfig=~/.kube/my-config\
+
+# Change the current context being used within the Kube Config
+kubectl config use-context $CONTEXT_NAME
+```
+
+**Note:** All `kubectl config` commands change the Kube Config file.
+
+* There are 2 ways to specify the certificates to use within a Kube Config file:
+  1. Using a relative or absolute path to the certificate file.
+  2. Using the base64 encoded string of the certificate file contents.
+
+![kubeconfig-v4.png](kubeconfig-v4.png)
+
+## 6.3) API
+
+
+## 6.4) Authorisation
 
 * What can users who access the cluster do?
 
-## 6.4) Network Policies
+## 6.5) Network Policies
 
 * Communication between applications in the cluster can be restricted with network policies.
 
