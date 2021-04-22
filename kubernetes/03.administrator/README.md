@@ -50,8 +50,12 @@
     - [6.2.2.1) Creating Digital Certificates For k8s](#6221-creating-digital-certificates-for-k8s)
     - [6.2.2.2) Certificates API](#6222-certificates-api)
     - [6.2.2.3) Kube Config](#6223-kube-config)
-  - [6.3) API](#63-api)
+  - [6.3) API Groups](#63-api-groups)
   - [6.4) Authorisation](#64-authorisation)
+    - [6.4.1) RBAC](#641-rbac)
+    - [6.4.2) Namespaced vs Cluster Scoped](#642-namespaced-vs-cluster-scoped)
+  - [6.5) Security](#65-security)
+    - [6.5.1) Image Security](#651-image-security)
   - [6.5) Network Policies](#65-network-policies)
 
 # 1) Core Concepts
@@ -205,7 +209,7 @@ The topics Labels & Selectors, Taints & Tolerants, and Node Selector and Node Af
 
 ## 2.3) Resource Requests & Limits
 
-The details for this can be found in in the developer's course under the section [Resources](../02.applications-developer/README.md##25-resources)
+The details for this can be found in in the developer's course under the section [Resources](../02.applications-developer/README.md#25-resources)
 
 ## 2.4) Daemon Sets
 
@@ -607,7 +611,7 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ## 6.1) Authentication
 
-* Who can access the cluster? There are 2 types of users, humans and computers. Details previously covered in the developer's course under the section [Service Accounts](../02.applications-developer/README.md#service-accounts)
+* **Authentication** confirms that users are who they say they are. There are 2 types of users, humans and computers. Details previously covered in the developer's course under the section [Service Accounts](../02.applications-developer/README.md#service-accounts)
 * All requests to the cluster go through the `kube-apiserver` and the user making the request is authenicated before the request is fulfilled.
 * There are 4 authentication mechanisms to access the cluster via the `kube-apiserver`:
   1. Basic authentication with passwords which are stored in a text file with 4 columns. Password,username,user id, and group. The username and password would be supplied with `curl -u $USER:$PASSWORD`
@@ -836,19 +840,144 @@ kubectl config use-context $CONTEXT_NAME
 
 ![kubeconfig-v4.png](kubeconfig-v4.png)
 
-## 6.3) API
+## 6.3) API Groups
 
+* All k8s objects are grouped into different API Groups. Here are some groups from the k8s API:
+  1. `/api` is the core group, and provides core cluster functionality through API versions.
+  2. `/apis` is the named group, and provides core cluster functionality but through names instead of API versions.
+  3. `/logs` used to integrate with third party logging solutions (e.g. prometheus).
+  4. `/healthz` used to monitor the health of the cluster.
+  5. `/metrics` used to get metric data about the cluster.
+  6. `/version` views the version of the cluster.
+
+![api-group-v1.png](api-group-v1.png)
+
+* `/apis` has **API Groups** which provide a variety of functionality that relates to that particular group.
+* `/apis` API Groups has **API Resources** which provides the specific implementation for the k8s object within it.
+* `/apis` API Groups has API Resources which has **Verbs** (i.e actions) which provides the k8s object actions. Users need access to these Verbs to be able to perform actions in the cluster.
+
+![api-group-v2.png](api-group-v2.png)
+
+* The [k8s API Reference page](https://kubernetes.io/docs/reference/) shows all the API Groups and the objects within them.
+* You can view your cluster's API Groups using `curl -k http://$ADDRESS:6443` and you can view your cluster's API Resources using `curl -k http://$ADDRESS:6443/api | grep name`
+
+**Note:** You still need to authenticate with the API, you can do this by passing your certificates via `curl --key $KEY --$CERT --cacert $CA_CERT` or using your KUBECONFIG via `kubectl proxy`.
+
+* `kubectl proxy` launches a local client on `127.0.0.1:8001` can uses your Kube Config File to access the cluster. You just need to replace port 6443 with 8001 when using curl.
+
+![api-group-v3.png](api-group-v3.png)
 
 ## 6.4) Authorisation
 
-* What can users who access the cluster do?
+* **Authorization** gives authenticated users permission to access a resource.
+* There are 6 types of authorisation in k8s:
+  1. **Node authorisation** is a special mode that authorises API requests made my kubelet agents.
+  ![authorisation-v1.png](authorisation-v1.png)
+  2. **Attribute Based Access Control (ABAC)** grants access rights to users.
+  ![authorisation-v2.png](authorisation-v2.png)
+  3. **Role Based Access Control (RBAC**) grants access rights to roles, and roles are assigned to users. This is a common approach for authorisation.
+  ![authorisation-v3.png](authorisation-v3.png)
+  4. **Webhook** is a HTTP callback, i.e. an event notification using HTTP POST. k8s will query an external REST service when determining user privileges.
+  ![authorisation-v4.png](authorisation-v4.png)
+  5. **AlwaysAllow** allows all requests in the cluster. This is the default is nothing is set.
+  6. **AlwaysDeny** denys all requests in the cluster.
+* The authorisation modes are set with the `kube-apiserver --authorization-mode=$ACCESS_MODE1,$ACCESS_MODE2`. When multiple authorisation modes are configured, the access request is checked by going to each mode sequentially until access is granted or all nodes have been visited and no access is granted.
+![authorisation-v5.png](authorisation-v5.png)
+
+### 6.4.1) RBAC
+
+* RBAC is commonly used for authentication in many applications. Because it is easy to maintain a single role for many users, than maintaining ABAC for many users.
+* When using RBAC, you need to either create a Role and RoleBinding. The **Role** provides the authorised access details and the **RoleBinding** links a user to a Role. This can be created with YAML definition files or imperative commands.
+
+![authorisation-v6.png](authorisation-v6.png)
+
+```bash
+# Create a Role
+kubectl create role developer --verb=$API_GROUP_VERB1,$API_GROUP_VERB2 --resource=$K8S_OBJECT -n $NAMESPACE
+
+# Create a RoleBinding
+kubectl create rolebinding $NAME --role=$ROLE_NAME --user=$USERNAME
+
+# View access permissions for a Role
+kubectl describe role $NAME
+
+# View what users can use a Role
+kubectl describe rolebinding $NAME
+
+# Check what a user can do
+kubectl auth can-i $API_GROUP_VERB $K8S_OBJECT --as $USER
+```
+
+* RBAC can cover namespaces and specific objects within a namespace. Use the `/roles/[i]/resourceNames` array to specific which objects.
+
+![authorisation-v7.png](authorisation-v7.png)
+
+### 6.4.2) Namespaced vs Cluster Scoped
+
+* There are 2 scopes within k8s
+  1. Namespaced, i.e. the scope is a namespace.
+  2. Cluster scoped, i.e. the scope is the entire cluster.
+* Roles and RoleBindings are created within namespaces. If you don't specificy a namespace they will be created in `default`.
+* ClusterRoles and ClusterRoleBindings are created within the cluster, i.e. they cover all namespaces within the cluster.
+* A ClusterRole can be used to grant access to all resources in all namespaces.
+
+![scope-v1.png](scope-v1.png)
+
+```bash
+# View all namespaced scoped objects
+kubectl api-resources --namespaced=true
+
+# View all cluster scoped objects
+kubectl api-resources --namespaced=false
+
+# Create a ClusterRole
+kubectl create clusterrole developer --verb=$API_GROUP_VERB1,$API_GROUP_VERB2 --resource=$K8S_OBJECT
+
+# Create a ClusterRoleBinding
+kubectl create clusterrolebinding $NAME --clusterrole=$CLUSTER_ROLE_NAME --user=$USERNAME
+
+# View access permissions for a ClusterRole
+kubectl describe clusterrole $NAME
+
+# View what users can use a ClusterRole
+kubectl describe clusterrolebinding $NAME
+
+# Check what a user can do
+kubectl auth can-i $API_GROUP_VERB $K8S_OBJECT --as $USER
+```
+
+## 6.5) Security
+
+The details for this can be found in in the developer's course under the section [Security](../02.applications-developer/README.md#24-security)
+
+### 6.5.1) Image Security
+
+* The `/spec/containers/[i]/image: image-name` value has some rules from Docker:
+  * The name of the image is assumed to be the name of the Docker account supplying the image and this account gets implicitly added. e.g. `image: nginx` expands into `image: nginx/nginx` which is `image: docker-hub-username:image-name`
+  * The registry used to pull images is assumed to be https://docker.io and this is added implicitly. e.g. `image: nginx` becomes `image: docker.io/nginx/nginx`
+  * You can add whatever image registry you like, you just need to specify it like `image: $REPO_URL/$REPO_USERNAME/$IMAGE_NAME`.
+
+![image-security-v1.png](image-security-v1.png)
+
+* To access a private image repository in Docker you need to:
+  1. Log in with `docker login $REPO_URL` with a username and password.
+  2. Run the app with `docker run $REPO_URL/$USERNAME/$IMAGE_NAME`
+
+![image-security-v2.png](image-security-v2.png)
+
+* To access a private image repository in k8s you need to:
+  1. Create a Docker Registry Secret for the docker credentials. `kubectl create secret docker-registry $NAME --docker-server=$URL --docker-username=$USER --docker-password=$PASSWORD --docker-email=$EMAIL`
+  2. Supply the `/spec/imagePullSecrets/[i]/name` with the Docker Registry Secret.
+  3. Supply the `/spec/containers/[i]/image: $REPO_URL/$USERNAME/$IMAGE_NAME` in the YAML definition file.
+
+![image-security-v3.png](image-security-v3.png)
 
 ## 6.5) Network Policies
 
-* Communication between applications in the cluster can be restricted with network policies.
+The details for this can be found in in the developer's course under the section [Network Policy](../02.applications-developer/README.md#53-network-policy)
 
+---
 
-
-**Note: **Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
+**Note:** Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
 
 **Note:** In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
