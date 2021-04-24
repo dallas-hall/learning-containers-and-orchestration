@@ -2624,9 +2624,14 @@ https://kubernetes.io/docs/concepts/storage/storage-classes/
 ![dynamic-provisioning.png](dynamic-provisioning.png)
 
 ```bash
-kubectl get storageclass -A
-kubectl get sc -A
+# Work with Storage Class objects.
+kubectl $CMD storageclass $ARGS
+kubectl $CMD sc $ARGS
 ```
+
+**Note:**`kubernetes.io/no-provisioner` means the Storage Class cannot be dynamically provisioned.
+
+**Note:** When using `volumeBindingMode: WaitForFirstConsumer` the PV and PVC won't bind until a Pod is scheduled that uses it.
 
 ## 7.2) Stateful Sets
 
