@@ -61,7 +61,7 @@
   - [7.1) Docker Storage](#71-docker-storage)
     - [7.1.1) Storage Drivers](#711-storage-drivers)
     - [7.1.2) Volume Drivers](#712-volume-drivers)
-    - [7.1.3) Container Storage Interface](#713-container-storage-interface)
+    - [7.1.3) k8s Cluster Interfaces](#713-k8s-cluster-interfaces)
   - [7.2) k8s Storage](#72-k8s-storage)
     - [7.2.1) Volumes](#721-volumes)
     - [7.2.2) Persistent Volumes](#722-persistent-volumes)
@@ -997,9 +997,56 @@ The details for this can be found in in the developer's course under the section
 
 ### 7.1.1) Storage Drivers
 
+* Docker stores its local data inside of `/var/lib/docker`.
+
+![docker-storage-v1.png](docker-storage-v1.png)
+
+* When Docker builds images, it builds them in a layered architecture. Every line in a Docker File is created in `/var/lib/image` as its own layer. Each layer only stores what has changed since the previous layer.
+* The final image will have mutliple layers in it. When rebuilding an image the layer will only change if the Docker File has changed.
+* The layered image approach means Docker can save time when building and space storing image layers. It does this by reusing layers.
+
+![docker-storage-v2.png](docker-storage-v2.png)
+
+* All of the layers that were used to build a Docker Image become read only when inside a container. They are known as the **Image Layer**. The same Image Layer is shared by all containers using this image.
+* A running container has a writeable layer called ther **Container Layer**. All new files created in the container are in the Container Layer. If you try to make any changes to files inside of a container that are from the Image Layer, they will be copied to the Container Layer and all changes will be made there. This is called **Copy On Write.**
+
+![docker-storage-v3.png](docker-storage-v3.png)
+
+![docker-storage-v4.png](docker-storage-v4.png)
+
+* The Container Layer and its data is destroyed when the container exits. If you want to data to persist after that container is destory, you need to use a Docker Volume.
+* There are 2 types of mounting in Docker:
+  1. **Volume mounting** is using a Docker Volume inside of `/var/lib/docker/volumes/`
+  2. **Bind mounting** is using a path from the filesystem on the Docker host. 
+
+![docker-storage-v5.png](docker-storage-v5.png)
+
+**Note:** Using `--mount` is prefered over the original `-v` when mounting Volumes.
+
+* The **Storage Driver** controls how images and containers are stored and managed on your Docker host. The selection of the Storage Driver is determined by what the underlying O/S supports. There are many Storage Drivers.
+
+![docker-storage-v6.png](docker-storage-v6.png)
+
+https://docs.docker.com/storage/storagedriver/select-storage-driver/
+
 ### 7.1.2) Volume Drivers
 
-### 7.1.3) Container Storage Interface
+https://docs.docker.com/engine/extend/plugins_volume/#docker-volume-plugins
+
+* **Volume Drivers** control how Docker Volumes are managed on your Docker host. Plugins are used to provide this functinoality and there are many types of Volume Driver Plugins.
+* The Local Volume Driver Plugin is what creates and manages `/var/lib/docker/volumes`
+
+### 7.1.3) k8s Cluster Interfaces
+
+* The **Container Runtime Interface (CRI)** is a standard that provides the details on how to create third party container runtime engine plugins to interact with the k8s cluster without having their code in the k8s code base. Traditionally only Docker was supported and the Docker support was written directly in the k8s code base. This approach changed when more CRE providers like CRI-O and containerd became mature.
+* The **Container Network Interface (CNI)** is a standard that provides the details on how to create third party networking solution plugins to interact with the k8s cluster without having their code in the k8s code base.
+* The **Container Storage Interface (CSI)** is a standard that provides the details on how to create third party storage solution plugins to interact with the k8s cluster without having their code in the k8s code base.
+
+![cluster-interfaces-v1.png](cluster-interfaces-v1.png)
+
+**Note:** The CSI is a universal standard that exists outside of k8s and allows a number of container orchestration tools to interface with third party storage plugins.
+
+![cluster-interfaces-v2.png](cluster-interfaces-v2.png)
 
 ## 7.2) k8s Storage
 
