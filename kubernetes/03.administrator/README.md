@@ -57,6 +57,19 @@
   - [6.5) Security](#65-security)
     - [6.5.1) Image Security](#651-image-security)
   - [6.5) Network Policies](#65-network-policies)
+- [7) Storage](#7-storage)
+  - [7.1) Docker Storage](#71-docker-storage)
+    - [7.1.1) Storage Drivers](#711-storage-drivers)
+    - [7.1.2) Volume Drivers](#712-volume-drivers)
+    - [7.1.3) Container Storage Interface](#713-container-storage-interface)
+  - [7.2) k8s Storage](#72-k8s-storage)
+    - [7.2.1) Volumes](#721-volumes)
+    - [7.2.2) Persistent Volumes](#722-persistent-volumes)
+    - [7.2.3) Persistent Volume Claims](#723-persistent-volume-claims)
+    - [7.2.4) Storage Classes](#724-storage-classes)
+- [8) Networking](#8-networking)
+- [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
+- [10) Troubleshooting](#10-troubleshooting)
 
 # 1) Core Concepts
 
@@ -975,6 +988,42 @@ The details for this can be found in in the developer's course under the section
 ## 6.5) Network Policies
 
 The details for this can be found in in the developer's course under the section [Network Policy](../02.applications-developer/README.md#53-network-policy)
+
+**Note:** Sometimes you need to add a Network Policy to allow DNS resolution.
+
+# 7) Storage
+
+## 7.1) Docker Storage
+
+### 7.1.1) Storage Drivers
+
+### 7.1.2) Volume Drivers
+
+### 7.1.3) Container Storage Interface
+
+## 7.2) k8s Storage
+
+### 7.2.1) Volumes
+
+The details for this can be found in in the developer's course under the section [Volumes](../02.applications-developer/README.md#61-volumes)
+
+### 7.2.2) Persistent Volumes
+
+The details for this can be found in in the developer's course under the section [Persistent Volumes](../02.applications-developer/README.md#62-persistent-volumes)
+
+### 7.2.3) Persistent Volume Claims
+
+The details for this can be found in in the developer's course under the section [Persistent Volume Claims](../02.applications-developer/README.md#persistent-volume-claims)
+
+### 7.2.4) Storage Classes
+
+The details for this can be found in in the developer's course under the section [Storage Classes](../02.applications-developer/README.md#71-storage-classes)
+
+# 8) Networking
+
+# 9) Installation, Configuration, & Validation
+
+# 10) Troubleshooting
 
 ---
 
