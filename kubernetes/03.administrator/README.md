@@ -76,7 +76,7 @@
       - [8.1.2.2) Domain Name Resolution](#8122-domain-name-resolution)
       - [8.1.2.3) DNS Record Types](#8123-dns-record-types)
     - [8.1.3) CoreDNS](#813-coredns)
-    - [8.1.4) Network Namespaces](#814-network-namespaces)
+    - [8.1.4) Linux Network Namespaces](#814-linux-network-namespaces)
     - [8.1.5) Docker Networking](#815-docker-networking)
 - [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
 - [10) Troubleshooting](#10-troubleshooting)
@@ -1279,7 +1279,117 @@ https://www.cloudflare.com/en-gb/learning/dns/dns-records/
 
 ![coredns-v1.png](coredns-v1.png)
 
-### 8.1.4) Network Namespaces
+### 8.1.4) Linux Network Namespaces
+
+* The **ARP (Address Resolution Protocol)** is a network protocol used to find out the hardware (MAC) address of a device from an IP address.
+
+```bash
+# View the ip Address / MAC address combination
+arp -n
+```
+
+* **Network Namespaces** are used by CRE to implement network isolation. The network namespace needs it own virtual network interface as it cannot see or use the CRE host network interfaces.
+
+![network-namespaces-v1.png](network-namespaces-v1.png)
+
+```bash
+# Create a network namespace
+ip ns add $NAMESPACE
+
+# List network namespaces
+ip listns
+
+# Run commands within the network namespace
+ip netns exec $NAMESPACE ip link
+ip -n $NAMESPACE link
+```
+
+* You can connect 2 network namespaces via their virtual network interfaces using a virtual ethernet cable, called a pipe.
+
+```bash
+# Create a virtual ethernet cable (i.e. pipe) between 2 virtual network interfaces on separate network namespaces
+ip link add $VIRTUAL_INTERFACE_A type veth peer name $VIRTUAL_INTERFACE_B
+```
+
+![network-namespaces-v2.png](network-namespaces-v2.png)
+
+```bash
+# Attach each virtual interface to their respective network namespace
+ip link set $VIRTUAL_INTERFACE_A netns $NAMESPACE_A
+ip link set $VIRTUAL_INTERFACE_B netns $NAMESPACE_B
+
+# Assign IP addresses to the virtual network interfaces
+ip -n $NAMESPACE_A addr add $IP_ADDRESS dev $VIRTUAL_INTERFACE_A
+ip -n $NAMESPACE_B addr add $IP_ADDRESS dev $VIRTUAL_INTERFACE_B
+
+# Bring the network interfaces UP, as they will be DOWN
+ip -n $NAMESPACE_A link set $VIRTUAL_INTERFACE_A up
+ip -n $NAMESPACE_B link set $VIRTUAL_INTERFACE_B up
+
+# Test connectivity
+ip netns exec $NAMESPACE_A ping $IP_ADDRESS
+
+# Delete a virtual ethernet cable, this will delete both interfaces and the cable.
+ip -n $NAMESPACE_A del $VIRTUAL_INTERFACE_A
+```
+
+![network-namespaces-v3.png](network-namespaces-v3.png)
+
+```bash
+# Create a virtual switch using Linux Bridge. This appears as an interface on the CRE host.
+ip link add $VIRTUAL_SWITCH type bridge
+
+# Bring the virtual switch UP, as it will be DOWN
+ip link set $VIRTUAL_SWITCH up
+```
+
+![network-namespaces-v4.png](network-namespaces-v4.png)
+
+```bash
+# Create new virtual ethernet cables and interfaces that connect to the virtual switch
+ip link add $VIRTUAL_INTERFACE_A type veth peer name $VIRTUAL_CABLE_NAME
+
+# Add the virtual interfaces to their respective endpoints
+ip link set $VIRTUAL_INTERFACE_A netns $NAMESPACE_A
+ip link set $VIRTUAL_CABLE_NAME master $VIRTUAL_SWITCH
+
+# Add IP addresses and make the links UP
+ip -n $NAMESPACE_A addr add $IP_ADDRESS dev $VIRTUAL_INTERFACE_A
+ip -n $NAMESPACE_A link set $VIRTUAL_INTERFACE_A up
+```
+
+![network-namespaces-v5.png](network-namespaces-v5.png)
+
+**Note:** If you really wanted to access the virtual switch from the CRE host, you just need to add an IP address to the virtual switch on the CRE host. `ip addr add $CIDR dev $VIRTUAL_INTERFACE_A`
+
+```bash
+# Add a route entry into the CRE host network interface so the network namespace can read another host on the network
+ip netns exec $NAMESPACE ip route add $TARGET_CIDR via $CRE_HOST_VIRTUAL_INTERFACE_IP_ADDRESS
+
+# View the new route
+ip netns exec $NAMESPACE route
+```
+
+![network-namespaces-v6.png](network-namespaces-v6.png)
+
+```bash
+# Enable NAT on CRE host to translate from virtual network interface IP address to the physical NIC IP address
+iptables -t nat -A POSTROUTING -s $CRE_HOST_VIRTUAL_INTERFACE_CIDR -j MASQUERADE
+```
+
+![network-namespaces-v7.png](network-namespaces-v7.png)
+
+```bash
+# Add a default gateway to allow egress traffic to the internet
+ip netns exec $NAMESPACE ip route add default via $CRE_HOST_VIRTUAL_INTERFACE_IP_ADDRESS
+
+# Allow ingress traffic from the internet with port forwarding
+iptables -t nat -A PREROUTING --dport 80 --to-destination $CRE_HOST_PHYSICAL_NIC_IP_ADDRESS:$PORT -j DNAT
+```
+
+![network-namespaces-v8.png](network-namespaces-v8.png)
+
+**Note:** When trying to troubleshoot connectivity between network namespaces, check that you are using CIDR addresses and check firewall rules.
 
 ### 8.1.5) Docker Networking
 
