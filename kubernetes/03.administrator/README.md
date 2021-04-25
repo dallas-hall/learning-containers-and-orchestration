@@ -68,6 +68,13 @@
     - [7.2.3) Persistent Volume Claims](#723-persistent-volume-claims)
     - [7.2.4) Storage Classes](#724-storage-classes)
 - [8) Networking](#8-networking)
+  - [8.1) Linux Networking Basics](#81-linux-networking-basics)
+    - [8.1.1) Switching, Routing, & Gateway](#811-switching-routing--gateway)
+      - [8.1.1.1) Setting Up Linux As A Router](#8111-setting-up-linux-as-a-router)
+    - [8.1.2) DNS](#812-dns)
+    - [8.1.3) CoreDNS](#813-coredns)
+    - [8.1.4) Network Namespaces](#814-network-namespaces)
+    - [8.1.5) Docker Networking](#815-docker-networking)
 - [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
 - [10) Troubleshooting](#10-troubleshooting)
 
@@ -1067,6 +1074,105 @@ The details for this can be found in in the developer's course under the section
 The details for this can be found in in the developer's course under the section [Storage Classes](../02.applications-developer/README.md#71-storage-classes)
 
 # 8) Networking
+
+## 8.1) Linux Networking Basics
+
+### 8.1.1) Switching, Routing, & Gateway
+
+* A **Computer Network** is a group of connected computing devices that can communicate with each other.
+
+![network-basics-v1.png](network-basics-v1.png)
+
+* A computing device on a network must have a **Network Interface** which allows traffic to flow into and out of the computing device. These can be physical cards (i.e. NICs) installed into the computing device or a virtual interface made from software only.
+
+```bash
+# View the interfaces on the host
+ip -c -h link
+
+# More verbose output
+ip -c -h a
+```
+
+* A network interface requires an IP address so it can communicate with other devices on the network.
+* By default Linux does not forward packets between network interfaces on the same host.
+
+```bash
+# Check if network interface packet forwarding is on. 1 is on and 0 is off.
+cat /proc/sys/net/ipv4/ip_forward
+sysctl net.ipv4.ip_forward
+
+# Update lost on reboot
+echo 1 > /proc/sys/net/ipv4/ip_forward
+sysctl -w net.ipv4.ip_forward=1
+
+# Update held on reboot
+cat >> /etc/sysctl
+net.ipv4.ip_forward = 1
+
+```bash
+# Manually add an IP address to an interface. Need to do this on all hosts.
+ip addr add $CIDR dev $NETWORK_INTERFACE
+
+# Test connectivity between 2 hosts
+ping -c $PING_COUNT $TARGET_IP_ADDRESS
+```
+
+* **Switches** connect devices within a network and forward data packets to and from those devices. Unlike a router, a switch only sends data to the single device it is intended for, not to networks of multiple devices. Thus they are only used for devices on the same network.
+
+![network-basics-v2.png](network-basics-v2.png)
+
+* **Routers** select paths for data packets to cross networks and reach their destinations. Routers do this by connecting with different networks and forwarding data from network to network. They are required for internet connectivity and home users will have a small switch, router, and modem combination device.
+
+![network-basics-v3.png](network-basics-v3.png)
+
+![network-basics-v4.png](network-basics-v4.png)
+
+* A **Gateway** is a network node that serves as an access point to another network, often involving not only a change of network addressing, but also a different networking technology. This is also known as the Default Route.
+
+```bash
+# Display the systems gateway / route
+route -n
+ip -c -h route
+
+# Manually add a gateway / route between to local networks. Need to do this on all hosts.
+ip route add $CIDR via $GATEWAY_IP_ADDRESS
+```
+
+![network-basics-v5.png](network-basics-v5.png)
+
+* A **Default Gateway** is the node in a computer network using that serves as the forwarding host (i.e. router) to other networks when no other route specification matches the destination IP address of a packet. This is typically used for internet connectivity.
+
+```bash
+# Manually add a default gateway / route
+ip route add default via $DEFAULT_GATEWAY_IP_ADDRESS
+
+# 0.0.0.0 means any IP address, this is the same as above.
+ip route add 0.0.0.0 via $DEFAULT_GATEWAY_IP_ADDRESS
+```
+
+![network-basics-v6.png](network-basics-v6.png)
+
+* **Note:** When troubleshooting internet connectivity issues, a good place to start is checking the default gateway.
+
+#### 8.1.1.1) Setting Up Linux As A Router
+
+* This exmample has 3 hosts, Host A, Host B, and Host C.
+* Host A and Host C are on different subnets, 192.168.1 and 192.168.2 respectively. They already 1 network inferface each and already have IP addresses assigned to them, 192.168.1.5 and 192.168.2.5.
+* Host B will be the router for Host A and Host C. Host B has 2 network interfaces and the IP addresses 192.168.1.6 and 192.168.2.6.
+* There are 3 steps to configure this setup:
+  1. Add a route from Host A to Host C via Host B `ip route add 192.168.2.0/24 via 192.168.1.6`
+  2. Add a route from Host C to Host A via Host B `ip route add 192.168.1.0/24 via 192.168.2.6`
+  3. Allow packet forwarding between network interfaces on Host B `echo 1 > /proc/sys/net/ipv4/ip_forward`
+  
+![network-basics-v7.png](network-basics-v7.png)
+
+### 8.1.2) DNS
+
+### 8.1.3) CoreDNS
+
+### 8.1.4) Network Namespaces
+
+### 8.1.5) Docker Networking
 
 # 9) Installation, Configuration, & Validation
 
