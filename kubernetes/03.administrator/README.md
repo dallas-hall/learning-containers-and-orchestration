@@ -72,6 +72,9 @@
     - [8.1.1) Switching, Routing, & Gateway](#811-switching-routing--gateway)
       - [8.1.1.1) Setting Up Linux As A Router](#8111-setting-up-linux-as-a-router)
     - [8.1.2) DNS](#812-dns)
+      - [8.1.2.1) Domain Names](#8121-domain-names)
+      - [8.1.2.2) Domain Name Resolution](#8122-domain-name-resolution)
+      - [8.1.2.3) DNS Record Types](#8123-dns-record-types)
     - [8.1.3) CoreDNS](#813-coredns)
     - [8.1.4) Network Namespaces](#814-network-namespaces)
     - [8.1.5) Docker Networking](#815-docker-networking)
@@ -1084,17 +1087,29 @@ The details for this can be found in in the developer's course under the section
 ![network-basics-v1.png](network-basics-v1.png)
 
 * A computing device on a network must have a **Network Interface** which allows traffic to flow into and out of the computing device. These can be physical cards (i.e. NICs) installed into the computing device or a virtual interface made from software only.
+* A network interface requires an IP address so it can communicate with other devices on the network.
 
 ```bash
 # View the interfaces on the host
 ip -c -h link
+ip -c -h l
+
 
 # More verbose output
+ip -c -h address
+ip -c -h addr
 ip -c -h a
 ```
 
-* A network interface requires an IP address so it can communicate with other devices on the network.
-* By default Linux does not forward packets between network interfaces on the same host.
+```bash
+# Manually add an IP address to an interface. Need to do this on all hosts.
+ip addr add $CIDR dev $NETWORK_INTERFACE
+
+# Test connectivity between 2 hosts
+ping -c $PING_COUNT $TARGET_IP_ADDRESS
+```
+
+* **Note:** By default Linux does not forward packets between network interfaces on the same host.
 
 ```bash
 # Check if network interface packet forwarding is on. 1 is on and 0 is off.
@@ -1103,18 +1118,12 @@ sysctl net.ipv4.ip_forward
 
 # Update lost on reboot
 echo 1 > /proc/sys/net/ipv4/ip_forward
-sysctl -w net.ipv4.ip_forward=1
 
 # Update held on reboot
 cat >> /etc/sysctl
 net.ipv4.ip_forward = 1
 
-```bash
-# Manually add an IP address to an interface. Need to do this on all hosts.
-ip addr add $CIDR dev $NETWORK_INTERFACE
-
-# Test connectivity between 2 hosts
-ping -c $PING_COUNT $TARGET_IP_ADDRESS
+sysctl -w net.ipv4.ip_forward=1
 ```
 
 * **Switches** connect devices within a network and forward data packets to and from those devices. Unlike a router, a switch only sends data to the single device it is intended for, not to networks of multiple devices. Thus they are only used for devices on the same network.
@@ -1127,12 +1136,13 @@ ping -c $PING_COUNT $TARGET_IP_ADDRESS
 
 ![network-basics-v4.png](network-basics-v4.png)
 
-* A **Gateway** is a network node that serves as an access point to another network, often involving not only a change of network addressing, but also a different networking technology. This is also known as the Default Route.
+* A **Gateway** is a network node that serves as an access point to another network, often involving not only a change of network addressing, but also a different networking technology. This is also known as the Route.
 
 ```bash
 # Display the systems gateway / route
 route -n
 ip -c -h route
+ip -c -h r
 
 # Manually add a gateway / route between to local networks. Need to do this on all hosts.
 ip route add $CIDR via $GATEWAY_IP_ADDRESS
@@ -1140,7 +1150,7 @@ ip route add $CIDR via $GATEWAY_IP_ADDRESS
 
 ![network-basics-v5.png](network-basics-v5.png)
 
-* A **Default Gateway** is the node in a computer network using that serves as the forwarding host (i.e. router) to other networks when no other route specification matches the destination IP address of a packet. This is typically used for internet connectivity.
+* A **Default Gateway** is the node in a computer network using that serves as the forwarding host (i.e. router) to other networks when no other route specification matches the destination IP address of a packet. This is typically used for internet connectivity as its easier to say forward all traffic to any address that the gateway doesn't know about, rather than listing every address on the internet!
 
 ```bash
 # Manually add a default gateway / route
@@ -1168,7 +1178,106 @@ ip route add 0.0.0.0 via $DEFAULT_GATEWAY_IP_ADDRESS
 
 ### 8.1.2) DNS
 
+https://www.cloudflare.com/en-gb/learning/dns/what-is-dns/
+
+* The **Domain Name System (DNS)** is the phonebook of the network, including the Internet. Humans access information online through domain name. Computers interact through Internet Protocol (IP) addresses. DNS translates domain names to IP addresses.
+* Local DNS hostname resolution is done via `/etc/hosts`.
+
+```bash
+# Assign an IP address to a hostname
+cat >> `/etc/hosts
+$IP_ADDRESS $HOSTNAME
+```
+
+![dns-basics-v1.png](dns-basics-v1.png)
+
+* Local DNS hostname resolution does not scale though, as every host needs to be updated.
+
+![dns-basics-v2.png](dns-basics-v2.png)
+
+* A DNS nameserver is used for centralised DNS hostname resolution. This is known as a nameserver. The IP address of the DNS nameserver can be found at `/etc/resolv.conf`. The DNS nameserver listens on port 53 by default and there are many software solutions available for this.
+
+**Note:** On a host running SystemD, `/etc/resolv.conf` is a symlink to `/run/systemd/resolve/resolv.conf` and the address in there will be `127.0.0.53`. This is the address that `systemd-resolved` is listening for DNS queries. The real IP addresses of the nameservers are in `/run/systemd/resolve/resolv.conf`.
+
+![dns-basics-v3.png](dns-basics-v3.png)
+
+* The default order of searching for nameservers is `/etc/hosts` and then `/etc/resolv.conf` but this can be changed. To change this, update `/etc/nsswitch.conf` and the `hosts:` line.
+* When trying to reach Internet hostnames, you will need to use a public internet DNS nameserver like Google's `8.8.8.8` or Cloudflare's `1.1.1.1` and they will be able to resolve any DNS queries that your local nameservers cannot resolve. If you have a DNS nameserver then you should add this there, otherwise in the local file is okay.
+
+![dns-basics-v4.png](dns-basics-v4.png)
+
+```bash
+# Query a nameserver for DNS resolution
+nslookup $IP_ADDRESS
+nslookup $DOMAIN
+
+dig $IP_ADDRESS
+dig $DOMAIN
+```
+
+**Note:** `nslookup` only queries the nameserver, it ignores your `/etc/hosts` files.
+
+#### 8.1.2.1) Domain Names
+
+* A **Domain Name** is an alphanumeric name with one or more periods, e.g. https://www.google.com and each entry is called a label. Domain names act as a pointer to an IP address on a computer network such as the Internet. They are used as they are easy for humans to remember.
+
+![domain-name-basics-v1.png](domain-name-basics-v1.png)
+
+* There a 4 levels in the entire domain name:
+  1. **Root level domain** is the highlest level in the DNS hierarchy. It does not have a formal name and its label in the DNS hierarchy is typically an empty string. It sometimes can be represented as a single dot. e.g. `www.google.com.` the final dot is the root level domain.
+  2. **Top level domains (TLD)** are used to group like objects together. e.g. .com is for comerical businesses.
+  3. **Domain** name is owned by a person or company and is used to host their services.
+  4. **Subdomains** are used to group things together under the domain. e.g. with Google `www` is for their search engine, `maps` is for Google Maps, `mail` is for GMail and so forth. You can have as many subdomains as you like.
+
+![domain-name-basics-v2.png](domain-name-basics-v2.png)
+
+**Note:** The domain name forms a tree structure.
+
+#### 8.1.2.2) Domain Name Resolution
+
+https://www.cloudflare.com/en-gb/learning/dns/dns-server-types/
+
+* There are potentially 6 steps when your computer tries to resolve a domain name:
+  1. The application making the DNS query checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it asks the O/S.
+  2. On behalf of the application, the O/S checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it asks the DNS Resolver. This could be a local nameserver or a network nameserver.
+  3. On behalf of the application and O/S, the DNS Resolver checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it asks the Root DNS Server.
+  4. On behalf of the DNS Resolver, the Root DNS Server checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it points to the TLD Server.
+  5. On behalf of the DNS Resolver, the TLD Server checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it points to the authoriatve namesever, i.e. the nameserver at the domain itself.
+  6. On behalf of the DNS Resolver, the authoriatve namesever replies what the IP address is for the DNS query.
+
+![dns-basics-v5.png](dns-basics-v5.png)
+
+**Note:** Steps 1 and 2 are ommitted from the picture above.
+
+* The `/etc/resolve.conf` file can have an entry called `search $DOMAIN` which means everytime you enter a subdomain it will automatically search the nameserver for `$SUBDOMAIN.$DOMAIN`.
+
+![dns-basics-v6.png](dns-basics-v6.png)
+
+![dns-basics-v7.png](dns-basics-v7.png)
+
+#### 8.1.2.3) DNS Record Types
+
+https://www.cloudflare.com/en-gb/learning/dns/dns-records/
+
+
+* **DNS records** are text files on authoritative DNS servers and provide information about a domain, including what IP address is associated with that domain and how to handle requests for that domain.
+* Here are 3 common DNS record types:
+  1. **A** maps a domain to an IPv4 address. https://www.cloudflare.com/en-gb/learning/dns/dns-records/dns-a-record/
+  2. **AAAA** maps a domain to an IPv6 address.
+  3. **CNAME (Canonical Name)** forwards the traffic for one domain or subdomain to another domain. It does not provide an IP address. https://www.cloudflare.com/en-gb/learning/dns/dns-records/dns-cname-record/
+
+![dns-basics-v8.png](dns-basics-v8.png)
+
 ### 8.1.3) CoreDNS
+
+* https://kubernetes.io/docs/tasks/administer-cluster/coredns/
+* https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/
+
+* **CoreDNS** is DNS nameserver software that’s often used to support the service discovery function in containerized environments, particularly those managed by Kubernetes. This is recommend DNS solution for k8s.
+* It can be deployed as an O/S service from a binary or as a `kube-system` Pod on the Master Nodes.
+* In a basic set up, the `/etc/hosts` file of the nameserver has all of the DNS entries added to it and then that is passed into CoreDNS via a `Corefile`. You can also use k8s plugins to do this.
+
+![coredns-v1.png](coredns-v1.png)
 
 ### 8.1.4) Network Namespaces
 
