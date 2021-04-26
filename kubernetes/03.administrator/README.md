@@ -81,6 +81,15 @@
     - [8.2.1) Docker Bridge Network](#821-docker-bridge-network)
   - [8.3) Container Network Interface (CNI)](#83-container-network-interface-cni)
   - [8.4) k8s Cluster Networking](#84-k8s-cluster-networking)
+    - [8.4.1) Network Setup & Ports](#841-network-setup--ports)
+    - [8.4.2) Pod Networking](#842-pod-networking)
+    - [8.4.3) CNI In k8s](#843-cni-in-k8s)
+    - [8.4.4) CNI Weave](#844-cni-weave)
+    - [8.4.5) Service Networking](#845-service-networking)
+    - [8.4.6) DNS In k8s](#846-dns-in-k8s)
+    - [8.4.7) CoreDNS In k8s](#847-coredns-in-k8s)
+    - [8.4.8) Ingress](#848-ingress)
+      - [8.4.8.1) Ingress Annotations & Rewrites](#8481-ingress-annotations--rewrites)
 - [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
 - [10) Troubleshooting](#10-troubleshooting)
 
@@ -1477,12 +1486,76 @@ ip -c -h a
   * Calico
   * Weave
 
+Note: In the CKA exam you are unable to go to third party websites and since the k8s documentation is vendor netural you need to go to third party websites for install instructions. But there is [one page left](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node) talking about how to install the Weave CNI network plugin, it is step 2.
+
 ## 8.4) k8s Cluster Networking
 
+### 8.4.1) Network Setup & Ports
+
+* Each Node in the Cluster must:
+  * Have at least one network interface connected to a network.
+  * Have an IP address allocated to the network interface.
+  * Have a unique hostname and MAC address.
+  * And the [following ports](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#check-required-ports) need to be opened.
+
+**Note:** When troubleshooting why the cluster isn't working, check that the required ports are open with `ss -lntp`.
+
+![node-networking-ports-v1.png](node-networking-ports-v1.png)
+
+* Master Node ports:
+  * 6443: the `kube-apiserver` listens for API requests on this port.
+  * 10250: all `kubelet` agents listens on this port.
+  * 10251: the `kube-scheduler` listens on this port.
+  * 10252: the `kube-controller-manager` listens on this port.
+  * 2379: ETCD listens locally on this port.
+  * 2380: ETCD listens to other ETCD clients on this port. This is only needed in a Cluster with multiple Master Nodes.
+* Worker Node ports:
+  * 10250: all `kubelet` agents listens on this port.
+  * 30000-32767: Services use this port range to listen on.
+
+![node-networking-ports-v2.png](node-networking-ports-v2.png)
+![node-networking-ports-v3.png](node-networking-ports-v3.png)
+![node-networking-ports-v4.png](node-networking-ports-v4.png)
+
+### 8.4.2) Pod Networking
+
+TODO
+
+### 8.4.3) CNI In k8s
+
+TODO
+
+### 8.4.4) CNI Weave
+
+TODO
+
+### 8.4.5) Service Networking
+
+TODO
+
+### 8.4.6) DNS In k8s
+
+TODO
+
+### 8.4.7) CoreDNS In k8s
+
+TODO
+
+### 8.4.8) Ingress
+
+The details for this can be found in in the developer's course under the section [Ingress](../02.applications-developer/README.md#52-ingress)
+
+#### 8.4.8.1) Ingress Annotations & Rewrites
+
+TODO
 
 # 9) Installation, Configuration, & Validation
 
+TODO
+
 # 10) Troubleshooting
+
+TODO
 
 ---
 
