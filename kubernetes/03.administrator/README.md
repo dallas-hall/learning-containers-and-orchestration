@@ -77,7 +77,10 @@
       - [8.1.2.3) DNS Record Types](#8123-dns-record-types)
     - [8.1.3) CoreDNS](#813-coredns)
     - [8.1.4) Linux Network Namespaces](#814-linux-network-namespaces)
-    - [8.1.5) Docker Networking](#815-docker-networking)
+  - [8.2) Docker Networking](#82-docker-networking)
+    - [8.2.1) Docker Bridge Network](#821-docker-bridge-network)
+  - [8.3) Container Network Interface (CNI)](#83-container-network-interface-cni)
+  - [8.4) k8s Cluster Networking](#84-k8s-cluster-networking)
 - [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
 - [10) Troubleshooting](#10-troubleshooting)
 
@@ -1305,6 +1308,9 @@ ip -n $NAMESPACE link
 ```
 
 * You can connect 2 network namespaces via their virtual network interfaces using a virtual ethernet cable, called a pipe.
+* **VETH (Virtual Ethernet)** are a local ethernet tunnel. They are created in pairs and packets transmitted between the 2 are immediately received. VETHs are used to connect network namespaces together, which also includes the host's main network namespace. https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking/#veth
+
+![veth.png](veth.png)
 
 ```bash
 # Create a virtual ethernet cable (i.e. pipe) between 2 virtual network interfaces on separate network namespaces
@@ -1391,7 +1397,88 @@ iptables -t nat -A PREROUTING --dport 80 --to-destination $CRE_HOST_PHYSICAL_NIC
 
 **Note:** When trying to troubleshoot connectivity between network namespaces, check that you are using CIDR addresses and check firewall rules.
 
-### 8.1.5) Docker Networking
+* The general steps for all of the above is:
+  * Create the network namespaces.
+  * Create the bridge network interface.
+  * Create VETH pairs.
+  * Attach VETH A to namespaces.
+  * Attach VETH B to bridge.
+  * Assign IP address to everything.
+  * Bring all the interfaces UP.
+  * Enable NAT for external communication.
+
+## 8.2) Docker Networking
+
+* When you run a Docker container, you have different networking options to choose from. Some are:
+  * **None network**, the Docker container is not attached to any network and cannot be accessed external and it cannot access anything itself.
+  ![docker-networking-v1.png](docker-networking-v1.png)
+  * **Host network**, the Docker container is attached the CRE host network. So there is no isolation between the CRE host network and the Docker container network. Thus a Docker container listening on port 80 can be accessed via the CRE host's `$CRE_HOST_IP_ADDRESS:80`
+  ![docker-networking-v2.png](docker-networking-v2.png)
+  * **Bridge network**, a virtual internal private network is created using Linux namespaces and the Docker containers attach to it.
+  ![docker-networking-v3.png](docker-networking-v3.png)
+
+### 8.2.1) Docker Bridge Network
+
+```bash
+# View the Docker network interfaces on the CRE host, it will be named bridge
+docker network ls
+
+# View the Docker network interfaces on the CRE host, it will be named docker0
+ip -c -h a
+```
+
+* The default address for the bridge network is `172.17.0.0` and every Docker container attached this virtual internal private network gets and IP address from this range.
+* Docker uses similar steps discussed in [Linux network namespaces](#814-linux-network-namespaces). The general steps are:
+  * Create the network namespaces.
+  * Create the bridge network interface.
+  * Create VETH pairs.
+  * Attach VETH A to namespaces.
+  * Attach VETH B to bridge.
+  * Assign IP address to everything.
+  * Bring all the interfaces UP.
+  * Enable NAT for external communication.
+
+![docker-networking-v4.png](docker-networking-v4.png)
+
+* VETH pairs can be identified by using numbers, and odd and even combination is used.
+
+![docker-networking-v5.png](docker-networking-v5.png)
+
+* The Docker container needs to have its port mapped to a CRE host port. This is so traffic sent to the host can be forwarded to the container. This is done through NAT.
+
+![docker-networking-v6.png](docker-networking-v6.png)
+
+## 8.3) Container Network Interface (CNI)
+
+* All of the CRE solutions solve the networking of containers the same way. The general steps are:
+  * Create the network namespaces.
+  * Create the bridge network interface.
+  * Create VETH pairs.
+  * Attach VETH A to namespaces.
+  * Attach VETH B to bridge.
+  * Assign IP address to everything.
+  * Bring all the interfaces UP.
+  * Enable NAT for external communication.
+
+![cni-v1.png](cni-v1.png)
+
+* So the **Container Network Interface (CNI)** standard was created as a centralised approach that every CRE solution can follow. The CNI does all the required tasks to get a container attached to a bridge network.
+
+![cni-v2.png](cni-v2.png)
+  
+* The exception is Docker, they developed their own which is called the **Container Network Model (CNM)**. The CNM does all the required tasks to get a container attached to a bridge network. Docker can implement CNI, but you must use the None Network and then do it yourself manually.
+
+**Note:** k8s using the None Network with Docker and implements a CNI as its container networking solution.
+
+![cni-v3.png](cni-v3.png)
+
+* The programs implementing the CNI are called plugins. Some CNI network plugins are:
+  * Flannel
+  * Calico
+  * Weave
+
+## 8.4) k8s Cluster Networking
+
 
 # 9) Installation, Configuration, & Validation
 
