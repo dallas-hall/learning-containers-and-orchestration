@@ -84,8 +84,8 @@
     - [8.4.1) Network Setup & Ports](#841-network-setup--ports)
     - [8.4.2) Pod Networking](#842-pod-networking)
     - [8.4.3) CNI In k8s](#843-cni-in-k8s)
-    - [8.4.3.1) CNI Weave](#8431-cni-weave)
-    - [8.4.3.1) IP Address Management (IPMAN) in Weave](#8431-ip-address-management-ipman-in-weave)
+      - [8.4.3.1) CNI Weave](#8431-cni-weave)
+      - [8.4.3.2) IP Address Management (IPMAN) in Weave](#8432-ip-address-management-ipman-in-weave)
     - [8.4.4) Service Networking](#844-service-networking)
     - [8.4.5) DNS In k8s](#845-dns-in-k8s)
     - [8.4.5.1) CoreDNS In k8s](#8451-coredns-in-k8s)
@@ -1557,7 +1557,7 @@ l /opt/cni/bin
 l /etc/cni/net.d
 ```
 
-### 8.4.3.1) CNI Weave
+#### 8.4.3.1) CNI Weave
 
 * A CNI agent is placed on each Node. 
 * The CNI agents communicate with each about networking information for Nodes and the k8s objects within them. Each agent stores a topology of the entire cluster's set up so they know exactly what to do.
@@ -1574,7 +1574,7 @@ l /etc/cni/net.d
 
 **Note:** In the CKA exam you are unable to go to third party websites and since the k8s documentation is vendor netural you need to go to third party websites for install instructions. But there is [one page left](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node) talking about how to install the Weave CNI network plugin, it is step 2.
 
-### 8.4.3.1) IP Address Management (IPMAN) in Weave
+#### 8.4.3.2) IP Address Management (IPMAN) in Weave
 
 * IPMAN is needed in k8s for the virtual bridge network IP addresses and the IP addresses of all other k8s objects.
 * The CNI plugin is responsible for IPMAN and ensuring there are no duplicate IP addresses assigned. CNI provides a few ways to do this:
@@ -1601,10 +1601,28 @@ Hosts/Net: 1048574
 ```
 ![ipman-weave-v2.png](ipman-weave-v2.png)
 
-
-
-
 ### 8.4.4) Service Networking
+
+* It is rare for Pods to directly communicate with each other, they typically go through ClusterIP Services.
+* There are a few steps involved to configure networking for k8s Services. Here are the steps for creating a ClusterIP Service:
+  * The `kubelet` agent responds to the `kube-apiserver`'s request to create a new Pod.
+  * The `kubelet` agent creates the new Pod.
+  * The `kubelet` agent invokes the CNI plugin to set up the Pod network configuration.
+  * When the ClusterIP Service is created, it is given an IP address. The `kube-proxy` agent takes this IP address and sets up forwarding from the ClusterIP Service IP address and port to the IP address and port of the Pod.
+
+![services-networking-v1.png](services-networking-v1.png)
+
+**Note:** There isn't actually a ClusterIP Service object, it is just a series of IP Tables rules to provide the ClusterIP Service functionality. These rules are created across the cluster on all Nodes.
+
+* There are 3 ways that `kube-proxy` can create the IP forwarding rules for a ClusterIP Service:
+  1. Userspace
+  2. Ipvs
+  3. IP Tables, the default option.
+* The IP forwarding mode can be set using the `--proxy-mode` when configuring `kube-proxy`.
+* The IP addresses assigned when creating Services can be set using the `--service-cluster-ip-range` when configuring `kube-apiserver`.
+
+![services-networking-v2.png](services-networking-v2.png)
+
 
 ```bash
 # Fine node ip address range
@@ -1614,30 +1632,41 @@ ip -c -h a
 kubectl -n kube-system logs weave-net-ptjqh weave | grep ipalloc
 
 # Find service ip address range
+ps aux | grep 'kube-api' | grep 'range'
 cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep range
 kubectl -n kube-system describe $KUBE_API_POD | grep range
 
 # Check what kube-proxy is using for traffic rules (e.g. iptables)
-kubectl -n kube-system logs $KUBE_PROXY_POD
+ps aux | grep 'kube-proxy' | grep 'proxy'
+kubectl -n kube-system logs $KUBE_PROXY_POD | grep proxy
 
-# Daemonset command
-kubectl $CMD ds $ARGS
+# View IP tables rules for services
+iptables -L -n -t net | grep $SERVICE_NAME
 
-# Calculate IPs from CIDR
-ipcalc 192.168.0.0/16
-Network:	192.168.0.0/16
-Netmask:	255.255.0.0 = 16
-Broadcast:	192.168.255.255
-
-Address space:	Private Use
-HostMin:	192.168.0.1
-HostMax:	192.168.255.254
-Hosts/Net:	65534
+# Can be found in a log too, but this location may be different depending on O/S
+cat /var/log/kube-proxy.log
 ```
+
+**Note:** The Pod network range and Service network range must not overlap. You can check that by using `ipcalc $POD_CIDR` and `ipcalc $SERVICE_CIDR`
 
 ### 8.4.5) DNS In k8s
 
-TODO
+* The Node name and its IP address will be recorded in a DNS nameserver somewhere.
+
+![dns-in-k8s-v1.png](dns-in-k8s-v1.png)
+
+* Whenever a Services is created, k8s creates a DNS record for it. It maps the name and IP address, so any Pod in the same namespace can access the Pod via the Service using the Service name. If the Pod is in another namespace, it must use `$SERVICE_NAME.$NAMESPACE.svc.cluster.local` to access the Pod through the Service.
+
+![dns-in-k8s-v2.png](dns-in-k8s-v2.png)
+
+* All Services are grouped into a sub-domain called `svc`.
+* All Services and Pods are grouped into a root domain for the cluster called `cluster.local`.
+
+![dns-in-k8s-v3.png](dns-in-k8s-v3.png)
+
+* Pods do not get a DNS record by default, but this can be turned on. The Pod's DNS record name is its IP address with the dots replaced by dashes.
+
+![dns-in-k8s-v4.png](dns-in-k8s-v4.png)
 
 ### 8.4.5.1) CoreDNS In k8s
 
