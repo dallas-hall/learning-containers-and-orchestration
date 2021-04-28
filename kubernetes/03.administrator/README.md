@@ -84,12 +84,13 @@
     - [8.4.1) Network Setup & Ports](#841-network-setup--ports)
     - [8.4.2) Pod Networking](#842-pod-networking)
     - [8.4.3) CNI In k8s](#843-cni-in-k8s)
-    - [8.4.4) CNI Weave](#844-cni-weave)
-    - [8.4.5) Service Networking](#845-service-networking)
-    - [8.4.6) DNS In k8s](#846-dns-in-k8s)
-    - [8.4.7) CoreDNS In k8s](#847-coredns-in-k8s)
-    - [8.4.8) Ingress](#848-ingress)
-      - [8.4.8.1) Ingress Annotations & Rewrites](#8481-ingress-annotations--rewrites)
+    - [8.4.3.1) CNI Weave](#8431-cni-weave)
+    - [8.4.3.1) IP Address Management (IPMAN) in Weave](#8431-ip-address-management-ipman-in-weave)
+    - [8.4.4) Service Networking](#844-service-networking)
+    - [8.4.5) DNS In k8s](#845-dns-in-k8s)
+    - [8.4.5.1) CoreDNS In k8s](#8451-coredns-in-k8s)
+    - [8.4.6) Ingress](#846-ingress)
+      - [8.4.6.1) Ingress Annotations & Rewrites](#8461-ingress-annotations--rewrites)
 - [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
 - [10) Troubleshooting](#10-troubleshooting)
 
@@ -1459,7 +1460,7 @@ ip -c -h a
 
 ## 8.3) Container Network Interface (CNI)
 
-* All of the CRE solutions solve the networking of containers the same way. The general steps are:
+* All of the CNI solutions solve the networking of containers the same way. The general steps are:
   * Create the network namespaces.
   * Create the bridge network interface.
   * Create VETH pairs.
@@ -1486,7 +1487,7 @@ ip -c -h a
   * Calico
   * Weave
 
-Note: In the CKA exam you are unable to go to third party websites and since the k8s documentation is vendor netural you need to go to third party websites for install instructions. But there is [one page left](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node) talking about how to install the Weave CNI network plugin, it is step 2.
+**Note:** In the CKA exam you are unable to go to third party websites and since the k8s documentation is vendor netural you need to go to third party websites for install instructions. But there is [one page left](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node) talking about how to install the Weave CNI network plugin, it is step 2.
 
 ## 8.4) k8s Cluster Networking
 
@@ -1519,33 +1520,134 @@ Note: In the CKA exam you are unable to go to third party websites and since the
 
 ### 8.4.2) Pod Networking
 
-TODO
+* k8s doesn't supply a networking solution natively. There are 3 requirements for any Pod networking solution:
+  1. Every Pod should have an IP address.
+  2. Every Pod should be able to communicate with every other Pod in the same Node.
+  3. Every Pod should be able to communicate with every other Pod on other Nodes without NAT.
+* All of the CNI solutions solve the networking of containers the same way. The general steps are:
+  * Create the network namespaces.
+  * Create the bridge network interface.
+  * Create VETH pairs.
+  * Attach VETH A to namespaces.
+  * Attach VETH B to bridge.
+  * Assign IP address to everything.
+  * Bring all the interfaces UP.
+  * Add routes between the bridge interfaces and Nodes
+  * Enable NAT for external communication.
+
+![pod-networking-v1.png](pod-networking-v1.png)
 
 ### 8.4.3) CNI In k8s
 
+* The CNI plugin is reponsible for:
+  * CRE creates network namespaces.
+  * Identifying network to attach the container to.
+  * CRE invokes CNI when a container is ADDed.
+  * CRE invokes CNI when a container is DELeted.
+  * CNI can spit out the networking configuration in JSON.
+* The `kubelet` agent is responsible for invoking the CNI plugin. The `kubelet` agent is also where the CNI plugin is configured.
+
+```bash
+# Checkout CNI configuration details with kubelet
+ps aux | grep kubelet | grep 'network-plugin'
+ps aux | grep kubelet | grep 'cni'
+
+# Check out the --cni-bin-dir and --cni-conf-dir
+l /opt/cni/bin
+l /etc/cni/net.d
+```
+
+### 8.4.3.1) CNI Weave
+
+* A CNI agent is placed on each Node. 
+* The CNI agents communicate with each about networking information for Nodes and the k8s objects within them. Each agent stores a topology of the entire cluster's set up so they know exactly what to do.
+* The CNI agents are responsible for all network traffic between Nodes and the k8s objects within them.
+* The CNI agent creates it own bridge network on each Node and assigns IP addresses to them. These bridge networks are used to communicate between Nodes. There are a few steps in this process:
+  * A packet going from Node A to Node B is intercepted by Node A's CNI agent.
+  * Node A's agent encapsulates the packet and sends it to Node B.
+  * Node B's agent strips away the encapsulation and the original packet is sent on to its original desitination.
+* A single Pod may be attached to multiple bridge networks, e.g. the Docker bridge and CNI bridge. The CNI makes sure the Pod gets the correct routes so it can use the CNI bridge network.
+
+![weave-cni-v1.png](weave-cni-v1.png)
+
+* You will need to use third party documentation to deploy a third party's CNI. The CNI can be deployed daemons or services at the O/S level, or deployed as control plane Pods. The Pods will be deployed as a DaemonSet to ensure each Node in the cluster has one CNI Pod on it.
+
+**Note:** In the CKA exam you are unable to go to third party websites and since the k8s documentation is vendor netural you need to go to third party websites for install instructions. But there is [one page left](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/#steps-for-the-first-control-plane-node) talking about how to install the Weave CNI network plugin, it is step 2.
+
+### 8.4.3.1) IP Address Management (IPMAN) in Weave
+
+* IPMAN is needed in k8s for the virtual bridge network IP addresses and the IP addresses of all other k8s objects.
+* The CNI plugin is responsible for IPMAN and ensuring there are no duplicate IP addresses assigned. CNI provides a few ways to do this:
+  * DHCP plugin.
+  * host-local plugin.
+
+![ipman-weave-v1.png](ipman-weave-v1.png)
+
+* Weave by default uses `10.32.0.0/12` for the entire network. This about 1 million IP addresses for the Node. This IP address is able to be changed when you deploy Weave.
+
+```bash
+# Use ipcalc to show the networking information for 10.32.0.0/12
+ipcalc 10.32.0.0/12
+
+# Output
+Network: 10.32.0.0/12
+Netmask: 255.240.0.0 = 12
+Broadcast: 10.47.255.255
+
+Address space:	Private Use
+HostMin: 10.32.0.1
+HostMax: 10.47.255.254
+Hosts/Net: 1048574
+```
+![ipman-weave-v2.png](ipman-weave-v2.png)
+
+
+
+
+### 8.4.4) Service Networking
+
+```bash
+# Fine node ip address range
+ip -c -h a
+
+# Find pod ip address range when using weave
+kubectl -n kube-system logs weave-net-ptjqh weave | grep ipalloc
+
+# Find service ip address range
+cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep range
+kubectl -n kube-system describe $KUBE_API_POD | grep range
+
+# Check what kube-proxy is using for traffic rules (e.g. iptables)
+kubectl -n kube-system logs $KUBE_PROXY_POD
+
+# Daemonset command
+kubectl $CMD ds $ARGS
+
+# Calculate IPs from CIDR
+ipcalc 192.168.0.0/16
+Network:	192.168.0.0/16
+Netmask:	255.255.0.0 = 16
+Broadcast:	192.168.255.255
+
+Address space:	Private Use
+HostMin:	192.168.0.1
+HostMax:	192.168.255.254
+Hosts/Net:	65534
+```
+
+### 8.4.5) DNS In k8s
+
 TODO
 
-### 8.4.4) CNI Weave
+### 8.4.5.1) CoreDNS In k8s
 
 TODO
 
-### 8.4.5) Service Networking
-
-TODO
-
-### 8.4.6) DNS In k8s
-
-TODO
-
-### 8.4.7) CoreDNS In k8s
-
-TODO
-
-### 8.4.8) Ingress
+### 8.4.6) Ingress
 
 The details for this can be found in in the developer's course under the section [Ingress](../02.applications-developer/README.md#52-ingress)
 
-#### 8.4.8.1) Ingress Annotations & Rewrites
+#### 8.4.6.1) Ingress Annotations & Rewrites
 
 TODO
 
