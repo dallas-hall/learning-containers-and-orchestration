@@ -1655,18 +1655,26 @@ cat /var/log/kube-proxy.log
 
 ![dns-in-k8s-v1.png](dns-in-k8s-v1.png)
 
-* Whenever a Services is created, k8s creates a DNS record for it. It maps the name and IP address, so any Pod in the same namespace can access the Pod via the Service using the Service name. If the Pod is in another namespace, it must use `$SERVICE_NAME.$NAMESPACE.svc.cluster.local` to access the Pod through the Service.
+* A DNS solution to handle internal Cluster DNS resolution is installed by default, unless you are setting up the Cluster manually.
 
 ![dns-in-k8s-v2.png](dns-in-k8s-v2.png)
+
+* Whenever a Services is created, k8s creates a DNS record for it. It maps the name and IP address, so any Pod in the same namespace can access the Pod via the Service using the Service name.
+  
+![dns-in-k8s-v3.png](dns-in-k8s-v3.png)
+
+* If the Pod is in another namespace, it must use `$SERVICE_NAME.$NAMESPACE.svc.cluster.local` to access the Pod through the Service.
+
+![dns-in-k8s-v4.png](dns-in-k8s-v4.png)
 
 * All Services are grouped into a sub-domain called `svc`.
 * All Services and Pods are grouped into a root domain for the cluster called `cluster.local`.
 
-![dns-in-k8s-v3.png](dns-in-k8s-v3.png)
+![dns-in-k8s-v5.png](dns-in-k8s-v5.png)
 
 * Pods do not get a DNS record by default, but this can be turned on. The Pod's DNS record name is its IP address with the dots replaced by dashes.
 
-![dns-in-k8s-v4.png](dns-in-k8s-v4.png)
+![dns-in-k8s-v6.png](dns-in-k8s-v6.png)
 
 ### 8.4.5.1) CoreDNS In k8s
 
