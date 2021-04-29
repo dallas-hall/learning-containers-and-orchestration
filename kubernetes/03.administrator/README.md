@@ -1655,7 +1655,7 @@ cat /var/log/kube-proxy.log
 
 ![dns-in-k8s-v1.png](dns-in-k8s-v1.png)
 
-* A DNS solution to handle internal Cluster DNS resolution is installed by default, unless you are setting up the Cluster manually.
+* A DNS solution to handle internal Cluster DNS resolution is installed by default, unless you are setting up the Cluster manually. Prior to version 1.12 this was `kube-dns` but now CoreDNS is recommended.
 
 ![dns-in-k8s-v2.png](dns-in-k8s-v2.png)
 
@@ -1672,13 +1672,41 @@ cat /var/log/kube-proxy.log
 
 ![dns-in-k8s-v5.png](dns-in-k8s-v5.png)
 
-* Pods do not get a DNS record by default, but this can be turned on. The Pod's DNS record name is its IP address with the dots replaced by dashes.
+* Pods do not get a DNS record by default, but this can be turned on. The Pod's DNS record name is its IP address with the dots replaced by dashes. They then can be reached on `$POD.$NAMESPACE.pod.cluster.local`
 
 ![dns-in-k8s-v6.png](dns-in-k8s-v6.png)
 
+**Note:** `$SERVICE.$NAMESPACE.svc.cluster.local` is the fully qualified domain name.
+
 ### 8.4.5.1) CoreDNS In k8s
 
-TODO
+* Rather then adding an entry into every Pod's `/etc/hosts` file, every Pod's `/etc/resolv.conf` points to a DNS nameserver with all the DNS records. You could do this manually.
+
+![dns-in-k8s-v7.png](dns-in-k8s-v7.png)
+
+![dns-in-k8s-v8.png](dns-in-k8s-v8.png)
+
+* By default it is handled automatically by the DNS solution installed by k8s. Prior to version 1.12 this was `kube-dns` but now it is CoreDNS.
+* CoreDNS is deployed as Pods in `kube-system` namespace via a Deployment. A ClusterIP Service called `kube-dns` is created for the CoreDNS Pods. This is how all other k8s objects communicate with the CoreDNS Pods.
+* The `kubelet` agent is reponsible for configuring Pod DNS nameservers to point to the CoreDNS ClusterIP Service `kube-dns`.
+
+![dns-in-k8s-v9.png](dns-in-k8s-v9.png)
+
+* The `/etc/coredns/Corefile` within the CoreDNS Pod contains the configuration details for CoreDNS. It is a ConfigMap mounted as a Volume so you can easily make changes to it. This file contains:
+  * A number of plugins handling different functionality. They are highlighted orange in the picture below.
+  * `kubernetes` is the plugin handling CoreDNS running in k8s.
+    * The cluster domain is defined here as `cluster.local` by default.
+    * `pods insecure` will create DNS record entries for Pods with the DNS name having the IP address dots replaced with dashes.
+  * `proxy`is the plugin that handles any DNS resolution that `kubernetes` cannot handle. For example trying to reach an IP address on the internet.
+
+![dns-in-k8s-v10.png](dns-in-k8s-v10.png)
+
+* The CoreDNS Pods watch the Cluster for new Services and everytime one is created it will create a new DNS record for it. It does this Pods as well if the `pods insecure` option is on within its `/etc/coredns/Corefile` `kubernetes` plugin.
+* If you use `nslookup` to lookup the DNS record for a k8s Service using any combination of the domain through to the fully qualified domain, you will always receive the fully qualified domain name `$SERVICE.$NAMESPACE.svc.cluster.local`. This is the `/etc/resolv.conf` file has a `search` entry for it.
+
+![dns-in-k8s-v11.png](dns-in-k8s-v11.png)
+
+* If you allow Pods to have a DNS record created, you must always use the fully qualified domain name to resolve the Pod. `$POD.$NAMESPACE.pod.cluster.local`.
 
 ### 8.4.6) Ingress
 
