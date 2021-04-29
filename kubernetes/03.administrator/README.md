@@ -1688,7 +1688,8 @@ cat /var/log/kube-proxy.log
 
 * By default it is handled automatically by the DNS solution installed by k8s. Prior to version 1.12 this was `kube-dns` but now it is CoreDNS.
 * CoreDNS is deployed as Pods in `kube-system` namespace via a Deployment. A ClusterIP Service called `kube-dns` is created for the CoreDNS Pods. This is how all other k8s objects communicate with the CoreDNS Pods.
-* The `kubelet` agent is reponsible for configuring Pod DNS nameservers to point to the CoreDNS ClusterIP Service `kube-dns`.
+* The IP address of the `kube-dns` ClusterIP Service is the IP address used as the DNS nameserver.
+* The `kubelet` agent is reponsible for configuring Pod DNS nameservers to point to the CoreDNS ClusterIP Service `kube-dns` IP address.
 
 ![dns-in-k8s-v9.png](dns-in-k8s-v9.png)
 
@@ -1714,7 +1715,10 @@ The details for this can be found in in the developer's course under the section
 
 #### 8.4.6.1) Ingress Annotations & Rewrites
 
-TODO
+* You can use Ingress Resources to configure the Ingress Controller to rewrite URL paths before they are sent to the application. e.g. `http://<ingress-service>:<ingress-port>/watch` becomes `http://<watch-service>:<port>/` with the rewrite option. Without it `http://<ingress-service>:<ingress-port>/watch` becomes `http://<watch-service>:<port>/watch` and this will be a problem if the applicaiton is expecting `/` but it gets `/watch`. It will return 404 not found. You can fix this with URL rewrites.
+  * [This GitHub page](https://github.com/kubernetes/ingress-nginx/blob/master/docs/examples/rewrite/README.md) talks about how URL path rewriting process.
+  * [This k8s documentation section](https://kubernetes.io/docs/concepts/services-networking/ingress/?spm=a2c4g.11186623.2.23.3fdd30dfnyevPx#the-ingress-resource) has a basic example as well.
+  * [This k8s GitHub documentation section](https://kubernetes.github.io/ingress-nginx/examples/rewrite/) has more examples as well.
 
 # 9) Installation, Configuration, & Validation
 
