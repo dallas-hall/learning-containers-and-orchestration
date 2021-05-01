@@ -91,8 +91,14 @@
     - [8.4.5.1) CoreDNS In k8s](#8451-coredns-in-k8s)
     - [8.4.6) Ingress](#846-ingress)
       - [8.4.6.1) Ingress Annotations & Rewrites](#8461-ingress-annotations--rewrites)
-- [9) Installation, Configuration, & Validation](#9-installation-configuration--validation)
-- [10) Troubleshooting](#10-troubleshooting)
+- [9) Desinging A Cluster](#9-desinging-a-cluster)
+- [9.1) High Availability (HA)](#91-high-availability-ha)
+  - [9.1.1) Kube API Server](#911-kube-api-server)
+    - [9.1.2) Scheduler & Controller Manager](#912-scheduler--controller-manager)
+    - [9.1.3) ETCD](#913-etcd)
+- [10) Installing A Cluster With Kubeadm](#10-installing-a-cluster-with-kubeadm)
+- [11) Troubleshooting The Cluster](#11-troubleshooting-the-cluster)
+- [12) Other Topics](#12-other-topics)
 
 # 1) Core Concepts
 
@@ -1720,11 +1726,139 @@ The details for this can be found in in the developer's course under the section
   * [This k8s documentation section](https://kubernetes.io/docs/concepts/services-networking/ingress/?spm=a2c4g.11186623.2.23.3fdd30dfnyevPx#the-ingress-resource) has a basic example as well.
   * [This k8s GitHub documentation section](https://kubernetes.github.io/ingress-nginx/examples/rewrite/) has more examples as well.
 
-# 9) Installation, Configuration, & Validation
+# 9) Desinging A Cluster
+
+* There are several questions that you need to ask and get answers to when designing a cluster. They are:
+  * What is the cluster's purpose?
+    * Education - use MiniKube or kubeadm
+    * Dev / test - use kubeadm or cloud.
+    ![cluster-design-v1.png](cluster-design-v1.png)  
+    * Production - use kubeadm or cloud.
+    ![cluster-design-v2.png](cluster-design-v2.png)
+  * Where will it be hosted?
+    * In the cloud.
+    * On premesis.
+    ![cluster-design-v3.png](cluster-design-v3.png)
+  * What type of workloads will the cluster run?
+    * How many applications will be hosted?
+      * Few vs many.
+    * What kind of applications?
+      * Web, data science, etc.
+    * What compute resources will the applications need?
+      * CPU, memory, and disk.
+    ![cluster-design-v4.png](cluster-design-v4.png)
+    * What type of network traffic will the applications generate?
+      * Burst traffic vs heavy sustained traffice.
+  * Do you need high availability?
+  ![cluster-design-v5.png](cluster-design-v5.png)
+  ![cluster-design-v6.png](cluster-design-v6.png)
+
+* k8s only supports running on Linux.
+* There are 2 types of k8s deployment solutions
+  1. **Turnkey solutions**, are when you provision the hosts to install k8s on and do all of the configuration and maintenance yourself.
+  2. **Hosted solutions** are when a third party provides the hosts to install k8s on and the third party does all the configuration and maintenance.
+
+![cluster-design-v7.png](cluster-design-v7.png)
+
+![cluster-design-v8.png](cluster-design-v8.png)
+
+![cluster-design-v9.png](cluster-design-v9.png)
+
+# 9.1) High Availability (HA)
+
+* If you only have 1 Master Node in your Cluster and it crashes, what happens?
+  * You cannot access the Cluster via `kubectl` as there is no `kube-apiserver`
+  * As long as your Worker Nodes are still running then users can access the applications. But if a Pod crashes then there are no Control Plane components to be able to recreate Pods.
+* **High availability** means you redundancy across every componenet in your system, which avoids having a single point of failure.
+* In k8s HA is achieved by having multiple Master Nodes, multiple Worker Nodes, and possibly separate hosts for ETCD.
+
+![high-availability-v1.png](high-availability-v1.png)
+
+## 9.1.1) Kube API Server
+
+* In a HA setup, the `kube-apiserver` on all Master Nodes can be run in 'active active' mode. An API request must only be sent to one of them. `kubectl` can only be configured with one Master Node to send API requests to. To use multiple `kube-apiservers` with `kubectl`, a load balancer (e.g. nginx) sits infront of the Master Nodes and splits traffic between them. The `kubectl` points to the load balancer.
+* **Active / Active** mode means all of the multiple components are active and doing their job.
+
+![high-availability-v2.png](high-availability-v2.png)
+
+### 9.1.2) Scheduler & Controller Manager
+
+* This Control Plane components contiunually monitor the Cluster and make changes when triggered. If multiple instances are running in 'active active' then duplicate actions will occur. e.g. the ReplicationControllers will create 2 sets of Pods instead of just 1. To counter this, they must be run in 'active standby' mode.
+* **Active / Standby** mode means that only one of many components is active and doing its job, and the rest are doing nothing while in standby.
+* When configuring the Controller Manager, the `--leader-elect true` option is used. The Controller Managers will try to gain a lock (i.e. lease) on the `kube-controller-manager` Endpoint, and whoever gets this lock becomes the active and the rest are passive. The default settings for this are:
+  * `--leader-elect-lease-duration` is 15 seconds and this determines how long the leader lock lasts for.
+  * `--leader-elect-renew-deadline` is 10 seconds and this determines how often to renew the current lock. 
+  * `--leader-elect-retry-period` is 2 seconds and this determines how often all of the components vying for the lock will request the lock.
+
+![high-availability-v3.png](high-availability-v3.png)
+
+**Note:** Both the Controller Manager and Scheduler use this locking mechanism and configuration options.
+
+### 9.1.3) ETCD
+
+* In k8s there are 2 deployment topologies for ETCD:
+  1. Installing ETCD on the Master Node with the rest of the Control Plane components.
+  ![high-availability-v4.png](high-availability-v4.png)
+  2. Installing ETCD on its own host separate to the Master Nodes.
+   ![high-availability-v5.png](high-availability-v5.png)
+
+**Note:** Regardless of the toplogy used to deploy ETCD, the configuration option `--etcd-servers` in the `kube-apiserver` set up configuration options is used to tell the `kube-apiserver` where to look for ETCD. Having 1 or 2 ETCD instances doesn't offer any redundancy value.
+
+![high-availability-v6.png](high-availability-v6.png)
+
+* When running multiple ETCD servers:
+  * The data is replicated across all of the ETCD servers.
+  ![etcd-ha-v1.png](etcd-ha-v1.png)
+  * You can read data from any ETCD server.
+  ![etcd-ha-v2.png](etcd-ha-v2.png)
+  * You can only write to one ETCD server, known as the leader. If any write requests go to non-leaders they will forward the write request to the leader. The write is only considered complete when the majority of ETCD nodes have performed the write.
+  ![etcd-ha-v3.png](etcd-ha-v3.png)
+  ![etcd-ha-v4.png](etcd-ha-v4.png)
+* Leader election in ETCD is done by the RAFT protocol.
+  * When the ETCD cluster is set up, a random timer is given to all ETCD nodes and leader will be the Node where the random timer expires first.
+  * The leader tells the other ETCD nodes that it is the leader and the other ETCD nodes acknowledge this.
+  * The leader periodically tells the other ETCD nodes it is still the leader. If other ETCD nodes don't received this period message, the leader election is done again.
+* The majority (i.e. quorum) algorithm for ETCD clusters is `Number of ETCD nodes / 2 + 1`
+![etcd-ha-v5.png](etcd-ha-v5.png)
+* The number of ETCD hosts should be only odd numbers greater than or equal to 3. As this provides the best fault tolerances against network segmentation. The minumum required amount of ETCD nodes in HA is 3, and 5 ETCD nodes is the point of diminishing return.
+![etcd-ha-v6.png](etcd-ha-v6.png)
+![etcd-ha-v7.png](etcd-ha-v7.png)
+* When configuring ETCD for the first time, `--initial-cluster` option is important as it configures the address of all ETCD peers in the ETCD cluster.
+
+# 10) Installing A Cluster With Kubeadm
+
+* Setting up a k8s Cluster manually is a tedious task. The `kubeadm` tool makes it easier to set up production grade k8s clusters. https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ has the links on how to do this.
+* In general the install steps start on the page https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ and then:
+  * On all Nodes, install kubeadm, kubelet, and kubectl - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+  * On all Nodes, install CRE - https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+  * On Master Node, create the cluster - https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
+    * Remember to use kubeadm init with `--apiserver-advertise-address=$MASTER_NODE_IP` and `--pod-network-cidr $POD_CIDR_RANGE`
+    * On Worker Node, join the cluster with the output from `kubeadm init` on Master.
+    * On Master Node, install Weave CNI in the exam with https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/
+
+![kubeadm-v1.png](kubeadm-v1.png)
+
+**Note:** When `kubectl get nodes` reports Cluster Nodes as NotReady this means the CNI network plugin hasn't been installed.
+
+```bash
+# Running without any flags can work
+kubeadm init
+
+# What I did to get the cluster to work
+kubeadm init --apiserver-advertise-address=$MASTER_NODE_IP --pod-network-cidr $POD_CIDR_RANGE
+
+# Undo a kubeadm init
+kubeadm reset
+
+# Regenerate a new join token for Worker Node
+kubeadm token create --print-join-command
+```
+
+# 11) Troubleshooting The Cluster
 
 TODO
 
-# 10) Troubleshooting
+# 12) Other Topics
 
 TODO
 
