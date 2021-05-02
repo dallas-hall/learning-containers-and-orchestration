@@ -98,7 +98,16 @@
     - [9.1.3) ETCD](#913-etcd)
 - [10) Installing A Cluster With Kubeadm](#10-installing-a-cluster-with-kubeadm)
 - [11) Troubleshooting The Cluster](#11-troubleshooting-the-cluster)
+  - [11.1) Application Failure](#111-application-failure)
+  - [11.2) Control Plane Failure](#112-control-plane-failure)
+    - [11.2.1) Control Plane Components As Pods](#1121-control-plane-components-as-pods)
+    - [11.2.1) Control Plane Components As O/S Services](#1121-control-plane-components-as-os-services)
+  - [11.3) Worker Node Failure](#113-worker-node-failure)
+  - [11.4) Network Troubleshooting](#114-network-troubleshooting)
 - [12) Other Topics](#12-other-topics)
+  - [12.1) JSON Path](#121-json-path)
+  - [12.1) Advanced Kubectl Commands](#121-advanced-kubectl-commands)
+- [13) Exam Tips](#13-exam-tips)
 
 # 1) Core Concepts
 
@@ -1856,14 +1865,164 @@ kubeadm token create --print-join-command
 
 # 11) Troubleshooting The Cluster
 
-TODO
+## 11.1) Application Failure
+
+https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application/
+
+* Here is a list of generic application failure troubleshooting steps.
+  * Create a diagram of the environment you are troublesshooting.
+  * Depending on what you know about the failure will determine which end of the diagram you start at.
+  * Check every object and link in the diagram.
+
+```bash
+# Check if the application is accessible using the IP of the Node
+curl -v $NODE_IP:$NODESERVICE_PORT
+
+# Check the NodePort Service to see if it has the correct ports and selectors
+kubectl describe svc $NAME
+
+# Check the end points of Services to see if they are working properly
+kubectl get endpoints
+kubectl get ep
+
+# Check the technical detils of a Pod and compare it to the Service. Checking for matching ports and labels.
+kubectl describe deploy $NAME
+kubectl describe po $NAME
+
+# Check the Pod's status and restart count
+kubectl get po
+
+# Check the current Pod's logs
+kubectl logs $POD_NAME
+
+# Check the previous failed Pod's logs
+kubectl logs $POD_NAME --previous
+```
+
+## 11.2) Control Plane Failure
+
+https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
+
+* Here is a list of generic Control Plane troubleshooting steps.
+  * Check the Master Nodes` health.
+  * Check the Control Plane components` health.
+  * Check the Control Plane components` logs.
+* When troubleshooting, remember:
+  * The Scheduler is responsible for selecting which Node to play a Pod onto.
+  * The Kubelet agent is reponsible for placing the Pod onto a Node.
+  * The Controller Manager is reponsible for Deployments and ReplicaSets.
+  * Static Pods will have `$POD_NAME-$NODENAME` so remember to check the last part of the name to see what Node the Static Pod is running on.
+
+### 11.2.1) Control Plane Components As Pods
+
+```bash
+# Check Node health
+kubectl get nodes
+
+# Check the Pods` status
+kubectl -n kube-system get pods
+
+# Check the Pods` logs
+kubectl -n kube-system logs $POD_NAME
+```
+
+### 11.2.1) Control Plane Components As O/S Services
+
+```bash
+# Check Node health
+kubectl get nodes
+
+# Check the Control Plane service status
+systemctl status kube-apiserver
+systemctl status kube-controller-manager
+systemctl status kube-scheduler
+systemctl status kubelet
+systemctl status kube-proxy
+
+service $SERVICE_NAME status
+
+# Check the Control Plane service logs
+journalctl -u $SERVICE_NAME
+less /var/log/$SERVICE_NAME
+
+# Check the Control Plane service files
+ls /etc/systemd/system/
+ls /etc/systemd/system/$SERVICE_NAME
+less /etc/systemd/system/$SERVICE_NAME/$SERVICE_FILE
+```
+
+**Note:** The `kubelet` configuration file determines where the Static Pod YAML definition files are, so use `grep -i 'staticpod' $KUBELET_SERVICE_CONF_FILE`. By default for `kubeadm` this is `/etc/kubernetes/manifests/`
+
+## 11.3) Worker Node Failure
+
+* Here is a list of generic Control Plane troubleshooting steps.
+  * Check the Master Nodes` health.
+  * Check the Master Nodes O/S and resource health
+    * If a Status is set to True then it is okay.
+    * If a Status is set to False then it is broken.
+    * If a Status is set to Unknown then network connectivity is lost.
+
+```bash
+# Check Node health
+kubectl get nodes
+
+# Check O/S and resource health
+kubectl describe node $NAME
+
+# Check process
+top
+htop
+ps aux
+
+# Check memory
+free -h
+top
+htop
+
+# Check disk space
+df -h
+
+# Check the Control Plane service status
+systemctl status kube-apiserver
+systemctl status kube-controller-manager
+systemctl status kube-scheduler
+systemctl status kubelet
+systemctl status kube-proxy
+
+service $SERVICE_NAME status
+
+# Check the Control Plane service logs
+journalctl -u $SERVICE_NAME
+less /var/log/$SERVICE_NAME
+
+# Check the Control Plane service files
+ls /etc/systemd/system/
+ls /etc/systemd/system/$SERVICE_NAME
+less /etc/systemd/system/$SERVICE_NAME/$SERVICE_FILE
+
+# Check the certificate ISSUER (ca) and Validity Not After (expiry)
+openssl x509 -in $CERT_PATH -text
+```
+
+## 11.4) Network Troubleshooting
+
+* Remember that:
+  * k8s uses CNI plugins for networking.
+  * `kubelet` is reponsible for executing plugins.
+
+**Note:** If there are multiple CNI configuration files in the directory, the kubelet uses the configuration file that comes first by name in lexicographic order.
 
 # 12) Other Topics
 
+## 12.1) JSON Path
+
 TODO
 
----
+## 12.1) Advanced Kubectl Commands
 
-**Note:** Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment.
+TODO
 
-**Note:** In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
+# 13) Exam Tips
+
+* Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment. But there will be times you cannot edit the object, in those instances a file will be saved to `/tmp` with your changes. Just delete the existing object and create the object from the file in `/tmp`.
+* In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
