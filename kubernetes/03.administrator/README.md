@@ -108,7 +108,7 @@
   - [12.1) YAML Basics](#121-yaml-basics)
   - [12.2) JSON Basics](#122-json-basics)
   - [12.3) JSON Path Basics](#123-json-path-basics)
-  - [12.4) Advanced Kubectl Commands](#124-advanced-kubectl-commands)
+  - [12.4) JSON Path & Kubectl](#124-json-path--kubectl)
 - [13) Exam Tips](#13-exam-tips)
 
 # 1) Core Concepts
@@ -2239,9 +2239,35 @@ fruits:
 
 **Note:** A good idea when writing complex queries is to use a step by step approach rather than writing it all in one go.
 
-## 12.4) Advanced Kubectl Commands
+## 12.4) JSON Path & Kubectl
 
-TODO
+* Why use JSON Path with `kubectl`?
+  * You can create your own custom `kubectl` output using JSON Path.
+  * You can filter `kubectl` output using JSON Path.
+* Why does JSON Path work with `kubectl`?
+  * Everytime you run a `kubectl` command it gets sent to the `kube-apiserver`. The `kube-apiserver` responds with JSON, which is then displayed in a predetermined format based on the `kubectl` command you ran. So you can use JSON Path to customise the returned JSON.
+
+![jsonpath-and-kubectl-v1.png](jsonpath-and-kubectl-v1.png)
+
+* There are 4 steps to using JSON Path with `kubectl`
+  1. Identiy the `kubectl` that will return the data you need.
+  2. Use the `-o json` output flag to get JSON returned from the command.
+  3. Look at the returned data and work out the JSON Path query. `$` is not mandatory with `kubectl` JSON.
+  4. Run the JSON Path query with `kubectl -o jsonpath='{$JSON_PATH}'` The JSON Path command must be inside single quotes and matching curly braces, e.g. `'{ ... }'`
+
+![jsonpath-and-kubectl-v2.png](jsonpath-and-kubectl-v2.png)
+
+* You can merge multiple JSON Path queries into one by separating them via a comma. e.g. `'{$JSON_PATH1,$JSON_PATH2}'`
+* You can add special characters to format the output, such as `\t` for tab and `\n` for newline.
+* You can write loops in JSON Path with `'{range .JSON_PATH_ITEMS[*]}{$JSON_PATH_ITEM}{end}'`
+![jsonpath-and-kubectl-v3.png](jsonpath-and-kubectl-v3.png)
+![jsonpath-and-kubectl-v4.png](jsonpath-and-kubectl-v4.png)
+* It can be easier to use custom columns than using the loop. You can create custom columns with `-o=custom-columns=$COLUMN_NAME:$JSON_PATH`
+![jsonpath-and-kubectl-v5.png](jsonpath-and-kubectl-v5.png)
+* You can sort data with `--sort-by=$JSON_PATH`
+![jsonpath-and-kubectl-v6.png](jsonpath-and-kubectl-v6.png)
+
+**Note:** It is a good idea to install `jq` when working with JSON. It will display JSON output in a colourised and formatted way.
 
 # 13) Exam Tips
 
