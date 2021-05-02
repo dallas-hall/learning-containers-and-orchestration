@@ -105,8 +105,10 @@
   - [11.3) Worker Node Failure](#113-worker-node-failure)
   - [11.4) Network Troubleshooting](#114-network-troubleshooting)
 - [12) Other Topics](#12-other-topics)
-  - [12.1) JSON Path](#121-json-path)
-  - [12.1) Advanced Kubectl Commands](#121-advanced-kubectl-commands)
+  - [12.1) YAML Basics](#121-yaml-basics)
+  - [12.2) JSON Basics](#122-json-basics)
+  - [12.3) JSON Path Basics](#123-json-path-basics)
+  - [12.4) Advanced Kubectl Commands](#124-advanced-kubectl-commands)
 - [13) Exam Tips](#13-exam-tips)
 
 # 1) Core Concepts
@@ -1901,12 +1903,13 @@ kubectl logs $POD_NAME --previous
 
 ## 11.2) Control Plane Failure
 
-https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
+* https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
+* Focus on the elements in https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/#master
 
 * Here is a list of generic Control Plane troubleshooting steps.
-  * Check the Master Nodes` health.
-  * Check the Control Plane components` health.
-  * Check the Control Plane components` logs.
+  * Check the Master Nodes\` health. `kubectl get nodes`
+  * Check the Control Plane components\` health.
+  * Check the Control Plane components\` logs.
 * When troubleshooting, remember:
   * The Scheduler is responsible for selecting which Node to play a Pod onto.
   * The Kubelet agent is reponsible for placing the Pod onto a Node.
@@ -1949,18 +1952,28 @@ less /var/log/$SERVICE_NAME
 ls /etc/systemd/system/
 ls /etc/systemd/system/$SERVICE_NAME
 less /etc/systemd/system/$SERVICE_NAME/$SERVICE_FILE
+
+# Restart service after fixing
+systemctl daemon-reload
+systemctl restart $SERVICE_NAME
 ```
 
 **Note:** The `kubelet` configuration file determines where the Static Pod YAML definition files are, so use `grep -i 'staticpod' $KUBELET_SERVICE_CONF_FILE`. By default for `kubeadm` this is `/etc/kubernetes/manifests/`
 
 ## 11.3) Worker Node Failure
 
+* Focus on the elements in https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/#worker-nodes
+
 * Here is a list of generic Control Plane troubleshooting steps.
-  * Check the Master Nodes` health.
-  * Check the Master Nodes O/S and resource health
+  * Check the Worker Nodes\` health.
+  * Check the Worker Nodes\` O/S and resource health
     * If a Status is set to True then it is okay.
     * If a Status is set to False then it is broken.
     * If a Status is set to Unknown then network connectivity is lost.
+* When troubleshooting, remember:
+  * The Kubelet agent is reponsible for placing the Pod onto a Node.
+  * The Kube Proxy is reponsible for setting up IP Tables rules for network communication.
+  * Static Pods will have `$POD_NAME-$NODENAME` so remember to check the last part of the name to see what Node the Static Pod is running on.
 
 ```bash
 # Check Node health
@@ -1969,10 +1982,11 @@ kubectl get nodes
 # Check O/S and resource health
 kubectl describe node $NAME
 
-# Check process
+# Check process on the broken node
+ssh $BROKEN_NODE
 top
 htop
-ps aux
+ps aux | grep $SERVICE_NAME
 
 # Check memory
 free -h
@@ -1982,10 +1996,7 @@ htop
 # Check disk space
 df -h
 
-# Check the Control Plane service status
-systemctl status kube-apiserver
-systemctl status kube-controller-manager
-systemctl status kube-scheduler
+# Check the Worker Node service status
 systemctl status kubelet
 systemctl status kube-proxy
 
@@ -2002,23 +2013,233 @@ less /etc/systemd/system/$SERVICE_NAME/$SERVICE_FILE
 
 # Check the certificate ISSUER (ca) and Validity Not After (expiry)
 openssl x509 -in $CERT_PATH -text
+
+# Restart service after fixing
+systemctl daemon-reload
+systemctl restart $SERVICE_NAME
 ```
 
 ## 11.4) Network Troubleshooting
 
+* https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/
+* https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
 * Remember that:
   * k8s uses CNI plugins for networking.
   * `kubelet` is reponsible for executing plugins.
+    * Check `cni-bin-dir` and `network-plugin` in the process parameters.
+  * `kube-proxy` is reponsible for IP Tables rules.
+  * `kube-dns` aka CoreDNS is responsible for DNS.
+
+
+```bash
+# Check that a CNI network plugin is installed, look for weave, flannel, calico
+kubectl -n kube-system get pods
+
+# Check CoreDNS deployment and look at the config map and volumes
+kubectl -n kube-system describe deployment coredns
+
+# Check CoreDNS endpoints
+kubectl -n kube-system get ep
+
+# Check Kube Proxy daemon set, check command and configmap
+kubectl -n kube-system describe ds kube-proxy
+```
 
 **Note:** If there are multiple CNI configuration files in the directory, the kubelet uses the configuration file that comes first by name in lexicographic order.
 
 # 12) Other Topics
 
-## 12.1) JSON Path
+## 12.1) YAML Basics
 
-TODO
+* [YAML](https://yaml.org/) is a human friendly data presentation standard for all programming languages.
+* YAML can store the same data as XML and JSON but in an easier way to read.
+![yaml-v1.png](yaml-v1.png)
+* Some YAML syntax rules:
+  * Like Python, YAML uses indentation for scope. The amount of spaces used in indentation must match.
+  * Like Python, Lists are ordered and Dictionaries are unordered.
+  * A line beginning with a `#` is a comment.
+* All programming languages should support YAML.
 
-## 12.1) Advanced Kubectl Commands
+```yaml
+# Basic Map AKA dictionary, key value pairs
+fruit: apple
+vegetable: carrot
+drink: water
+
+# Arrays AKA lists
+fruits:
+- apple
+- banana
+- orange
+vegetables:
+- carrot
+- lettuce
+- pea
+
+# Nested data structure, a dictionary within a dictionary
+apple:
+  color: red
+  size: medium
+  cost: 1 dollar
+  nutrition:
+    calories: 50
+    carbs: 10
+    fat: 1
+
+banana:
+  color: yellow
+  size: large
+  cost: 50 cents
+  nutrition:
+    calories: 57
+    carbs: 6
+    fat: 2
+
+# Nested data structure, a dictionary within a list
+fruits:
+- apple:
+    color: red
+    size: medium
+    cost: 1 dollar
+    nutrition:
+      calories: 50
+      carbs: 10
+      fat: 1
+- banana:
+    color: yellow
+    size: large
+    cost: 50 cents
+    nutrition:
+      calories: 57
+      carbs: 6
+      fat: 2
+```
+
+## 12.2) JSON Basics
+
+* JSON can store the same data as XML and YAML.
+![yaml-v1.png](yaml-v1.png)
+* YAML uses space identation to denotescope and JSON uses spaces and curly braces to denote scope.
+![json-v1.png](json-v1.png)
+* YAML uses `- list-item` for lists and JSON uses `[list-item]`.
+![json-v2.png](json-v2.png)
+* YAML uses `key: value` for dictionaries and JSON uses `{ key: value }`.
+* You can easily convert between YAML and JSON with https://www.json2yaml.com/
+* All programming languages should support JSON.
+
+```json
+# Basic Map AKA dictionary, key value pairs
+{
+  "fruit": "apple",
+  "vegetable": "carrot",
+  "drink": "water"
+}
+
+# Arrays AKA lists
+{
+  "fruits": [
+    "apple",
+    "banana",
+    "orange"
+  ],
+  "vegetables": [
+    "carrot",
+    "lettuce",
+    "pea"
+  ]
+}
+
+# Nested data structure, a dictionary within a dictionary
+{
+  "apple": {
+    "color": "red",
+    "size": "medium",
+    "cost": "1 dollar",
+    "nutrition": {
+      "calories": 50,
+      "carbs": 10,
+      "fat": 1
+    }
+  },
+  "banana": {
+    "color": "yellow",
+    "size": "large",
+    "cost": "50 cents",
+    "nutrition": {
+      "calories": 57,
+      "carbs": 6,
+      "fat": 2
+    }
+  }
+}
+
+# Nested data structure, a dictionary within a list
+{
+  "fruits": [
+    {
+      "apple": {
+        "color": "red",
+        "size": "medium",
+        "cost": "1 dollar",
+        "nutrition": {
+          "calories": 50,
+          "carbs": 10,
+          "fat": 1
+        }
+      }
+    },
+    {
+      "banana": {
+        "color": "yellow",
+        "size": "large",
+        "cost": "50 cents",
+        "nutrition": {
+          "calories": 57,
+          "carbs": 6,
+          "fat": 2
+        }
+      }
+    }
+  ]
+}
+```
+
+## 12.3) JSON Path Basics
+
+* In databases you can use SQL to query and return data. In JSON you can use JSON path to query and return data.
+![jsonpath-v1.png](jsonpath-v1.png)
+![jsonpath-v2.png](jsonpath-v2.png)
+* All results from a JSON Path query are returned as an array.
+* The root element in JSON for a dictionary is `$`
+* Use dot notation `key.value` to access dictionary elements.
+* Use bracket notation and indices `[i]` to access list elements.
+![jsonpath-v3.png](jsonpath-v3.png)
+* The root element in JSON for a list is `$[]`
+* Like Python, list elements start at 0 and the standard list operations exist.
+![jsonpath-v4.png](jsonpath-v4.png)
+* You can write selection statements with list items with `[?( @.item operator expression )]`.
+  * The `$()` means you are writing a selection statement.
+  * The `@.item` refers to key in the list.
+  * The `operator` will be something like `==` or `!=`.
+  * The `expression` will be something like a string or number.
+
+![jsonpath-v5.png](jsonpath-v5.png)
+* You can use `*` as a wild card in JSON path. It can mean any property in a dictionary and any item within a list.
+![jsonpath-v6.png](jsonpath-v6.png)
+![jsonpath-v7.png](jsonpath-v7.png)
+* These are some of the list operations supported in JSON Path:
+  * First element = `[0]`
+  * Third element = `[2]`
+  * First and third element = `[0,2]`
+  * All elements beween first and fifth element = `[0:5]`. Notice how we are using 5 instead of 4, because the last number is excluded from the range.
+  * Every second element beween first and fifth element = `[0:5:2]` which effectively the elements `[0,2,4]`. The additional third number denotes how many positions to increment by.
+  * All elements in the list = `[0:-1]` or just `[0:]`
+  * Last element = `[-1:0]` or just `[-1:]`
+  * The last three elements = `[-3:0]` or just `[-3:]`
+
+**Note:** A good idea when writing complex queries is to use a step by step approach rather than writing it all in one go.
+
+## 12.4) Advanced Kubectl Commands
 
 TODO
 
