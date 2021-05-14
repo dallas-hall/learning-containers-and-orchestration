@@ -1879,6 +1879,7 @@ https://kubernetes.io/docs/tasks/debug-application-cluster/debug-application/
 ```bash
 # Check if the application is accessible using the IP of the Node
 curl -v $NODE_IP:$NODESERVICE_PORT
+nc -w 2 -v -z $NODE_IP $NODESERVICE_PORT
 
 # Check the NodePort Service to see if it has the correct ports and selectors
 kubectl describe svc $NAME
@@ -1899,6 +1900,12 @@ kubectl logs $POD_NAME
 
 # Check the previous failed Pod's logs
 kubectl logs $POD_NAME --previous
+
+# View k8s related events, useful for troubleshooting
+kubectl get events
+
+# View the scheduler logs
+kubectl -n kube-system logs $SCHEDULER_POD_NAME
 ```
 
 ## 11.2) Control Plane Failure
@@ -1927,6 +1934,10 @@ kubectl -n kube-system get pods
 
 # Check the Pods` logs
 kubectl -n kube-system logs $POD_NAME
+
+# Check Static Pods with CRE
+docker ps -a
+docker logs $CONTAINER_ID -f
 ```
 
 ### 11.2.1) Control Plane Components As O/S Services
@@ -1982,7 +1993,7 @@ kubectl get nodes
 # Check O/S and resource health
 kubectl describe node $NAME
 
-# Check process on the broken node
+# Check processes on the broken node
 ssh $BROKEN_NODE
 top
 htop
@@ -2030,7 +2041,6 @@ systemctl restart $SERVICE_NAME
   * `kube-proxy` is reponsible for IP Tables rules.
   * `kube-dns` aka CoreDNS is responsible for DNS.
 
-
 ```bash
 # Check that a CNI network plugin is installed, look for weave, flannel, calico
 kubectl -n kube-system get pods
@@ -2043,9 +2053,55 @@ kubectl -n kube-system get ep
 
 # Check Kube Proxy daemon set, check command and configmap
 kubectl -n kube-system describe ds kube-proxy
+
+# Display the systems gateway / route
+route -n
+ip -c -h route
+ip -c -h r
+
+# View the Docker network interfaces on the CRE host, it will be named docker0
+ip -c -h a
+
+# View the IP Address / MAC address combination
+arp -n
+
+# DNS troublshooting
+cat /etc/hosts
+cat /etc/resolv.conf
+
+# Query a nameserver for DNS resolution
+nslookup $IP_ADDRESS
+nslookup $DOMAIN
+
+# View iptables rules
+iptables -L
+
+# Checkout CNI configuration details with kubelet
+ps aux | grep kubelet | grep 'network-plugin'
+ps aux | grep kubelet | grep 'cni'
+
+# Check out the --cni-bin-dir and --cni-conf-dir
+l /opt/cni/bin
+l /etc/cni/net.d
+
+# Check open ports, k8s doco search installing kubeadm
+ss -lntp
+
+# Use ipcalc to show the networking information for 10.32.0.0/12
+ipcalc 10.32.0.0/12
 ```
 
 **Note:** If there are multiple CNI configuration files in the directory, the kubelet uses the configuration file that comes first by name in lexicographic order.
+
+**Note:** When troubleshooting certificates, you need to look at the logs. This will either be `journalctl -u $CONTROL_PLANE_SERVICE -l` or `kubectl -n kube-system logs $CONTROL_PLANE_POD`. If that isn't work, trying Docker with `docker logs $CONTAINER_ID -f`.
+
+**Note:** When troubleshooting internet connectivity issues, a good place to start is checking the default gateway.
+
+**Note:** When troubleshooting why the cluster isn't working, check that the required ports are open with `ss -lntp`.
+
+**Note:** The `/etc/resolve.conf` file can have an entry called search `$DOMAIN` which means everytime you enter a subdomain it will automatically search the nameserver for `$SUBDOMAIN.$DOMAIN.`
+
+**Note:** The default order of searching for nameservers is `/etc/hosts` and then `/etc/resolv`.conf but this can be changed. To change this, update `/etc/nsswitch.conf` and the hosts: line.
 
 # 12) Other Topics
 
@@ -2273,3 +2329,4 @@ fruits:
 
 * Editing in memory Pods is restricted compared to editing in memory Pod templates from a Deployment. But there will be times you cannot edit the object, in those instances a file will be saved to `/tmp` with your changes. Just delete the existing object and create the object from the file in `/tmp`.
 * In the exam you can quickly check object syntax by doing `kubectl explain $K8S_OBJECT --recursive | less` and then search for the syntax you are looking for.
+echo $CERT | base64 -d | openssl x509 -in - -noout -text
