@@ -4,10 +4,22 @@
   - [1) Why Docker?](#1-why-docker)
     - [1.1) What Are Containers?](#11-what-are-containers)
     - [1.2) Docker Versions](#12-docker-versions)
-  - [2) Docker Commands](#2-docker-commands)
-    - [2.1) Basics](#21-basics)
-      - [2.1.1) Containers](#211-containers)
-      - [2.1.2) Images](#212-images)
+  - [2) Basic Docker Commands](#2-basic-docker-commands)
+    - [2.1) docker run](#21-docker-run)
+    - [2.2) docker attach](#22-docker-attach)
+    - [2.3) docker ps](#23-docker-ps)
+    - [2.4) docker stop](#24-docker-stop)
+    - [2.5) docker rm](#25-docker-rm)
+    - [2.6) docker exec](#26-docker-exec)
+    - [2.7) docker images](#27-docker-images)
+    - [2.8) docker rmi](#28-docker-rmi)
+    - [2.9) docker pull](#29-docker-pull)
+    - [2.10) docker inspect](#210-docker-inspect)
+    - [2.11) docker logs](#211-docker-logs)
+    - [2.11) docker build](#211-docker-build)
+      - [2.11.1) Dockerfile](#2111-dockerfile)
+    - [2.12) docker history](#212-docker-history)
+    - [2.12) docker push](#212-docker-push)
 
 ## 1) Why Docker?
 
@@ -68,30 +80,130 @@ Docker solves this by
 1. **Community edition (CE)** is the set of free Docker products.
 2. **Enterprise edition (EE)** comes with additional features that you need to pay for.
 
-## 2) Docker Commands
-
-### 2.1) Basics
+## 2) Basic Docker Commands
 
 **NOTE:** All Docker IDs only require enough characters in them to uniquely identify the object. You don't need to user the entire ID.
 
-#### 2.1.1) Containers
+### 2.1) docker run
+
+**NOTE:** The container will only run while an application inside of them is running. This does not include shells like bash. So O/S images will exit immediately if they are only running a shell.
+
+**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
 
 * `docker run $IMAGE_NAME` will run the specified image on the current host as a container. If the current host doesn't have the image locally it will go to Docker Hub and download it. If the current host does have the image locally it will just use that image.
-  * By default this will run in attached mode, i.e. your terminal will be attached to stdout of the container. Use `docker run -d $IMAGE_NAME` to run in detached mode.
-  * `docker attach $CONTAINER_ID` and `docker attach $CONTAINER_NAME` can attach to a detached container.
+* By default `docker run $IMAGE_NAME` will run in attached mode, i.e. your terminal will be attached to stdout of the container. Use `docker run -d $IMAGE_NAME` to run in detached mode.
+* By default Docker does not listen to stdin from the CRE host to the container. You need to use `docker run -i $IMAGE_NAME` to enable interactive mode and map the CRE host's stdin to the container's stdin.
+* Use `docker run -t $IMAGE_NAME` to attach to the container's terminal.
+* Often you will use `docker run -it $IMAGE_NAME` to attach to the container's terminal in interactive mode.
+* When using `docker run $IMAGE_NAME` the tag `:latest` is automatically appended to the name. This will automatically use the Docker image that is associated with the latest tag which is typically the latest version.
+* You can use `docker run $IMAGE_NAME:$TAG_NAME` to manually specfiy with image version (i.e. tag) to use.
+* Use `docker run $IMAGE_NAME -p $CRE_PORT:$CONTAINER_PORT` to map an available CRE host port to an available container port.
+  * In this example all traffic on `$CRE_HOST_IP:$CRE_PORT` is routed to the container via `$CONTAINER_PORT` 
+* Use `docker run $IMAGE_NAME -v $CRE_PATH:$CONTAINER_PATH` to map a CRE filesystem path to a container filesystem path. This decouples the data lifecycle from the container lifecycle. When the container is destroyed the volume and data will remain.
+* Use `docker run -e $KEY=$VALUE $IMAGE_NAME` to inject an environment variable into the container.
+
+### 2.2) docker attach
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
+
+* Use `docker attach $CONTAINER_NAME` to attach to a detached container.
+
+### 2.3) docker ps
+
+**NOTE:** Each container automatically gets a random UID and name created for it.
+
 * `docker ps` lists all the running containers and some basic information about them.
 * `docker ps -a` lists all running containers and stopped containers and some basic information about them.
-* **NOTE:** Each container automatically gets a random UID and name created for it.
-* `docker stop $CONTAINER_ID` and `docker stop $CONTAINER_NAME` will stop a running container. These can still be viewed and take up space.
-* `docker rm $CONTAINER_ID` and `docker rm $CONTAINER_NAME` will delete a stopped container.
 
-#### 2.1.2) Images
+### 2.4) docker stop
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
+
+* `docker stop $CONTAINER_NAME` will stop a running container. These can still be viewed and take up space.
+
+### 2.5) docker rm
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
+
+* `docker rm $CONTAINER_NAME` will delete a stopped container.
+
+### 2.6) docker exec
+
+**NOTE:** The container will only run while an application inside of them is running. This does not include shells like bash. So O/S images will exit immediately if they are only running a shell.
+
+**NOTE:** You can use `$IMAGE_NAME`, `$IMAGE_ID`, `$CONTAINER_NAME`, or `$CONTAINER_ID` with the commands below.
+
+* `docker exec $CONTAINER_NAME $CMD` executes a command on a running container.
+* Using `docker exec -it $CONTAINER_ID bash` will connect to the container in interactive mode (i.e. you can type) and load a shell.
+
+### 2.7) docker images
 
 * `docker images` lists all local images on the system.
-* `docker rmi $IMAGE_NAME` and `docker rmi $IMAGE_ID` will delete all local images. All dependent containers must be stopped before deleting an image.
-  * These are a shortcut for `docker iamge rm $IMAGE_NAME` and `docker image rm $IMAGE_ID`
-* `docker pull $IMAGE` will download the specified image but not run it.
-* **NOTE:** Container will only run while an application inside of them is running. This does not include shells like bash. So O/S images will exit immediately if they are only running a shell.
-* `docker exec $IMAGE_NAME $CMD` and `docker exec $IMAGE_ID $CMD` executes a command on a running container.
-  * Using `docker exec -it $IMAGE_NAME bash` and `docker exec -it $IMAGE_ID bash` will connect to the container in interactive mode (i.e. you can type) and load a shell.
-* 
+
+### 2.8) docker rmi
+
+**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
+
+* `docker rmi $IMAGE_NAME`  will delete all local images. All dependent containers must be stopped before deleting an image.
+* This is a shortcut for `docker iamge rm $IMAGE_NAME`
+
+### 2.9) docker pull
+
+* `docker pull $IMAGE_NAME` will download the specified image but not run it.
+
+### 2.10) docker inspect
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
+
+* Use `docker inspect $CONTAINER_NAME` to view verbose information about a container. This is returned in a JSON format and it contains all information about a container.
+
+### 2.11) docker logs
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
+
+* Use `docker logs $CONTAINER_NAME` to view the logs of a container.
+* Use `docker logs -f $CONTAINER_NAME` to view the logs of a container in real time.
+
+### 2.11) docker build
+
+* The first step is to write down the steps you would do to manually deploy the application.
+
+![image-creation-v1.png](image-creation-v1.png)
+
+* The second step is to convert these to a Dockerfile.
+
+```Dockerfile
+FROM Ubuntu
+RUN apt-get update
+RUN apt-get install python
+RUN pip install flask
+RUN pip install flask-mysql
+COPY . /opt/source-code
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run
+```
+
+* Use `docker build $PWD -f Dockerfile -t $IMAGE:$TAG` to build an image with a tag. This will build it locally, you need to push this to an external image repository.
+
+#### 2.11.1) Dockerfile
+
+* This is a textfile containing the insutrctions to build the image. It uses the instruction and argument format. Insutrctions are in capital letters and are reserved words and the arguments are what o do.
+
+![dockerfile.png](dockerfile.png)
+
+### 2.12) docker history
+
+**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
+
+* Docker builds images in a layered architecture. Each line in a Dockerfile creates a new image with the changes from the previous image. Each layer only stores the changes from the previous layer.
+
+![dockerfile-v2.png](dockerfile-v2.png)
+
+* Use `docker history $IMAGE_NAME` to view this layered architecture.
+* All layers are cached by Docker and will be reused in subsequent builds.
+
+### 2.12) docker push
+
+**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
+
+* Use `docker push $IMAGE:TAG` to push this to the Docker Hub image repo.
+
