@@ -18,8 +18,10 @@
     - [2.11) docker logs](#211-docker-logs)
     - [2.11) docker build](#211-docker-build)
       - [2.11.1) Dockerfile](#2111-dockerfile)
-    - [2.12) docker history](#212-docker-history)
+      - [2.11.1.2) CMD vs ENTRYPOINT](#21112-cmd-vs-entrypoint)
     - [2.12) docker push](#212-docker-push)
+    - [2.13) docker history](#213-docker-history)
+  - [3) Docker Compose](#3-docker-compose)
 
 ## 1) Why Docker?
 
@@ -91,16 +93,39 @@ Docker solves this by
 **NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
 
 * `docker run $IMAGE_NAME` will run the specified image on the current host as a container. If the current host doesn't have the image locally it will go to Docker Hub and download it. If the current host does have the image locally it will just use that image.
+
+![docker-run.png](docker-run.png)
+
 * By default `docker run $IMAGE_NAME` will run in attached mode, i.e. your terminal will be attached to stdout of the container. Use `docker run -d $IMAGE_NAME` to run in detached mode.
+
+![docker-run-detached.png](docker-run-detached.png)
+
 * By default Docker does not listen to stdin from the CRE host to the container. You need to use `docker run -i $IMAGE_NAME` to enable interactive mode and map the CRE host's stdin to the container's stdin.
 * Use `docker run -t $IMAGE_NAME` to attach to the container's terminal.
 * Often you will use `docker run -it $IMAGE_NAME` to attach to the container's terminal in interactive mode.
+
+![docker-run-iteractive-terminal.png](docker-run-iteractive-terminal.png)
+
 * When using `docker run $IMAGE_NAME` the tag `:latest` is automatically appended to the name. This will automatically use the Docker image that is associated with the latest tag which is typically the latest version.
 * You can use `docker run $IMAGE_NAME:$TAG_NAME` to manually specfiy with image version (i.e. tag) to use.
+
+![docker-tags.png](docker-tags.png)
+
 * Use `docker run $IMAGE_NAME -p $CRE_PORT:$CONTAINER_PORT` to map an available CRE host port to an available container port.
-  * In this example all traffic on `$CRE_HOST_IP:$CRE_PORT` is routed to the container via `$CONTAINER_PORT` 
+  * In this example all traffic on `$CRE_HOST_IP:$CRE_PORT` is routed to the container via `$CONTAINER_PORT`
+
+![docker-run-port-mapping.png](docker-run-port-mapping.png)
+
 * Use `docker run $IMAGE_NAME -v $CRE_PATH:$CONTAINER_PATH` to map a CRE filesystem path to a container filesystem path. This decouples the data lifecycle from the container lifecycle. When the container is destroyed the volume and data will remain.
+
+![docker-run-volume-mapping.png](docker-run-volume-mapping.png)
+
 * Use `docker run -e $KEY=$VALUE $IMAGE_NAME` to inject an environment variable into the container.
+
+![docker-run-environment-variables.png](docker-run-environment-variables.png)
+
+* Use `docker run $IMAGE_NAME $CMD` to specify which command to run inside the container.
+* Use `docker run $IMAGE_NAME $CMD $ARGS` to specify which command to run inside the container and what arguments it takes.
 
 ### 2.2) docker attach
 
@@ -115,17 +140,23 @@ Docker solves this by
 * `docker ps` lists all the running containers and some basic information about them.
 * `docker ps -a` lists all running containers and stopped containers and some basic information about them.
 
+![docker-ps.png](docker-ps.png)
+
 ### 2.4) docker stop
 
 **NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
 
 * `docker stop $CONTAINER_NAME` will stop a running container. These can still be viewed and take up space.
 
+![docker-stop.png](docker-stop.png)
+
 ### 2.5) docker rm
 
 **NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
 
 * `docker rm $CONTAINER_NAME` will delete a stopped container.
+
+![docker-rm.png](docker-rm.png)
 
 ### 2.6) docker exec
 
@@ -135,6 +166,8 @@ Docker solves this by
 
 * `docker exec $CONTAINER_NAME $CMD` executes a command on a running container.
 * Using `docker exec -it $CONTAINER_ID bash` will connect to the container in interactive mode (i.e. you can type) and load a shell.
+
+![docker-exec.png](docker-exec.png)
 
 ### 2.7) docker images
 
@@ -147,9 +180,13 @@ Docker solves this by
 * `docker rmi $IMAGE_NAME`  will delete all local images. All dependent containers must be stopped before deleting an image.
 * This is a shortcut for `docker iamge rm $IMAGE_NAME`
 
+![docker-rmi.png](docker-rmi.png)
+
 ### 2.9) docker pull
 
 * `docker pull $IMAGE_NAME` will download the specified image but not run it.
+
+![docker-pull.png](docker-pull.png)
 
 ### 2.10) docker inspect
 
@@ -157,12 +194,16 @@ Docker solves this by
 
 * Use `docker inspect $CONTAINER_NAME` to view verbose information about a container. This is returned in a JSON format and it contains all information about a container.
 
+![docker-inspect.png](docker-inspect.png)
+
 ### 2.11) docker logs
 
 **NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the commands below.
 
 * Use `docker logs $CONTAINER_NAME` to view the logs of a container.
 * Use `docker logs -f $CONTAINER_NAME` to view the logs of a container in real time.
+
+![docker-logs.png](docker-logs.png)
 
 ### 2.11) docker build
 
@@ -184,13 +225,40 @@ ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run
 
 * Use `docker build $PWD -f Dockerfile -t $IMAGE:$TAG` to build an image with a tag. This will build it locally, you need to push this to an external image repository.
 
+![docker-build-and-push.png](docker-build-and-push.png)
+
 #### 2.11.1) Dockerfile
 
 * This is a textfile containing the insutrctions to build the image. It uses the instruction and argument format. Insutrctions are in capital letters and are reserved words and the arguments are what o do.
 
 ![dockerfile.png](dockerfile.png)
 
-### 2.12) docker history
+#### 2.11.1.2) CMD vs ENTRYPOINT
+
+* Dockerfiles may contain `CMD` and / or `ENTRYPOINT`.
+* `CMD` by itself is a hard coded shell format or JSON array format for the command and its arguments. Any arguments supplied to `docker run` overwrite it. The first element is the command to be run.
+
+![Dockerfile-CMD.png](Dockerfile-CMD.png)
+
+* `ENTRYPOINT` by itself is a hard coded shell format or JSON array format for the command. Any arguments supplied to `docker run` are appended here as arguments.
+
+![Dockerfile-ENTRYPOINT.png](Dockerfile-CMD.png)
+
+* When used together `ENTRYPOINT` is the hard coded shell format or JSON array format for the command and `CMD` is the hard coded shell format or JSON array format for the default arguments. Any arguments supplied to `docker run` are appended to `ENTRYPOINT` as arguments and override `CMD`.
+
+**NOTE:** `docker run --entrypoint $CMD $IMAGE_NAME` can be used to override the `ENTRYPOINT` of a Dockerfile.
+
+![Dockerfile-BOTH.png](Dockerfile-BOTH.png)
+
+### 2.12) docker push
+
+**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
+
+* Use `docker push $IMAGE:TAG` to push this to the Docker Hub image repo.
+
+![docker-build-and-push.png](docker-build-and-push.png)
+
+### 2.13) docker history
 
 **NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
 
@@ -201,9 +269,6 @@ ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run
 * Use `docker history $IMAGE_NAME` to view this layered architecture.
 * All layers are cached by Docker and will be reused in subsequent builds.
 
-### 2.12) docker push
+## 3) Docker Compose
 
-**NOTE:** You can use `$IMAGE_NAME` or `$IMAGE_ID` on the commands below.
-
-* Use `docker push $IMAGE:TAG` to push this to the Docker Hub image repo.
-
+![.png](.png)
