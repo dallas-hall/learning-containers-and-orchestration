@@ -22,6 +22,11 @@
     - [2.12) docker push](#212-docker-push)
     - [2.13) docker history](#213-docker-history)
   - [3) Docker Compose](#3-docker-compose)
+  - [4) Docker Registry](#4-docker-registry)
+  - [5) Docker Engine](#5-docker-engine)
+  - [6) Docker Storage](#6-docker-storage)
+  - [7) Docker Networking](#7-docker-networking)
+  - [8) Container Orchestration](#8-container-orchestration)
 
 ## 1) Why Docker?
 
@@ -126,6 +131,10 @@ Docker solves this by
 
 * Use `docker run $IMAGE_NAME $CMD` to specify which command to run inside the container.
 * Use `docker run $IMAGE_NAME $CMD $ARGS` to specify which command to run inside the container and what arguments it takes.
+
+**NOTE:** You can use `$CONTAINER_NAME` or `$CONTAINER_ID` on the `--link` option below.
+
+* Use `docker run --link $CONTAINER_NAME $IMAGE_NAME $CMD` to specify which container to link to this container.
 
 ### 2.2) docker attach
 
@@ -270,5 +279,54 @@ ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run
 * All layers are cached by Docker and will be reused in subsequent builds.
 
 ## 3) Docker Compose
+
+https://docs.docker.com/compose/
+
+* Docker compose uses a YAML file called `docker-compose.yaml` to define and run applications that have multiple containers. This replaces having to run multiple `docker` commands to set everything up.
+* `docker-compose up`
+
+![docker-compose.png](docker-compose.png)
+
+* You can build images via Docker compose as well. You need to use the `build: $PATH` entry to specify the path where to get the Dockerfile from to build the image.
+
+![docker-compose-with-build.png](docker-compose-with-build.png)
+
+* There are different versions of Docker compose so there are different valid syntaxes for `docker-compose-.yaml` files. Check out the documentation for what each version supports.
+
+![docker-compose-versions.png](docker-compose-versions.png)
+
+```yaml
+services:
+  redis:
+    image: redis:alpine
+  clickcounter:
+    image: kodekloud/click-counter
+    ports:
+    - 8085:5000
+version: '3.0'
+```
+
+## 4) Docker Registry
+
+* This is a central repository of all Docker images, currently this is https://docker.io
+* The `image: $IMAGE_NAME` actually expands into `image: $DOCKERHUB_URL/$DOCKERHUB_USER:$IMAGE_NAME`
+
+![docker-registry-expansion.png](docker-registry-expansion.png) 
+
+* Use `docker login $PRIVATE_REGISTRY_URL` to access your personal registry and `docker run $PRIVATE_REGISTRY_URL $IMAGE_NAME` to run an image from your private registry. You must login first before doing this.
+
+![docker-private-registry.png](docker-private-registry.png)
+
+* You can deploy your own private Docker registry using the image `registry` on port 5000. You will need to use your `$PRIVATE_REGISTRY_URL` with all `docker` commands.
+
+![docker-private-registry-v2.png](docker-private-registry-v2.png)
+
+## 5) Docker Engine
+
+## 6) Docker Storage
+
+## 7) Docker Networking
+
+## 8) Container Orchestration
 
 ![.png](.png)
