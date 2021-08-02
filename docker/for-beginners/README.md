@@ -323,6 +323,35 @@ version: '3.0'
 
 ## 5) Docker Engine
 
+The Docker Engine is a host with Docker installed on it. It has 3 parts:
+1. **Docker CLI:** the command line interface that users use to submit commands. Commands are submitted to the REST API server. 
+2. **REST API server:** the API interface that programs use to talk to the Docker Daemon.
+3. **Docker Daemon**: a background service that manages Docker objects (e.g. images, containers, volumes etc.)
+
+![docker-engine.png](docker-engine.png)
+
+* Use `docker -H=$HOST:$PORT $CMD` to run Docker CLI commands on a remote host.
+
+![docker-engine-remote.png](docker-engine-remote.png)
+
+* Docker uses Linux namespaces to isolate a container's workspace which makes the container thinks it is its own system. The namespaces cover things like:
+  * Process IDs
+  * Networking
+  * Volume mounts
+  * Unix timesharing
+  * Interprocess communication 
+
+![namespaces.png](namespaces.png)
+
+* For example the Process ID namespace allows a process to have multiple process IDs. e.g. its real process ID on the Docker Engine host and its fake process ID inside of its own namespace.
+
+![process-id-namespace.png](process-id-namespace.png)
+
+* A Docker container uses the system resources from the Docker Enginer host, such as CPU and memory. By default there is no restriction on how much resources a container can use. Docker can use cgroups (i.e. control groups) to manage how much Docker Engine host resources a container consumes.
+* Use `docker run --cpus=.5 $IMAGE` and `docker run --memory=100m $IMAGE` to allocate resources.
+
+![namespaces-v2.png](namespaces-v2.png)
+
 ## 6) Docker Storage
 
 ## 7) Docker Networking
