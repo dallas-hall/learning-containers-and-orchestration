@@ -1,0 +1,8 @@
+# Any video lecture files
+*.mp4
+
+# The example app
+docker/for-beginners/example-voting-app/
+
+# Kubespray repo
+**/kubespray/
