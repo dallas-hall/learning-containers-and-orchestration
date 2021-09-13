@@ -25,6 +25,9 @@
   - [4) Docker Registry](#4-docker-registry)
   - [5) Docker Engine](#5-docker-engine)
   - [6) Docker Storage](#6-docker-storage)
+    - [Filesystems](#filesystems)
+    - [Volumes](#volumes)
+    - [Storage Drivers](#storage-drivers)
   - [7) Docker Networking](#7-docker-networking)
   - [8) Container Orchestration](#8-container-orchestration)
 
@@ -311,7 +314,7 @@ version: '3.0'
 * This is a central repository of all Docker images, currently this is https://docker.io
 * The `image: $IMAGE_NAME` actually expands into `image: $DOCKERHUB_URL/$DOCKERHUB_USER:$IMAGE_NAME`
 
-![docker-registry-expansion.png](docker-registry-expansion.png) 
+![docker-registry-expansion.png](docker-registry-expansion.png)
 
 * Use `docker login $PRIVATE_REGISTRY_URL` to access your personal registry and `docker run $PRIVATE_REGISTRY_URL $IMAGE_NAME` to run an image from your private registry. You must login first before doing this.
 
@@ -324,7 +327,7 @@ version: '3.0'
 ## 5) Docker Engine
 
 The Docker Engine is a host with Docker installed on it. It has 3 parts:
-1. **Docker CLI:** the command line interface that users use to submit commands. Commands are submitted to the REST API server. 
+1. **Docker CLI:** the command line interface that users use to submit commands. Commands are submitted to the REST API server.
 2. **REST API server:** the API interface that programs use to talk to the Docker Daemon.
 3. **Docker Daemon**: a background service that manages Docker objects (e.g. images, containers, volumes etc.)
 
@@ -339,7 +342,7 @@ The Docker Engine is a host with Docker installed on it. It has 3 parts:
   * Networking
   * Volume mounts
   * Unix timesharing
-  * Interprocess communication 
+  * Interprocess communication
 
 ![namespaces.png](namespaces.png)
 
@@ -353,6 +356,55 @@ The Docker Engine is a host with Docker installed on it. It has 3 parts:
 ![namespaces-v2.png](namespaces-v2.png)
 
 ## 6) Docker Storage
+
+### Filesystems
+
+* By default Docker creates its folders at `/var/lib/docker` and it stores all of its data here in a series of sub-folders.
+  * The `containers` folder stores container related files.
+  * The `image` folder stores image related files.
+  * The `volumes` folder stores volume mount related files.
+
+![docker-file-system-v1.png](docker-file-system-v1.png)
+
+* We learnt earlier that Docker stores data a layered architecture and each layer only stores the changes from the previous layer. These layers are stored on the disk in `/var/lib/docker`. This approach is efficient because:
+  * It saves space by not reusing existing layers.
+  * It saves build time by not rebuilding existing layers.
+
+![docker-file-system-v2.png](docker-file-system-v2.png)
+
+* All of the layers that are used to create a Docker Image are known as the **Image Layer**. These become a read only layer inside of any container using this image. They can only be modified be doing another build.
+* When a container is run a new layer that is readable and writeable is created, this layer is called the **Container Layer**.
+  * Data created by the application is stored here.
+  * This layer is transient and is destroyed when the container is destroyed. This
+  * Any modifications attemped on a file  in the Image Layer results in copy of that file being created in the Container Layer. All edits are stored here and they are transient. This is called **Copy On Write**.
+  * The same Container Layer is shared by all containers that were created with the same image.
+
+![docker-file-system-v3.png](docker-file-system-v3.png)
+
+![docker-file-system-v4.png](docker-file-system-v4.png)
+
+### Volumes
+
+* A **Persistent Volume** can be created and used by a container to store data that will not be deleted when the container finishes running.
+  * The PV is mounted inside of the Container Layer but its lifecycle is decoupled from the container.
+* `docker volume create $VOLUME_NAME` will create a Persistent Volume within `/var/lib/docker/volumes/$VOLUME_NAME`.
+* `docker run -v $VOLUME_NAME:$MOUNT_PATH $IMAGE` will create a container using the PV from `/var/lib/docker/volumes/$VOLUME_NAME`. This is called **Volume Mounting**.
+  * If you created the PV before `docker run` it will use that PV.
+  * If you created the PV after `docker run` it will create a PV for you and mount it to the container.
+* Use `ls /var/lib/docker/volumes` to see all Docker PVs.
+* `docker run -v $VOLUME_PATH:$MOUNT_PATH $IMAGE` will create a container using the PV from `$VOLUME_PATH` on the Docker Host. This is called **Bind Mounting**.
+
+![docker-volumes-v1.png](docker-volumes-v1.png)
+
+* `docker run -v $VOLUME_PATH:$MOUNT_PATH $IMAGE` is deprecated and should be written as `docker run --mount type=bind,source=$VOLUME_PATH,target=$MOUNT_PATH $IMAGE`
+
+### Storage Drivers
+
+* **Storage Drivers** are responsible for all storage related actions. Such as looking after the image layers, mounting, etc.
+* There are many types of Storage Drivers and Docker automatically detects which one is being used by the O/S on the Docker Host. Some O/S don't support some SDs.
+
+![docker-storage-driver.png](docker-storage-driver.png)
+
 
 ## 7) Docker Networking
 
