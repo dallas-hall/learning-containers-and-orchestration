@@ -29,6 +29,9 @@
     - [Volumes](#volumes)
     - [Storage Drivers](#storage-drivers)
   - [7) Docker Networking](#7-docker-networking)
+    - [7.1) Network Types](#71-network-types)
+    - [7.2) docker inspect](#72-docker-inspect)
+    - [7.3) Docker DNS](#73-docker-dns)
   - [8) Container Orchestration](#8-container-orchestration)
 
 ## 1) Why Docker?
@@ -408,6 +411,38 @@ The Docker Engine is a host with Docker installed on it. It has 3 parts:
 
 ## 7) Docker Networking
 
+### 7.1) Network Types
+
+![docker-networks-v1.png](docker-networks-v1.png)
+
+* Docker has 3 types of networks:
+  1. This is the default network. The **Bridge** network is private virtual network created on the Docker Host within a Network Namespace. All containers attach this by default.  The default IP address range inside of the `172` series. Ports on the Docker Host need to be mapped to ports within the Network Namespace.
+  2. The **Host** network is when containers are directly attached to the Docker Host's network. There is no isolation between them thus there is no need to map ports between them.
+  3. The **None** network is when containers aren't attached to any network and have no network access.
+
+![docker-networks-v2.png](docker-networks-v2.png)
+
+* By default Docker only creates one Bridge Network within a Network Namespace. You can use `docker network create --driver bridge --subnet $CIDR $NETWORK_NAME` to create an additional one and attach containers to that network.
+* Use `docker network ls` to view all Docker Networks.
+
+![docker-networks-v3.png](docker-networks-v3.png)
+
+### 7.2) docker inspect
+
+
+* User `docker inspect $CONTAINER_NAME` or `docker inspect $CONTAINER_ID` to view details about the container, including networking details.
+
+![docker-networks-v4.png](docker-networks-v4.png)
+
+### 7.3) Docker DNS
+
+* Docker creates a DNS server within the container network space. This allows containers to communicate with each other via `$CONTAINER_NAME` or `$CONTAINER_IP`. You should use the `$CONTAINER_NAME` as the IP address may change later.
+* The Docker DNS Nameserver is running at `127.0.0.11`
+
+![docker-networks-v5.png](docker-networks-v5.png)
+
 ## 8) Container Orchestration
 
-![.png](.png)
+
+
+![]()
