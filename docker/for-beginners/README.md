@@ -416,7 +416,7 @@ The Docker Engine is a host with Docker installed on it. It has 3 parts:
 ![docker-networks-v1.png](docker-networks-v1.png)
 
 * Docker has 3 types of networks:
-  1. This is the default network. The **Bridge** network is private virtual network created on the Docker Host within a Network Namespace. All containers attach this by default.  The default IP address range inside of the `172` series. Ports on the Docker Host need to be mapped to ports within the Network Namespace.
+  1. This is the default network. The **Bridge** network is private virtual network created on the Docker Host within a Network Namespace. All containers attach this by default using Virtual Ethernet pairs.  The default IP address range inside of the `172` series. Ports on the Docker Host need to be mapped to ports within the Network Namespace.
   2. The **Host** network is when containers are directly attached to the Docker Host's network. There is no isolation between them thus there is no need to map ports between them.
   3. The **None** network is when containers aren't attached to any network and have no network access.
 
@@ -428,7 +428,6 @@ The Docker Engine is a host with Docker installed on it. It has 3 parts:
 ![docker-networks-v3.png](docker-networks-v3.png)
 
 ### 7.2) docker inspect
-
 
 * User `docker inspect $CONTAINER_NAME` or `docker inspect $CONTAINER_ID` to view details about the container, including networking details.
 
