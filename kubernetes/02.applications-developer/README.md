@@ -123,35 +123,35 @@
 
 * **Containers** are an isolated environment with its own resources (e.g. processes, network interfaces, storage etc) within an operating system but all containers within the same O/S share the same kernel.
 
-![container example](container-example.png)
+![images/container-example.png](images/container-example.png)
 
 * Containers are used to isolate applications from each other. Each container has its own O/S that supports the application and its dependencies.
 
-![container example](container-example-detailed.png)
+![images/container-example-detailed.png](images/container-example-detailed.png)
 
 * A container can only run on the same O/S kernel that it has. So if Docker is running on a Linux kernel, any Linux distribution can run on it. Running a Linux Docker container on Windows actually spins up a Linux VM.
 
-![kernel sharing](kernel-sharing.png)
+![images/kernel-sharing.png](images/kernel-sharing.png)
 
 * Containers are not new but Docker is a high level tool that has made them very popular.
 * Docker uses LXC containers.
 * Containers are more resource friendly than VMs. They are typically 10s or 100s of MB in size whereas VMs are typically GBs in size.  It is common to run containers within VMs.
 
-![container v vm](container-vs-vm.png)
+![images/container-vs-vm.png](images/container-vs-vm.png)
 
 * A **Docker Image** is a template used to create a **Docker Container**. Thus like in OOP, the Docker Image is the blueprint and the Docker Container is the running instance.
 
-![image v container](image-v-container.png)
+![images/image-v-container.png](images/image-v-container.png)
 
 * A **Dockerfile** is a file has the necessary steps to build a Docker Image and subsequent Containers.
 
-![Dockerfile](Dockerfile.png)
+![images/Dockerfile.png](images/Dockerfile.png)
 
 * Traditionally a developer would hand over the operations team the compiled application and a list of instructions on how to deploy it. This would change with each environment and become complicated quickly. Now a developer just hads the operations team the Dockerfile and they are able to build the Docker Container the same way in each environment.
 
 ## 1.2) Container Orchestration
 
-![Container orchestration](container-orchestration.png)
+![images/container-orchestration.png](images/container-orchestration.png)
 
 * The process of automatically deploying and managing containers is called **Container Orchestration**. This can provide:
   * Fault tolerance by using multiple compute nodes.
@@ -162,11 +162,11 @@
   * **Apache Mesos** is hard to set up
 * k8s supports cloud platforms like Google Cloud Platform (GCP), Amazon Web Services (AWS), and Microsoft Azure.
 
-![Container orchestration](container-orchestration-technologies.png)
+![images/container-orchestration-technologies.png](images/container-orchestration-technologies.png)
 
 ## 1.3) k8s Architecture Recap
 
-![cluster](cluster.png)
+![images/cluster.png](images/cluster.png)
 
 * A **Node** is physical or virtual machine where k8s is installed. A Node is used as a k8s worker. Also known as a Minion in the past. This is where applications and their containers run. It has:
   * kubelet
@@ -180,7 +180,7 @@
   * scheduler
   * kubectl
 
-![k8s components](k8s-components.png)
+![images/k8s-components.png](images/k8s-components.png)
 
 * k8s cluster components
   * **api server** - allows interaction with the k8s cluster. kube-apiserver
@@ -199,7 +199,7 @@
   1. Install networking layer between master and worker(s).
   1. Add worker(s) to the master.
 
-![kubeadm](kubeadm-steps.png)
+![images/kubeadm-steps.png](images/kubeadm-steps.png)
 
 ```bash
 # Deploy an application
@@ -216,7 +216,7 @@ kubcetl get nodes
 
 ## 1.4) k8s Pod Recap
 
-![pods](pods.png)
+![images/pods.png](images/pods.png)
 
 * A **Pod**
   * Is a single instance of an application. But multiple instances can be run by creating additional Pods.
@@ -242,7 +242,7 @@ spec: # The stuff the k8s object will be doing
   ...
 ```
 
-![pods](pods2.png)
+![images/pods2.png](images/pods2.png)
 
 ```yaml
 # https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates
@@ -315,7 +315,7 @@ kubectl run httpd --image=httpd:alpine --port=80 --expose
 
 ### Replication Controller
 
-![Replicaiton controller](replication-controller.png)
+![images/replication-controller.png](images/replication-controller.png)
 
 * A **ReplicationContoller** helps us run multiple instances of a single pod in a Cluster.
 * It provides high availability by ensuring that the specified number of Pods is running at all times.
@@ -349,7 +349,7 @@ spec:
 
 ### ReplicaSet
 
-![Labels and Selectors](labels-and-selectors.png)
+![images/labels-and-selectors.png](images/labels-and-selectors.png)
 
 * Very similar to ReplicationController but it is not the same. The **ReplicaSet** is the modern and recommended replacement.
 * The concepts of ReplicationController's apply to ReplicaSets, with the Selector being the major differnece between them.
@@ -431,13 +431,13 @@ kubectl scale --replicas=6 replicaset $REPLICA_SET_NAME
 
 ## 1.6) k8s Deployments Recap
 
-![Deployements](deployment.png)
+![images/deployment.png](images/deployment.png)
 
 * Applications and their dependencies need to be deployed (i.e installed) into environments. Each environment might have differnet installation requirements. Environment upgrades can be difficult as well. k8s can handle this with the Deployment object
 * A **Deployment** object will create a ReplicaSet, and the ReplicaSet will create the Pods.
   * The ReplicaSet and Pods created by a Deployment will have the Deployment's name in their name.
 
-![deployment-creating-replicaset-and-pods.png](deployment-creating-replicaset-and-pods.png)
+![images/deployment-creating-replicaset-and-pods.png](images/deployment-creating-replicaset-and-pods.png)
 
 * The Deployment object provides a way to do updates and rollbacks to Pod application versions.
 
@@ -535,16 +535,16 @@ kubectl create deployment --image=$IMAGE_NAME $DEPLOYMENT_NAME --replicas=$AMOUN
 
 ### 1.6.1) Deployment Updates and Rollbacks
 
-![Rollouts and Versioning](rollout-and-versioning.png)
+![images/rollout-and-versioning.png](images/rollout-and-versioning.png)
 
-![Deploy strategy](deployment-strategy.png)
+![images/deployment-strategy.png](images/deployment-strategy.png)
 
 * Each time a Deployment is run, a **Rollout** is triggered. A version (i.e. **Revision**) of the Rollout is kept, which can be used later to rollback to.
 * There are 2 types of Deployment strategies
   * **Recreate strategy** will delete all at once and create all at once, this means there will be an outage
   * **Rolling Update** will delete old Pods and replace with new Pods 1 by 1, this means no outage. This is the default.
 
-![recreate-v-rolling-update.png](recreate-v-rolling-update.png)
+![images/recreate-v-rolling-update.png](images/recreate-v-rolling-update.png)
 
 * Updates to version numbers are applied in the Deployment YAML file, by specifying the image tag version.
   * If you do it from the command line, the running Deployment is updated but this doesn't update the YAML file.
@@ -552,20 +552,20 @@ kubectl create deployment --image=$IMAGE_NAME $DEPLOYMENT_NAME --replicas=$AMOUN
 * A **Rollback** is when you undo a Deployment and go back to a previous Rollout version.
   * When rolling back, the original revision number that was rolled back to is moved to the lastest revision number. e.g. we have revision 1 and revision 2. We roll back to revision 1, revision 1 is renamed revision 3 and we will only see revisions 2 and 3.
 
-![rollback-revisions.png](rollback-revisions.png)
+![images/rollback-revisions.png](images/rollback-revisions.png)
 
-![Upgrades](upgrades.png)
+![images/upgrades.png](images/upgrades.png)
 
-![Rollback](rollback.png)
+![images/rollback.png](images/rollback.png)
 
-![deployment-rollout-status.png](deployment-rollout-status.png)
+![images/deployment-rollout-status.png](images/deployment-rollout-status.png)
 
 ## 1.7) k8s Namespaces
 
 * **Namespaces** are named containers that are used to group objects together and provide each object within the group a unique name to all other objects outside the group. Namespace objects will be unique even if they have the same name as objects from another Namespace. For example, in Java there is `java.util.Date` and `java.sql.Date`. Thus Namespaces are a method of providing isolation (i.e. variable scope) to objects.
   * An analogy with people works. Each person in a family will typically have a unique name combination. But people from other familes may have the same name combination. To differeniate the people with the exact same name, we will use other identifying qualties like address, date of birth, etcetera. The combination of properties that uniquely identifies related people is the namespace. This will typically be their fullname and address.
 
-![Namespace DNS](namespace.png)
+![images/namespace.png](images/namespace.png)
 
 * All objects within k8s are created within a namespace.
 * 3 namespaces are automatically created by k8s
@@ -574,13 +574,13 @@ kubectl create deployment --image=$IMAGE_NAME $DEPLOYMENT_NAME --replicas=$AMOUN
   1. **kube-public** - a namespace that can be used for objects that will be available to all users.
 * Namespaces can have policies which will define who can do what. Such as compute resource allocation.
 
-![Namespace resource allocation](namespace-resource-limits.png)
+![images/namespace-resource-limits.png](images/namespace-resource-limits.png)
 
 * All resources within a Namespace can refer to each simply by their names. This is because a DNS entry is added into each host.
   * To access resource within another namespace, you must use `resource-name.namespace-name.svc.cluster.local`
 
-![Namespace DNS](namespace-dns.png)
-![Namespace DNS](namespace-dns-2.png)
+![images/namespace-dns.png](images/namespace-dns.png)
+![images/namespace-dns-2.png](images/namespace-dns-2.png)
 
 * By default all commands use the default Namespace, you can use the `--namespace` option to look at other namespaces.
   * You can change this permanently by using `kubectl config set-context $(kubectl config current-context) --namespace=$NAMESPACE`
@@ -649,20 +649,20 @@ https://kubernetes.io/docs/concepts/cluster-administration/networking/
 * Each Pod is has its own dynamic IP address as well. This address changes and should never be used for accessing a Pod as the IP address will change when Pods are recreated.
 * All Pods get the IP addresses from the same internal private k8s network. This private internal network is created when the k8s cluster is configured.
 
-![Single Node Cluster](single-pod-on-single-node-networking.png)
+![images/single-pod-on-single-node-networking.png](images/single-pod-on-single-node-networking.png)
 
-![Multiple Node Cluster](multiple-pods-on-single-node-networking.png)
+![images/multiple-pods-on-single-node-networking.png](images/multiple-pods-on-single-node-networking.png)
 
 * In multiple Node clusters there will be IP address clashes by default. This is because by default each private internal network within each Node has the same IP address range. Nodes and Pods will have IP address conflicts.
 
-![IP address clash](ip-address-clash.png)
+![images/ip-address-clash.png](images/ip-address-clash.png)
 
 * k8s does not natively supply any networking tools to handle the networking conflicts. When installing k8s, you must choose an external application (e.g. Calico) to handle the networking within the k8s cluster.
 * The custom network manager creates a virtual network where all Pods and Nodes are assigned a unique IP address. It also manages the routing within this network.
 
 https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network
 
-![Custom network layer](networking-layer.png)
+![images/networking-layer.png](images/networking-layer.png)
 
 * Some rules of k8s networking which are implemented by the external networking solution..
   * All Containers / Pods can communicate with one another without NAT.
@@ -673,7 +673,7 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
 
 * k8s **Services** is a k8s object that enable communications between various cluster components. They help us connect applications/users together by loosely coupling them together.
 
-![Services overview](services-overview.png)
+![images/services-overview.png](images/services-overview.png)
 
 #### NodePort
 
@@ -683,19 +683,19 @@ https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-clu
   1. the port running on the Service, called the Port
   1. the port running on the Node, called the NodePort, 30000-32767 default range
 
-![NodePort](nodeport-1.png)
+![images/nodeport-1.png](images/nodeport-1.png)
 
-![NodePort](nodeport-2.png)
+![images/nodeport-2.png](images/nodeport-2.png)
 
-![NodePort](nodeport-3.png)
+![images/nodeport-3.png](images/nodeport-3.png)
 
 * The Pod label is used by Service Selector to find all Pods to apply the NodePort to. The Service uses a a random algorithm to select which Pod to send traffic to from all the Pods matched by the label.
 
-![NodePort](nodeport-label-and-selector.png)
+![images/nodeport-label-and-selector.png](images/nodeport-label-and-selector.png)
 
 * For multiple Nodes, the Service is created across all the Nodes which will provide access to each Node via its own IP and the same port.
 
-![NodePort](nodeport-multinodes.png)
+![images/nodeport-multinodes.png](images/nodeport-multinodes.png)
 
 * Thus the Service is always created exactly the same no matter how many Pods or Nodes are involved. The Service is automatically updated if Pods and Nodes are removed.
 
@@ -751,7 +751,7 @@ kubectl describe service
   * The ClusterIP Service helps up group Pods together and provides a single interface to access the different tiers of Pods.
   * Each ClusterIP Service gets a name and IP address and that is what is used to access the Pods grouped with the Service. The ClusterIP also handles scaling.
 
-![ClusterIP](clusterip.png)
+![images/clusterip.png](images/clusterip.png)
 
 ```yaml
 # https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
@@ -799,7 +799,7 @@ kubectl describe service
 
 * The **LoadBalancer Service** delegates control to a cloud provider's (e.g. Google/AWS) load balancing agent. It can only be used when you are within a cloud envrionemnt that has this capability.
 
-![Cloud LoadBalancer](loadbalancer.png)
+![images/loadbalancer.png](images/loadbalancer.png)
 
 ## 1.9) Imperative Commands
 
@@ -1214,15 +1214,15 @@ spec:
 * The host that has the Docker daemon installed on it has a variety of its own processes, including the Docker daemon. These are running in a variety of namespaces.
 * The host and the Docker container share the same Linux kernel and use namespaces to separate each other.
 
-![Namespaces](host-v-container-namespace.png)
+![images/host-v-container-namespace.png](images/host-v-container-namespace.png)
 
 * Whenever a Docker container is running, it is running inside of its own namespace. The Docker container can only see processes within its container namespace. These processes will have their own process IDs, starting with PID 1. This PID is only relative to the container and the PID 1 inside a Docker container is not the PID 1 (initial process) of the host.
 
-![Container PID](container-PID.png)
+![images/container-PID.png](images/container-PID.png)
 
 * The host will be able to see the processes running within the Docker container but will have a different process ID. This PID is only relative to the host. This is the 'real' PID as the Docker container is running within the host.
 
-![Host PID](host-PID.png)
+![images/host-PID.png](images/host-PID.png)
 
 #### Users
 
@@ -1236,19 +1236,19 @@ spec:
 * You can change the runtime user that Docker uses from root to any other user. This can be done in the Docker Image or at runtime.
   * `docker run --user=$USER_ID $IMAGE`
 
-![Users](host-v-container-PID.png)
+![images/host-v-container-PID.png](images/host-v-container-PID.png)
 
 ### Security Contexts
 
 * **Security Contexts** are the k8s way of implementing some Docker security features. Such as which use will run the process inside the container, and what Linux capabilities it has.
 
-![Docker / k8s security mapping](docker-to-k8s-security-mapping.png)
+![images/docker-to-k8s-security-mapping.png](images/docker-to-k8s-security-mapping.png)
 
 * Security Contexts can be configured at the Pod level or the container level.
   * If configured at the Pod level, all containers within the Pod will inherit these security settings.
   * If configured at the containter level, only those containers will have the security settings applied to them. This will override the settings on the Pod. Linux capabilities can only be set at the container level.
 
-![pod-v-container-level-security.png](pod-v-container-level-security.png)
+![images/pod-v-container-level-security.png](images/pod-v-container-level-security.png)
 
 * Security Contexts are defined inside the Pod definition file.
 * Pod level Security Context is inside the `spec:` section.
@@ -1321,15 +1321,15 @@ Thu Apr 19 11:14:00 UTC 2012
   1. **User Accounts** are used by people - e.g. an admin / developer logging in to the k8s cluster.
   1. **Service Accounts** are used by an application to interact with the k8s cluster. - e.g. the monitoring application Prometheus uses a Service Account to query the k8s metrics API. Jenkins uses a Service Account to deploy applications to the cluster.
 
-![2-types-of-accounts.png](2-types-of-accounts.png)
+![images/2-types-of-accounts.png](images/2-types-of-accounts.png)
 
 * When a Service Account is created an access token is automatically created and associated with it. This is used by internal and external cluster applications to authenticate with the k8s API.
 
-![token-authentication.png](token-authentication.png)
+![images/token-authentication.png](images/token-authentication.png)
 
 * The token is stored as a k8s Secret object.
 
-![service-account-token-link.png](service-account-token-link.png)
+![images/service-account-token-link.png](images/service-account-token-link.png)
 
 * The token can be supplied as an authentication bearer token in `curl` when an external application is communicating with the k8s API. `curl $URL --header "Authorization: Bearer "$TOKEN`
 * When using Service Account tokens with applications inside the k8s cluster, the token secret is mounted inside the Pod.
@@ -1398,19 +1398,19 @@ kubectl exec -it $POD_NAME cat /var/run/secrets/kubernetes.io/serviceaccount/tok
 
 * All Nodes have CPU, memory, and disk available. Whenever a Pod is placed on a Node it consumes some or all of these resources.
 
-![pod-resource-usage.png](pod-resource-usage.png)
+![images/pod-resource-usage.png](images/pod-resource-usage.png)
 
 ### Scheduler
 
 * The k8s Scheduler decides which Node a Pod will run on.
 * It takes into consideration how much Node resources are available and how much resource the Pod needs.
 
-![pod-to-node-placement.png](pod-to-node-placement.png)
+![images/pod-to-node-placement.png](images/pod-to-node-placement.png)
 
 * If a Pod's resource needs exceed the available resource of a Node, the schedular will try to place it eleswhere.
 * If it cannot find a Node with enough resources available, the Pod will not be run and it will be in a Pending state.
 
-![scheduler-blocking-pod.png](scheduler-blocking-pod.png)
+![images/scheduler-blocking-pod.png](images/scheduler-blocking-pod.png)
 
 * You can specifiy how much CPU your Pod needs.
 
@@ -1513,7 +1513,7 @@ spec:
   3. **NoExecute** - New Pods will not be placed onto the Node and any existing Pods will be evicted from the Node if they do not tolerate the Taint.
 * A Taint is automatically set on the Master Node when k8s is intiailly set up. This is what stops the Master from accepting Pods. `kubectl describe node kubemaster | grep Taint` will show this taint.
 
-![tainted-master.png](tainted-master.png)
+![images/tainted-master.png](images/tainted-master.png)
 
 ```bash
 # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
@@ -1556,7 +1556,7 @@ spec:
 
 * **Node Labels** are just Labels attached to Nodes that can be used by the Selector to identify which Nodes to use.
 
-![node-label.png](node-label.png)
+![images/node-label.png](images/node-label.png)
 
 ```bash
 # https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/#add-a-label-to-a-node
@@ -1642,7 +1642,7 @@ spec:
   2. `preferredDuringSchedulingIgnoredDuringExecution` - rules may be met during scheduling, if not place the Pod anywhere it can. Do nothing if the label changes during execution.
 * There is a new one coming but it hasn't been released yet.
 
-![node-affinity-types.png](node-affinity-types.png)
+![images/node-affinity-types.png](images/node-affinity-types.png)
 
 * Can be used on Deployments too.
 
@@ -1687,14 +1687,14 @@ spec:
 * We have 5 Nodes, we want 3 to be blue, red, and green, and others default.
 * We only want coloured Pods to run on their matching coloured Node. All uncoloured Pods must run on uncoloured Nodes.
 
-![combine-taints-tolerants-and-node-affinity-1.png](combine-taints-tolerants-and-node-affinity-1.png)
+![images/combine-taints-tolerants-and-node-affinity-1.png](images/combine-taints-tolerants-and-node-affinity-1.png)
 
 * To do this, do these 3 steps:
   1. Use Node Tainting to ensure the Node only accepts the correct Tolerant Pod.
   2. Use Pod Tolerants to ensure the Pod can be accepted by the correct Tainted Node.
   3. Use Node Affinity to Label the Nodes and Node Selectors on the Pods to ensure the Pods go to the desired Nodes.
 
-![combine-taints-tolerants-and-node-affinity-2.png](combine-taints-tolerants-and-node-affinity-2.png)
+![images/combine-taints-tolerants-and-node-affinity-2.png](images/combine-taints-tolerants-and-node-affinity-2.png)
 
 # 3) Multi-Container Pods
 
@@ -1704,18 +1704,18 @@ spec:
 
 * **Monolithic application** describes a software application where everything is bundled together into a single application.
 
-![monolithic-app.png](monolithic-app.png)
+![images/monolithic-app.png](images/monolithic-app.png)
 
 ### Microservices
 
 * **Microservices** is the concept of decoupling a single monolithic application into separate independent smaller services. This architecture makes it easier to manage, deploy, and scale.
 
-![microservices-app-1.png](microservices-app-1.png)
+![images/microservices-app-1.png](images/microservices-app-1.png)
 
 * When using microservices you will often need to use multiple services together, for example, a webserver and a logging server. These services need to be started and stopped together. This is where multiple container Pods comes into play.
 
-![microservices-app-1.png](microservices-app-2.png)
-![multi-container-pod-1.png](multi-container-pod-1.png)
+![images/microservices-app-2.png](images/microservices-app-2.png)
+![images/multi-container-pod-1.png](images/multi-container-pod-1.png)
 
 ## 3.2) k8s Implementation
 
@@ -1742,12 +1742,12 @@ spec:
   * Share the same network space, they can refer to each other via `localhost`
   * Have access to the same storage volumes.
 
-![multi-container-pod-2.png](multi-container-pod-2.png)
+![images/multi-container-pod-2.png](images/multi-container-pod-2.png)
 
 * 3 different patterns can be used to assign multiple containers to a single Pod. The YAML file is always the same though.
-  1. **Sidecar** - the container's main app is extended by a helper app. ![sidecar.png](sidecar.png)
-  2. **Ambassador** - proxy a local connection to the world. ![ambassador.png](ambassador.png)
-  3. **Adaptor** - standardise and normalise output. ![adaptor.png](adaptor.png)
+  1. **Sidecar** - the container's main app is extended by a helper app. ![images/sidecar.png](images/sidecar.png)
+  2. **Ambassador** - proxy a local connection to the world. ![images/ambassador.png](images/ambassador.png)
+  3. **Adaptor** - standardise and normalise output. ![images/adaptor.png](images/adaptor.png)
 * All 3 can be combined. For example, we might have 3 different apps using sidecar with a logging agent. They all produce different log output foramts. An Adaptor can parse and translate them into a single format. An Ambassador can proxy the localhost connection to an external centralised logging server.
 
 ## 3.3) Observability
@@ -1756,7 +1756,7 @@ spec:
 
 #### Pod Statuses
 
-![pod-running-status.png](pod-running-status.png)
+![images/pod-running-status.png](images/pod-running-status.png)
 
 * There are only 3 Pod statuses that tell us where abouts in the lifecycle the Pod is. Use the `kubectl get pods` command to see the Pod's status.
 1. **Pending** is when the Pod is first created. The Schedulor is trying to find a Node to place the Pod onto. If it can't, the Pod will remain in this state. Run `kubectl describe $POD_NAME` to find out why a Pod is stuck in a pending state.
@@ -1765,7 +1765,7 @@ spec:
 
 #### Pod Conditions
 
-![pod-ready-condition.png](pod-ready-condition.png)
+![images/pod-ready-condition.png](images/pod-ready-condition.png)
 
 * Pod Conditions provide additional information to Pod Statues. There are 4 Pod Conditions that have a boolean value. Use the `kubectl describe pods` command to view the Conditions of Pods.
 1. **PodScheduled** is set to true when the Pod is scheduled onto a Node.
@@ -1775,11 +1775,11 @@ spec:
 * The problem with the Ready condition is it just means the containers are running, this doesn't mean that the applications within the containers are actually running yet.
 * For example, a webserver may a few minutes to start up after the container is started. The status would be Ready but the application is still offline until the webserver has finished starting up.
 
-![pod-ready-but-app-is-not.png](pod-ready-but-app-is-not.png)
+![images/pod-ready-but-app-is-not.png](images/pod-ready-but-app-is-not.png)
 
 * Once a Pod is in the Ready state, a Service will start routing traffic to it. If the application ins't online yet, users will get errors. This can be solved with Readiness and Liveness Probes.
 
-![pod-ready-but-app-is-not2.png](pod-ready-but-app-is-not2.png)
+![images/pod-ready-but-app-is-not2.png](images/pod-ready-but-app-is-not2.png)
 
 ### Readiness Probes
 
@@ -1789,17 +1789,17 @@ spec:
 2. **TCP test** will test a TCP service on a specifrc port. Useful when testing if a database is up and running.
 3. **Command test** will run a command within the container that has its own success and failure logic.
 
-![readiness-probe-yaml.png](readiness-probe-yaml.png)
+![images/readiness-probe-yaml.png](images/readiness-probe-yaml.png)
 
 * The `initialDelaySeconds` tells the Readiness Probe to wait this amount of time before proding the Pod.
 * The `periodSeconds` tells the Readiness Probe how often to probe the Pod.
 * The `failureThreshold` tells the Readiness Probe how often to probe the Pod unsuccessfully before giving up. The default is 3.
 
-![readiness-probe-yaml-all-3.png](readiness-probe-yaml-all-3.png)
+![images/readiness-probe-yaml-all-3.png](images/readiness-probe-yaml-all-3.png)
 
 * The k8s Service will not direct any traffic to the Pod until its Readiness Probe has passed successfully. This will stop users experiencing a service outage because the container is ready but the application isn't.
 
-![multi-pod-without-readiness-probe.png](multi-pod-without-readiness-probe.png)
+![images/multi-pod-without-readiness-probe.png](images/multi-pod-without-readiness-probe.png)
 
 ### Liveness Probes
 
@@ -1811,24 +1811,24 @@ spec:
 2. **TCP test** will test a TCP service on a specifrc port. Useful when testing if a database is up and running.
 3. **Command test** will run a command within the container that has its own success and failure logic.
 
-![readiness-probe-yaml.png](readiness-probe-yaml.png)
+![images/readiness-probe-yaml.png](images/readiness-probe-yaml.png)
 
 * The `initialDelaySeconds` tells the Readiness Probe to wait this amount of time before proding the Pod.
 * The `periodSeconds` tells the Readiness Probe how often to probe the Pod.
 * The `failureThreshold` tells the Readiness Probe how often to probe the Pod unsuccessfully before giving up. The default is 3.
 
-![liveness-probe-yaml-all-3.png](liveness-probe-yaml-all-3.png)
+![images/liveness-probe-yaml-all-3.png](images/liveness-probe-yaml-all-3.png)
 
 ## 3.4) Logging
 
 * In Docker you can view logs with `docker logs -f $CONTAINER_ID`
 
-![docker-logs.png](docker-logs.png)
+![images/docker-logs.png](images/docker-logs.png)
 
 * In k8s you can view the logs for a single container Pod with `kubectl logs -f $POD_NAME`
 * But what about a Pod with multiple containers? You must specify with container logs you want to view. Use `kubectl logs -f $POD_NAME $IMAGE_NAME`
 
-![k8s-multiple-container-logs.png](k8s-multiple-container-logs.png)
+![images/k8s-multiple-container-logs.png](images/k8s-multiple-container-logs.png)
 
 ## 3.5) Monitoring
 
@@ -1836,7 +1836,7 @@ spec:
   * Node level metrics, such as current state of all Nodes and the CPU and memory performance of all Nodes.
   * Pod level metrics, such as current state of all Pods and the CPU and memory performance of all Pods.
 
-![cluster-metrics.png](cluster-metrics.png)
+![images/cluster-metrics.png](images/cluster-metrics.png)
 
 * There is a variety of monitoring tools, such as:
   * **Metrics Server**, based off the original and now deprecated Heapster.
@@ -1845,7 +1845,7 @@ spec:
   * **Data Dog** (paid), covered in CKA.
   * **Dyantrace** (paid), covered in CKA.
 
-![k8s-monitoring-tools.png](k8s-monitoring-tools.png)
+![images/k8s-monitoring-tools.png](images/k8s-monitoring-tools.png)
 
 * You can have one Metrics Server per k8s Cluster. It gathers information from Nodes and Pods and stores that data in memory. It provides no historical data.
 * The Kubelet Agent running on each Nodes is responsible for running Pods on the Nodes and receiving instructions from the master kube-apiserver.
@@ -1867,7 +1867,7 @@ kubectl create -f .
   * Nodes - `kubectl top node`
   * Pods - `kubectl top pod`
 
-![metrics-server-stats.png](metrics-server-stats.png)
+![images/metrics-server-stats.png](images/metrics-server-stats.png)
 
 # 4) Pod Design
 
@@ -1875,25 +1875,25 @@ kubectl create -f .
 
 ### Labels
 
-![label-and-selectors.png](label-and-selectors.png)
+![images/label-and-selectors.png](images/label-and-selectors.png)
 
 * in k8s **Labels** are key/value pairs that are attached to objects. In general, labels are are a standard way of grouping things together. We can use single or multiple labels to filter items.
 * Labels are created by YAML files.
 
-![label-yml.png](label-yml.png)
+![images/label-yml.png](images/label-yml.png)
 
 ### Selectors
 
 * **Selectors** use Labels to perform object selection and filtering.
 * Can filter objects by type.
 
-![k8s-objects-unfiltered.png](k8s-objects-unfiltered.png)
+![images/k8s-objects-unfiltered.png](images/k8s-objects-unfiltered.png)
 
-![k8s-objects-filtered-by-object-type.png](k8s-objects-filtered-by-object-type.png)
+![images/k8s-objects-filtered-by-object-type.png](images/k8s-objects-filtered-by-object-type.png)
 
 * Can filter objects by application.
 
-![k8s-objects-filtered-by-app.png](k8s-objects-filtered-by-app.png)
+![images/k8s-objects-filtered-by-app.png](images/k8s-objects-filtered-by-app.png)
 * Can filter objects by any type of Label.
 
 ```bash
@@ -1904,11 +1904,11 @@ kubectl get $OBJECT --selector $KEY=$VALUE
 kubectl get $OBJECT --selector $KEY1=$VALUE1,$KEY2=$VALUE2
 ```
 
-![selector-command.png](selector-command.png)
+![images/selector-command.png](images/selector-command.png)
 
 * k8s internally uses Labels and Selectors to group objects together, such as a ReplicaSet and Pods. In this example there are 2 labels in the YAML defintion file, the ReplicaSet Label and the Pod Label.
 
-![replicaset-labels.png](replicaset-labels.png)
+![images/replicaset-labels.png](images/replicaset-labels.png)
 
 ## 4.2) Deployment Updates & Rollbacks
 
@@ -1943,17 +1943,17 @@ kubectl rollout undo deployment/$DEPLOYMENT_NAME
 
 * In docker an adhoc workload would run inside a container and the container will exit once its finished.
 
-![docker-adhoc-job.png](docker-adhoc-job.png)
+![images/docker-adhoc-job.png](images/docker-adhoc-job.png)
 
 #### k8s
 
 * In k8s an adhoc workload would run inside a Pod and when the Pod has finished, k8s will try to restart it. This will happen until a threshold is reached. This behaviour is undesirable for this type of workload. You can see this in the below screenshot by looking at RESTARTS.
 
-![k8s-adhoc-job.png](k8s-adhoc-job.png)
+![images/k8s-adhoc-job.png](images/k8s-adhoc-job.png)
 
 * This is because `restartPolicy: Always` is set by default for a container. Other options are `Never` and `Failure`.
 
-![restart-policy.png](restart-policy.png)
+![images/restart-policy.png](images/restart-policy.png)
 
 ### Jobs
 
@@ -1986,11 +1986,11 @@ spec:
   * Jobs don't run in parallel.
   * Jobs will run until a single completion.
 
-![jobs-commands.png](jobs-commands.png)
+![images/jobs-commands.png](images/jobs-commands.png)
 
 * Be careful of Jobs with a high completion rate, high failure rate, and no parallelism. These Jobs may take a long time to reach their goal. Solve this by using parallelism.
 
-![job-completion-changed.png](job-completion-changed.png)
+![images/job-completion-changed.png](images/job-completion-changed.png)
 
 ```bash
 # Create a Job
@@ -2126,37 +2126,37 @@ Why do we need an Ingress? Lets look at an example.
 * There is a NodePort exposing the Node to the internet.
 * Users can connect to this directly to the Nodes via the Node IP address and NodePort port.
 
-![app-setup-1.png](app-setup-1.png)
+![images/app-setup-1.png](images/app-setup-1.png)
 
 #### Scaling The App
 
 * We scale the app by increasing the Deployments Replica amount which will increase the amount of Pods. The NodePort Service handles load balancing between the Pods.
 
-![app-setup-2.png](app-setup-2.png)
+![images/app-setup-2.png](images/app-setup-2.png)
 
 #### URL:port Instead Of IP:port
 
 * We don't want users to have to type an IP address. So the Website domain DNS is now mapped to the IP addresses of the Nodes.
 
-![app-setup-3.png](app-setup-3.png)
+![images/app-setup-3.png](images/app-setup-3.png)
 
 #### Website URL Only
 
 * We don't want users to have to type a port either. So the website domain DNS points to a proxy address listening on port 80. The proxy server will forward requests to the Nodes on the NodePort.
 
-![app-setup-4.png](app-setup-4.png)
+![images/app-setup-4.png](images/app-setup-4.png)
 
 #### Google Cloud Provider
 
 * For a web application hosted on a cloud provider, you can replace the NodePort with a LoadBalancer. This will automatically configure a proxy to route traffice to your LoadBalancer. The website domain DNS now points to the IP address of the Google Cloud proxy load balancer.
 
-![app-setup-5.png](app-setup-5.png)
+![images/app-setup-5.png](images/app-setup-5.png)
 
 #### Adding Another App And SSL
 
 * An additional application can easily be added by using Deployments, a new LoadBalancer, and a new Google Cloud proxy load balancer. SSL Can be added by yet another proxy.
 
-![app-setup-6.png](app-setup-6.png)
+![images/app-setup-6.png](images/app-setup-6.png)
 
 #### Replacing With Ingress
 
@@ -2165,11 +2165,11 @@ Why do we need an Ingress? Lets look at an example.
 * Proxy and proxy load balancers
 * NortPort or GCP LoadBalancer
 
-![without-ingress.png](without-ingress.png)
+![images/without-ingress.png](images/without-ingress.png)
 
 becomes
 
-![with-ingress.png](with-ingress.png)
+![images/with-ingress.png](images/with-ingress.png)
 
 Notice that the ingress is exposed as well.
 
@@ -2203,7 +2203,7 @@ A k8s Ingress needs 2 things to work:
 3. A Service of type NodePort is needed to expose the Ingress Controller to the world.
 4. A Service Account with the correct roles and bindings is needed. The Ingress Controller uses this when it detects Ingress Resources changes and updates the nginx configuration.
 
-![ingress-controller-components.png](ingress-controller-components.png)
+![images/ingress-controller-components.png](images/ingress-controller-components.png)
 
 ### Ingress Resources
 
@@ -2214,15 +2214,15 @@ A k8s Ingress needs 2 things to work:
   2. Route traffic to different applications based on URL.
   3. Route traffic to different applications based on the domain name.
 
-![ingress-resource-routing.png](ingress-resource-routing.png)
+![images/ingress-resource-routing.png](images/ingress-resource-routing.png)
 
 * There are rules at the top for each domain and then rules for paths within the domain.
 
-![ingress-resource-rules.png](ingress-resource-rules.png)
+![images/ingress-resource-rules.png](images/ingress-resource-rules.png)
 
 ### Forward All Traffic To Single Application
 
-![ingress-service-routing-rule.png](ingress-service-routing-rule.png)
+![images/ingress-service-routing-rule.png](images/ingress-service-routing-rule.png)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -2237,7 +2237,7 @@ spec:
 
 ### Route Traffic Based On URL
 
-![ingress-path-routing-rule.png](ingress-path-routing-rule.png)
+![images/ingress-path-routing-rule.png](images/ingress-path-routing-rule.png)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -2262,7 +2262,7 @@ spec:
 
 ### Route Traffic Based On Domain
 
-![ingress-domain-routing-rule.png](ingress-domain-routing-rule.png)
+![images/ingress-domain-routing-rule.png](images/ingress-domain-routing-rule.png)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -2310,11 +2310,11 @@ kubectl -n $NAMESPACEget ingress $INGRESS_NAME -o yaml
 
 This simple application accepts user data via a web server on port 80. An API request is sent on port 5000. The API server sends a request to the database on port 3306. The data is sent back to the user.
 
-![network-traffic-example-1.png](network-traffic-example-1.png)
+![images/network-traffic-example-1.png](images/network-traffic-example-1.png)
 
 In k8s this would be implemented with pods and services possibly spanning across multiple nodes.
 
-![network-traffic-example-2.png](network-traffic-example-2.png)
+![images/network-traffic-example-2.png](images/network-traffic-example-2.png)
 
 ### Ingress vs Egress Network Traffic
 
@@ -2322,11 +2322,11 @@ In k8s this would be implemented with pods and services possibly spanning across
 
 **Egress network traffic** is internal traffic going out of the source pod.
 
-![network-traffic-example-3.png](network-traffic-example-3.png)
+![images/network-traffic-example-3.png](images/network-traffic-example-3.png)
 
 The above diagram shows ingress and egress traffic from the perspective of different services. This would require multiple k8s ingress and egress network policies on multiple pods.
 
-![network-traffic-example-4.png](network-traffic-example-4.png)
+![images/network-traffic-example-4.png](images/network-traffic-example-4.png)
 
 ### k8s Network Security
 
@@ -2336,13 +2336,13 @@ By default, if no policies exist in a namespace then k8s allows traffic from all
 
 https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-policies
 
-![all-allow.png](all-allow.png)
+![images/all-allow.png](images/all-allow.png)
 
 **Network policies** are k8s objects are used to allow or deny traffic to the pod they are applied to. Labels and selectors are used to link a network policy to a pod.
 
-![network-policy-1.png](network-policy-1.png)
+![images/network-policy-1.png](images/network-policy-1.png)
 
-![network-policy-2.png](network-policy-2.png)
+![images/network-policy-2.png](images/network-policy-2.png)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -2397,7 +2397,7 @@ From the perspective of the database Pod, this example's use case requirements a
 * The database Pod to allow incoming traffic from the backup server outside the cluster.
 * All other incoming and outgoing traffic to and from the database Pod is blocked.
 
-![netpol-scope.png](netpol-scope.png)
+![images/netpol-scope.png](images/netpol-scope.png)
 
 When designing Network Policies, the key things to remember are:
 
@@ -2406,41 +2406,41 @@ When designing Network Policies, the key things to remember are:
   * Egress means outgoing traffic out of the Pod with the Network Policy.
 * When creating Network Policies, all response traffic is automatically allowed. So you don't need an extra rule for that.
 
-![return-traffic-allowed-by-default.png](return-traffic-allowed-by-default.png)
+![images/return-traffic-allowed-by-default.png](images/return-traffic-allowed-by-default.png)
 
 * By default, k8s allows traffic from all Pods to all destinations in the cluster.
 * A Network Policy that doesn't have an ingress or egress `policyTypes` will block all traffic to the applied Pods.
 
-![netpol-block-all-traffic.png](netpol-block-all-traffic.png)
+![images/netpol-block-all-traffic.png](images/netpol-block-all-traffic.png)
 
 * Using the `podSelector` property by itself will allow traffic to/from all Pods with the matching label. It doesn't matter what namespace they are in. The label must be set on the Pod for this to work.
 
-![pod-selector-many-namespaces.png](pod-selector-many-namespaces.png)
+![images/pod-selector-many-namespaces.png](images/pod-selector-many-namespaces.png)
 
 * Using the `namespaceSelector` property by itself will allow traffic to/from all Pods within the namespaces with the matching label. The label must be set on the namespace for this to work.
 
-![namespace-selector.png](namespace-selector.png)
+![images/namespace-selector.png](images/namespace-selector.png)
 
 * Using the `podSelector` and `namespaceSelector` properties together will allow traffic to/from all Pods with the matching label that are in namespaces with the matching label. The labels must be set on the Pods and namespaces for this to work.
 
-![pod-and-namespace-selector.png](pod-and-namespace-selector.png)
+![images/pod-and-namespace-selector.png](images/pod-and-namespace-selector.png)
 
 * Using the `ipBlock` specifies which IP addresses outside of the k8s cluster are allowed to access the Pod. This is via CIDR addresses.
 
-![cidr-netpol.png](cidr-netpol.png)
+![images/cidr-netpol.png](images/cidr-netpol.png)
 
 * All `[podSelector, namespaceSelector, ipBlock]` properties underneath the `ingress.from` and `egress.to` sections will either have AND or OR logic.
   * Any rules underneath another rule with a `-` infront of it will apply AND logic with the original rule with the `-` above it. This means these rules are combined.
 
-  ![netpol-AND.png](netpol-AND.png)
+  ![images/netpol-AND.png](images/netpol-AND.png)
 
   * Any rules with a `-` infront of them will apply OR logic to other rules with `-` infront of them. This means these rules are separate.
 
-  ![netpol-OR-1.png](netpol-OR-1.png)
+  ![images/netpol-OR-1.png](images/netpol-OR-1.png)
 
 * All of the above applies to egress traffic as well. In this example the database Pod is expecting external pull traffic from the backup server.
 
-![egress-example.png](egress-example.png)
+![images/egress-example.png](images/egress-example.png)
 
 # 6) State Persistence
 
@@ -2454,7 +2454,7 @@ Containers are transient in nature, i.e. they only last for a short period of ti
 
 One way is to use external storage Volumes. These are attached to the containers when they are created and allow data to be stored permanently. These can be accessed by any container they are mounted to.
 
-![docker-volume.png](docker-volume.png)
+![images/docker-volume.png](images/docker-volume.png)
 
 ### k8s
 
@@ -2464,13 +2464,13 @@ Pods are transient in nature, i.e. they only last fort a short period of time du
 
 One way is to use external storage Volumes. These are attached to the Pods when they are created and allow data to be stored permanently. These can be accessed by any container they are mounted to. A k8s Volume requries Storage and a variety of Storage options are available.
 
-![k8s-volume.png](k8s-volume.png)
+![images/k8s-volume.png](images/k8s-volume.png)
 
-![k8s-volume-2.png](k8s-volume-2.png)
+![images/k8s-volume-2.png](images/k8s-volume-2.png)
 
 **Note:** In the above example a host path is used, this is only recommended to be used in a single Node cluster. Because the host path resides on the Node. You can get around this by using some kind of networked storage solution. k8s supports many different types.
 
-![k8s-volume-3.png](k8s-volume-3.png)
+![images/k8s-volume-3.png](images/k8s-volume-3.png)
 
 ```bash
 # Get volume information
@@ -2487,7 +2487,7 @@ https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 
 One problem with the Volume approach is that the entire configuration options are within the Pod definition file. This means the users who are deploying Pods have to configure storage options on each individual Pod. This approach does not scale.
 
-![persistent-volume.png](persistent-volume.png)
+![images/persistent-volume.png](images/persistent-volume.png)
 
 A **Persistent Volume** is a Cluster wide pool of storage Volumes that is created and configured by an administrator.
 
@@ -2508,7 +2508,7 @@ spec:
     path: "/mnt/data"
 ```
 
-![persistent-volume-2.png](persistent-volume-2.png)
+![images/persistent-volume-2.png](images/persistent-volume-2.png)
 
 Persistent Volumes have a variety of access modes. Access modes determine how the Volume should be mounted on the host. There is
 * **ReadOnlyMany (ROX)** means the Volume can be mounted as read only and accessed by many Nodes.
@@ -2584,11 +2584,11 @@ The Persistaent Volumes and Persistent Volume Claims are 2 seperate objects. The
 * Storage Class
 * Selector - You can use labels and selectors to force bindings.
 
-![pv-and-pvc-binding-1.png](pv-and-pvc-binding-1.png)
+![images/pv-and-pvc-binding-1.png](images/pv-and-pvc-binding-1.png)
 
 Every PVC is bound to a single PV. There is a 1 to 1 mapping between the PV and PVC, so if a PVC doesn't use all the storage from a PV the rest of the PV will go unallocated.
 
-![pv-and-pvc-binding-2.png](pv-and-pvc-binding-2.png)
+![images/pv-and-pvc-binding-2.png](images/pv-and-pvc-binding-2.png)
 
 PVC's are in a Pending state when there aren't any PVs available for binding.
 
@@ -2619,9 +2619,9 @@ https://kubernetes.io/docs/concepts/storage/storage-classes/
 * There are many types of storage provisioners that can be used as Storage Classes. They can be on-premesis or in the cloud.
   * Each provisioner has specific configuration parameters that are required when creating the Storage Class.
 
-![static-provisioning.png](static-provisioning.png)
+![images/static-provisioning.png](images/static-provisioning.png)
 
-![dynamic-provisioning.png](dynamic-provisioning.png)
+![images/dynamic-provisioning.png](images/dynamic-provisioning.png)
 
 ```bash
 # Work with Storage Class objects.
@@ -2642,9 +2642,9 @@ https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
   * The Pod names are always based off of the name of the Stateful Set and the unique ordinal index number. The first Pod is always named `"$STATEFUL_SET_NAME"-0`
 * A good example of this is a database in a master and slave configuration, that has continuous data replication from the master to the slave.
 
-![stateful-set-1.png](stateful-set-1.png)
+![images/stateful-set-1.png](images/stateful-set-1.png)
 
-![stateful-set-2.png](stateful-set-2.png)
+![images/stateful-set-2.png](images/stateful-set-2.png)
 
 * A Stateful Set is created just like a Deployment. The YAML file is almost identical, but the `kind:` is StatefulSet and it also requires a `serviceName:` field which requires a headless service.
 * Scaling up a Stateful set will increment the ordinal index by one.
@@ -2660,7 +2660,7 @@ kubectl get statefulset -A
 * A **Volume Claim Template** allows you to have a separate Volume per Pod that is easy to configure. It is the entire Persistent Storage Claim `/metadata` and `/spec` section moved into the Stateful Set's `/spec/volumeClaimTemplate/[i]`. This stops the need of having to manually create a PVC and adding it into the Stateful Set.
 * Stateful Sets don't automatically delete the PVC or the associated Volume. So if a Pod crashes and is recreated the existing PVC and Volume with the data still intact can be used again.
 
-![volume-claim-template.png](volume-claim-template.png)
+![images/volume-claim-template.png](images/volume-claim-template.png)
 
 ## 7.3) Headless Services
 
@@ -2668,15 +2668,15 @@ https://kubernetes.io/docs/concepts/services-networking/service/#headless-servic
 
 * A **Headless Service** doesn't provide load balancing like other Services, but still provides a DNS entry to each Pod via the Pod name and a sub-domain.
   * The sub-domain is `$POD_NAME.$HEADLESS_SERVICE_NAME.$NAMESPACE.svc.cluster.local`
- 
-![headless-service.png](headless-service.png)
+
+![images/headless-service.png](images/headless-service.png)
 
 * It does not have an IP address of its own. Use `/spec/clusterIP` as None to create a Headless Service.
 * The Pod definition must have `/spec/subdomain` with `$HEADLESS_SERVICE_NAME` and `/spec/hostname` with a name.
 
-![headless-service-2.png](headless-service-2.png)
+![images/headless-service-2.png](images/headless-service-2.png)
 
 * If you use `/spec/template/subdomain` or `/spec/template/spec/hostname` with a Deployment then all of your Pods will get the same DNS name. This isn't useful.
 * You do not need to use `/spec/template/subdomain` or `/spec/template/spec/hostname` with a Stateful Set as it will automatically do this for you. You muse use `/spec/serviceName` with the Headless Service here and all Pods within the Stateful Set will get a unique DNS record recreated.
 
-![headless-service-3.png](headless-service-3.png)
+![images/headless-service-3.png](images/headless-service-3.png)

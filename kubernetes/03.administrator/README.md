@@ -124,7 +124,7 @@
 * Container runtime engine (CRE) must be installed on all Nodes in the Cluster. By default this is Docker, it can be others though like containerd or rkt.
   * Some control plane components can be run as containers instead of system binaries. For example DNS and networking solutions. This is why the CRE must be installed onto the master nodes.
 
-![cluster-architecture.png](cluster-architecture.png)
+![images/cluster-architecture.png](images/cluster-architecture.png)
 
 ## 1.1) ETCD
 
@@ -156,7 +156,7 @@ etcdctl set key1 value
 etcdctl get key1
 
 # When starting ETCD on a master you need to provide the certificates.
-kubectl exec etcd-master -n kube-system -- sh -c "ETCDCTL_API=3 etcdctl get / --prefix --keys-only --limit=10 --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/server.crt  --key /etc/kubernetes/pki/etcd/server.key" 
+kubectl exec etcd-master -n kube-system -- sh -c "ETCDCTL_API=3 etcdctl get / --prefix --keys-only --limit=10 --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/server.crt  --key /etc/kubernetes/pki/etcd/server.key"
 
 ```
 
@@ -206,16 +206,16 @@ https://kubernetes.io/docs/concepts/architecture/controller/
 * When trying to achieve a goal, **the imperative approach** specifies exactly what steps to do and how to do them to achieve the goal.
 * When trying to achieve a goal, **the declarative approach** only specifies what the goal is. The details of how the goal is reached are abstracted away.
 
-![imperative-v-declartive-v1.png](imperative-v-declartive-v1.png)
+![images/imperative-v-declartive-v1.png](images/imperative-v-declartive-v1.png)
 
 * The declarative approach is used in infrastructure as code (IAS). Tools like Ansible ingest YAML files that declare what the final state needs to be and Ansible works out how to do it. Ansible does this in an idempotent way, i.e. running the declarative process one or many times will always produce the same result.
 
-![imperative-v-declartive-v2.png](imperative-v-declartive-v2.png)
+![images/imperative-v-declartive-v2.png](images/imperative-v-declartive-v2.png)
 
 * In k8s the majority of `kubectl` commands are the imperative approach. This is great for the exam since you can get things done quickly.
 * In k8s the `kubectl apply` command uses YAML files to work out what needs to be done to get the desired state. This is the declarative approach in k8s.
 
-![imperative-v-declartive-v3.png](imperative-v-declartive-v3.png)
+![images/imperative-v-declartive-v3.png](images/imperative-v-declartive-v3.png)
 
 ## 1.7) Kubectl Apply Command
 
@@ -227,11 +227,11 @@ https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/
 2. The live (i.e. in memory) k8s object definition
 3. The last applied configuration within the live k8s object. This is the local YAML definition file converted to JSON and stored inside the live k8s object.
 
-![kubectl-apply-v1.png](kubectl-apply-v1.png)
+![images/kubectl-apply-v1.png](images/kubectl-apply-v1.png)
 
 * The last applied configuration is stored inside of `/metadata/annotations/kubectl.kubernetes.io/last-applied-configuration/` as a JSON string.
 
-![kubectl-apply-v2.png](kubectl-apply-v2.png)
+![images/kubectl-apply-v2.png](images/kubectl-apply-v2.png)
 
 # 2) Scheduling
 
@@ -258,7 +258,7 @@ kubectl get $K8s_OBJECT --selector='key1=value1,key2=value2,key3=value3'
 
 The topics Labels & Selectors, Taints & Tolerants, and Node Selector and Node Affinity are covered in the developer's course under the section [Assigning Pods To Nodes](../02.applications-developer/README.md#26-assigning-pods-to-nodes)
 
-![nodename-v1.png](nodename-v1.png)
+![images/nodename-v1.png](images/nodename-v1.png)
 
 ## 2.3) Resource Requests & Limits
 
@@ -270,19 +270,19 @@ https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
 
 * A **Daemon Set** ensure that all Nodes in the cluster run a copy of a Pod. As new Nodes are added to the cluster, the Daemon Set runs the desired Pod on the new Node. It does using the default scheduler and node affinity rules. Obviously when Nodes are removed from the cluster the Daemon Set Pod will be removed too. Daemon sets are ignored by the Kube Scheduler.
 
-![daemon-set-v1.png](daemon-set-v1.png)
+![images/daemon-set-v1.png](images/daemon-set-v1.png)
 
 * Some typical use cases are:
   * Running a cluster management Pods (e.g. kube-proxy Pod in the kube-system namespace) on every node.
   * Running log collection daemon on every node.
   * Running node monitoring daemon on every node.
 
-![daemon-set-v2.png](daemon-set-v2.png)
-![daemon-set-v3.png](daemon-set-v3.png)
+![images/daemon-set-v2.png](images/daemon-set-v2.png)
+![images/daemon-set-v3.png](images/daemon-set-v3.png)
 
 * The DaemonSet YAML definition file is almost identical to a Deployment YAML definition file.
 
-![daemon-set-v4.png](daemon-set-v4.png)
+![images/daemon-set-v4.png](images/daemon-set-v4.png)
 
 ```bash
 kubectl get daemonsets
@@ -299,19 +299,19 @@ https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/
 
 * **Static Pods** are automatically created by the kubelet daemon using a filesystem based or web hosted based YAML definition file, rather than one supplied via the kube-apiserver. The Static Pod is only created for the Node that the YAML defintion file is associated with. The Statics Pods are created outside of control plane management tools, and are available as read only objects within the cluster. To delete the Static Pod, just delete the YAML defintion file. Static Pods are completely ignored by the Kube Scheduler.
 
-![static-pods-v1.png](static-pods-v1.png)
+![images/static-pods-v1.png](images/static-pods-v1.png)
 
 * The location of the filesystem or web hosted based YAML defintion file is passed in to the kubelet daemon through its O/S service file. The `--pod-manifest-path=$PATH` or `--pod-manifest-path=$CONFIG_FILE` option is used for filesystem YAML defintion files and `--manifest-url=$URL` is used for web hosted YAML definition files.
   * In older versions it can be found at `--config=$PATH` or `--config=$CONFIG_FILE`
 
 
-![static-pods-v4.png](static-pods-v2.png)
-![static-pods-v2.png](static-pods-v3.png)
+![images/static-pods-v2.png](images/static-pods-v2.png)
+![images/static-pods-v3.png](images/static-pods-v3.png)
 
 * Static Pods will typically have a Node name in their name as a suffix, something like `$POD_NAME-$NODE_NAME`. So you can use the `kubectl get po -A | grep '$NODE_NAME'` to look for Static Pods.
 * A typical use case for using Static Pods is to deploy the control plane componenets on each Node. This is how kubeadm sets up control plane components in the cluster.
 
-![static-pods-v3.png](static-pods-v4.png)
+![images/static-pods-v4.png](images/static-pods-v4.png)
 
 * If you want to view the running containers of a Static Pod before the other cluster components are avaiable, you need to use `docker ps` to see them.
 
@@ -340,7 +340,7 @@ staticPodPath: /etc/kubernetes/manifests
 * You can create your custom scheduling algorithm and deploy it into the cluster. k8s allows for multiple schedulers running at the same time.
 * When installing the `kube-scheduler` for the first time, if you don't give it a name it will automatically be called `default-scheduler`. You can supply whatever name you like.
 
-![custom-scheduler-v1.png](custom-scheduler-v1.png)
+![images/custom-scheduler-v1.png](images/custom-scheduler-v1.png)
 
 Note: This example is using the same scheduler in the example.
 
@@ -348,15 +348,15 @@ Note: This example is using the same scheduler in the example.
   * The `/spec/containers/[i]/command` array has all the command options. The `--leader-elect=true` option is used when there are multiple copies of the scheduler running on multiple Master Nodes in a HA setup. Only one scheduler can be active at a time, this option chooses the active scheduler.
   * The `/spec/containers/[i]/command` array has all the command options. The `--leader-elect=false` option is used when there are multiple copies of the scheduler running on one Master Node. Only one scheduler can be active at a time, this option chooses the active scheduler.
 
-![custom-scheduler-v2.png](custom-scheduler-v2.png)
+![images/custom-scheduler-v2.png](images/custom-scheduler-v2.png)
 
 * A Pod can manually choose its scheduler by using the `/spec/schedulerName/` option. If the custom scheduler isn't working properly, the Pod will be in a PENDING state.
 
-![custom-scheduler-v3.png](custom-scheduler-v3.png)
+![images/custom-scheduler-v3.png](images/custom-scheduler-v3.png)
 
 * Use `kubectl get events` to find scheduler events which will tell you which scheduler was used for a Pod.
 
-![custom-scheduler-v4.png](custom-scheduler-v4.png)
+![images/custom-scheduler-v4.png](images/custom-scheduler-v4.png)
 
 ```bash
 # View k8s related events, useful for troubleshooting
@@ -476,7 +476,7 @@ Note: Not covered in CKA, covered in CKAD. This using ReplicaSets and Liveness, 
 
 ```bash
 # ignore daemonset pods when draining
-kubectl drain $NODE --ignore-daemonsets 
+kubectl drain $NODE --ignore-daemonsets
 
 # remove pods that won't automatically be rescheduled
 kubectl drain $NODE --force
@@ -497,13 +497,13 @@ kubectl uncordon $NODE
 
 **Note:** Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format.
 
-![semantic-versioning-v1.png](semantic-versioning-v1.png)
-![semantic-versioning-v2.png](semantic-versioning-v2.png)
+![images/semantic-versioning-v1.png](images/semantic-versioning-v1.png)
+![images/semantic-versioning-v2.png](images/semantic-versioning-v2.png)
 
 * `kubectl get nodes -o wide` or `kubectl version --short` shows the k8s semantic version of `kubelet`.
 * The [k8s github repo release page](https://github.com/kubernetes/kubernetes/releases) has all the released versions of k8s. You can download the file which contains all the control plane components within it. All of the k8s supplied control plane components will have the same semantic version, but the third party supplied control plane components will have different semantic version numbers.
 
-![semantic-versioning-v3.png](semantic-versioning-v3.png)
+![images/semantic-versioning-v3.png](images/semantic-versioning-v3.png)
 
 ## 5.2) Cluster Upgrades
 
@@ -513,11 +513,11 @@ kubectl uncordon $NODE
   * Kubelet and Kube Proxy can be the same version or up to 2 versions behind.
   * `kubectl` can be the same version, 1 version behind, or 1 version ahead.
 
-![upgrading-cluster-v1.png](upgrading-cluster-v1.png)
+![images/upgrading-cluster-v1.png](images/upgrading-cluster-v1.png)
 
 * This version differencing allows upgrading, component by component if desired. k8s only supports the 3 latest minor versions. You must upgrade 1 minor release version at a time, you cannot jump minor versions unless you completely reinstall.
 
-![upgrading-cluster-v2.png](upgrading-cluster-v2.png)
+![images/upgrading-cluster-v2.png](images/upgrading-cluster-v2.png)
 
 * There are 3 high level steps to the `kubeadm` cluster upgrade process:
   1. Upgrade a primary control plane node.
@@ -525,7 +525,7 @@ kubectl uncordon $NODE
   3. Upgrade worker nodes.
 * The Master Node must be taken offline when upgrading it. This means the cluster has no management features avaiable, but Worker Node Pods will continue to run. But if one does there is no ReplicationController to bring the Pod back up.
 
-![upgrading-cluster-v3.png](upgrading-cluster-v3.png)
+![images/upgrading-cluster-v3.png](images/upgrading-cluster-v3.png)
 
 * There are 3 strategies to use when upgrading Worker Nodes.
   1. You can upgrade all Worker Nodes at once. But that has an outage for users.
@@ -629,7 +629,7 @@ systemctl stop kube-apiserver
 
 # Restore from backup (only works with API 3), don't need keys as it is on the local filesystem: etcdctl snapshot restore -h
 etcdctl snapshot restore /opt/snapshot-pre-boot.db \
---data-dir /var/lib/etcd-from-backup 
+--data-dir /var/lib/etcd-from-backup
 
 # Update the ETCD static Pod data path
 cp /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml.old
@@ -658,11 +658,25 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ## 6.1) Primitives
 
+All of this information is repeated in [CKS Security Primitives](../04.security/README.md#k8s-security-primitives)
+
 * The hosts running k8s must be hardened. Things like:
   * `ssh` hardening such as disabling root access, disabling passwords, using keys for authentication, etc.
 * From a k8s perspective, the `kube-apiserver` is the most important thing to defind. This is because all interactions within the cluster go through it.
 
+There are 2 questions to answer when defending the kube-apiserver:
+1. Who can access the cluster?
+   1. Covered by authentication. e.g. certificates, Service Accounts, etc.
+2. What they can do when they access the cluster?
+   1. Covered by authorisation. e.g. RBAC, ABAC, etc.
+
+All communication between control plane components within the cluster is secured using TLS encryption.
+
+Communication between Pods is allowed by default, you can secure this with Network Policies.
+
 ## 6.1) Authentication
+
+All of this information is repeated in [CKS Authentication](../04.security/README.md#authentication)
 
 * **Authentication** confirms that users are who they say they are. There are 2 types of users, humans and computers. Details previously covered in the developer's course under the section [Service Accounts](../02.applications-developer/README.md#service-accounts)
 * All requests to the cluster go through the `kube-apiserver` and the user making the request is authenicated before the request is fulfilled.
@@ -678,13 +692,15 @@ kubectl -n kube-system logs $ETCD_POD -f
 
 ## 6.2) TLS Encryption
 
+All of this information is repeated in [CKS TLS Encryption](../04.security/README.md#tls-encryption)
+
 * All communication between the components in the cluster is secured using TLS encryption. TLS certificates can also be used for user authentication.
 
 ### 6.2.1 ) TLS Basics
 
 * A **digital certificate (X.509)** provides a trusted link between a public key and an entity (e.g. a business, domain name, etc). This is a trusted link because it has been verified (i.e. signed) by a trusted third party (i.e. a Certificate Authority).
 
-![certificates-v1.png](certificates-v1.png)
+![images/certificates-v1.png](images/certificates-v1.png)
 
 * A digital certificate needs to be signed by a Certificate Authority for it to be considered trusted and valid. Self signed certificates cannot be trusted as anyone can create them. This signing and validation request is known as a **Certificate Signing Request (CSR).**
 * A **Certificate Authority (CA)** is a public, well known, and trusted organisation that will validate the information within CSR's and sign certificates. They sign certificates with their private key. Their public key is built into the browser and O/S and is used to validate a CA signed certificate. There are 2 types of CA certificates:
@@ -692,7 +708,7 @@ kubectl -n kube-system logs $ETCD_POD -f
   2. An **intermediate certificate** is by CAs to issue end user certificates for servers and clients.
 * You can host your own private CA so you can validate internal websites. You must bundle your private CA's public key into the browser and O/S so your private CA signed certificates can be validated.
 
-![certificates-v2.png](certificates-v2.png)
+![images/certificates-v2.png](images/certificates-v2.png)
 
 * There are 4 steps to an CSR:
   1. The server generates an OpenSSL public/private key pair.
@@ -708,18 +724,18 @@ kubectl -n kube-system logs $ETCD_POD -f
   4. **Change Cipher Suite** - The server decrypts the pre-master key with its private key, and uses the pre-master key to create a symmetric key. The symmetric key is used to encrypt a message sent back to the client.
   5. **Establish Secure Connection** - The client uses the pre-master key to create the same symmetric key as the server did. It decrypts the message from the server and an encrypted session has been established between the client and server with the same symmetric key that both the client and server created from the pre-master key.
 
-![certificates-v3.png](certificates-v3.png)
+![images/certificates-v3.png](images/certificates-v3.png)
 
 * Certificate naming conventions are typically:
   * A public key file has is named `*.crt` or `*.pem`, i.e. the public key doesn't have the word key in its name or extension.
   * A private key file has is named `*.key` or `*-key.pem`, i.e. the private key has the word key in its name or extension.
 
-![certificates-v4.png](certificates-v4.png)
+![images/certificates-v4.png](images/certificates-v4.png)
 
 ### 6.2.2) TLS In k8s
 
 * From a k8s perspective, there are 3 types of certificates:
-  1. **Root certificates** which are installed on the CA server and also on the server and client. k8s supports mulitiple CAs, so you can have one CA for client certificates and one CA for server certificates. 
+  1. **Root certificates** which are installed on the CA server and also on the server and client. k8s supports mulitiple CAs, so you can have one CA for client certificates and one CA for server certificates.
   2. **Server certificates** which are installed on the k8s cluster and used by cluster components. These are verified by the cluster.
   3. **Client certificates** which are installed onto the clients and use when connecting to the cluster. These are verified by the cluster.
 * The following control plane components require their own server certificates:
@@ -734,9 +750,9 @@ kubectl -n kube-system logs $ETCD_POD -f
   * Kube API Server to Kubelet agent (optional, can reuse server certificate)
   * Kube API Server to ETCD Server (optional, can reuse server certificate)
 
-![certificates-v5.png](certificates-v5.png)
+![images/certificates-v5.png](images/certificates-v5.png)
 
-![certificates-v6.png](certificates-v6.png)
+![images/certificates-v6.png](images/certificates-v6.png)
 
 **Note:** In the diagrams above there have been new public/private key pairs created (e.g. Kube API server talking to ETCD server), but you can share the same one as well.
 
@@ -788,29 +804,29 @@ openssl x509 -req -in $ADMIN_PRIVATE_KEY -CA $CA_CERTIFICATE -CAkey $CA_PRIVATE_
 openssl x509 -in $ADMIN_CERTIFICATE -text -noout
 ```
 
-![certificates-v7.png](certificates-v7.png)
+![images/certificates-v7.png](images/certificates-v7.png)
 
 **Note:** The user certificates can be moved into `KUBECONFIG` which is used to connect and authenticate with the server.
 
-![certificates-v8.png](certificates-v8.png)
+![images/certificates-v8.png](images/certificates-v8.png)
 
 **Note:** All system components must have 'system' as the prefix in their certificate CN field, e.g. system:kube-controller-manager.
 
-![certificates-v9.png](certificates-v9.png)
+![images/certificates-v9.png](images/certificates-v9.png)
 
-![certificates-v10.png](certificates-v10.png)
+![images/certificates-v10.png](images/certificates-v10.png)
 
 **Note:** The Kube API Server must have Alternative Names present the certificate.
 
-![certificates-v11.png](certificates-v11.png)
+![images/certificates-v11.png](images/certificates-v11.png)
 
 **Note:** There needs to be a certificate for Kubelet on each Node in the cluster. The certificates are named after the Node.
 
-![certificates-v12.png](certificates-v12.png)
+![images/certificates-v12.png](images/certificates-v12.png)
 
 **Note:** Each Node also needs to have client certificates for Kubelet so they can talk to the Kube API Server. Since they are system components they need to have the name `system:node:$NODE_NAME`. These certificates go into the KUBECONFIG file and allow Kubectl to work.
 
-![certificates-v13.png](certificates-v13.png)
+![images/certificates-v13.png](images/certificates-v13.png)
 
 **Note:** When viewing the certificate's contents with `openssl x509 -in $CA_CERTIFICATE -text -noout` you need to pay attention to `Issuer`, `Validity`, `Subject`, and the `Subject Alternative Names`.
 
@@ -833,7 +849,7 @@ openssl req -new -key $PRIVATE_KEY -subj "/CN=$USER/O=system:masters" -out $CSR
 
 **Note:** The user's public key must be base64 encoded. Do this with `cat $PUBLIC_KEY |base64 | tr -d '\n' && echo`. We are using `tr` to delete all newlines as the CSR YAML definition file doesn't accept them. Use the script at https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#create-certificatesigningrequest and add `/metadata/name/$USERNAME`, `/spec/request/$BASE64_PUBLIC_KEY`, and the correct `/spec/groups/[i]/$USER_PERMISSION`.
 
-![csr-v1.png](csr-v1.png)
+![images/csr-v1.png](images/csr-v1.png)
 
 ```bash
 # View certificate signing requests
@@ -849,7 +865,7 @@ kubectl certificate approve $USER
 kubectl get csr $USER -o yaml
 ```
 
-![csr-v2.png](csr-v2.png)
+![images/csr-v2.png](images/csr-v2.png)
 
 **Note:** The Controller Manager is responsible for all certificate related operations.
 
@@ -857,7 +873,7 @@ kubectl get csr $USER -o yaml
 
 * The **Kube Config file** is used instead of supplying the certificates with every `curl` or `kubectl` command.
 
-![kubeconfig-v1.png](kubeconfig-v1.png)
+![images/kubeconfig-v1.png](images/kubeconfig-v1.png)
 
 * The default Kube Config file is located at `~/.kube/config` but can be named whatever you like. You can set this in the environment variable `KUBECONFIG` or `kubectl --config $FILE`.
 * The Kube Config file has 3 sections:
@@ -865,8 +881,8 @@ kubectl get csr $USER -o yaml
   2. `/contexts/[i]` define which user account will be used to access which cluster. This uses the existing users and clusters within the
   3. `/users/[i]` are the accounts that you use to access the clusters. The username, certificate, and key goes here.
 
-![kubeconfig-v2.png](kubeconfig-v2.png)
-![kubeconfig-v3.png](kubeconfig-v3.png)
+![images/kubeconfig-v2.png](images/kubeconfig-v2.png)
+![images/kubeconfig-v3.png](images/kubeconfig-v3.png)
 
 * The `/current-context` specifies which is the default context to use from the Kube Config file.
 * The `/contexts/[i]/context/namespace` specifies which is the default namespace to use for the context from the Kube Config file.
@@ -891,7 +907,7 @@ kubectl config use-context $CONTEXT_NAME
   1. Using a relative or absolute path to the certificate file.
   2. Using the base64 encoded string of the certificate file contents.
 
-![kubeconfig-v4.png](kubeconfig-v4.png)
+![images/kubeconfig-v4.png](images/kubeconfig-v4.png)
 
 ## 6.3) API Groups
 
@@ -903,13 +919,13 @@ kubectl config use-context $CONTEXT_NAME
   5. `/metrics` used to get metric data about the cluster.
   6. `/version` views the version of the cluster.
 
-![api-group-v1.png](api-group-v1.png)
+![images/api-group-v1.png](images/api-group-v1.png)
 
 * `/apis` has **API Groups** which provide a variety of functionality that relates to that particular group.
 * `/apis` API Groups has **API Resources** which provides the specific implementation for the k8s object within it.
 * `/apis` API Groups has API Resources which has **Verbs** (i.e actions) which provides the k8s object actions. Users need access to these Verbs to be able to perform actions in the cluster.
 
-![api-group-v2.png](api-group-v2.png)
+![images/api-group-v2.png](images/api-group-v2.png)
 
 * The [k8s API Reference page](https://kubernetes.io/docs/reference/) shows all the API Groups and the objects within them.
 * You can view your cluster's API Groups using `curl -k http://$ADDRESS:6443` and you can view your cluster's API Resources using `curl -k http://$ADDRESS:6443/api | grep name`
@@ -918,31 +934,31 @@ kubectl config use-context $CONTEXT_NAME
 
 * `kubectl proxy` launches a local client on `127.0.0.1:8001` can uses your Kube Config File to access the cluster. You just need to replace port 6443 with 8001 when using curl.
 
-![api-group-v3.png](api-group-v3.png)
+![images/api-group-v3.png](images/api-group-v3.png)
 
 ## 6.4) Authorisation
 
 * **Authorization** gives authenticated users permission to access a resource.
 * There are 6 types of authorisation in k8s:
   1. **Node authorisation** is a special mode that authorises API requests made my kubelet agents.
-  ![authorisation-v1.png](authorisation-v1.png)
+  ![images/authorisation-v1.png](images/authorisation-v1.png)
   2. **Attribute Based Access Control (ABAC)** grants access rights to users.
-  ![authorisation-v2.png](authorisation-v2.png)
+  ![images/authorisation-v2.png](images/authorisation-v2.png)
   3. **Role Based Access Control (RBAC**) grants access rights to roles, and roles are assigned to users. This is a common approach for authorisation.
-  ![authorisation-v3.png](authorisation-v3.png)
+  ![images/authorisation-v3.png](images/authorisation-v3.png)
   4. **Webhook** is a HTTP callback, i.e. an event notification using HTTP POST. k8s will query an external REST service when determining user privileges.
-  ![authorisation-v4.png](authorisation-v4.png)
+  ![images/authorisation-v4.png](images/authorisation-v4.png)
   5. **AlwaysAllow** allows all requests in the cluster. This is the default is nothing is set.
   6. **AlwaysDeny** denys all requests in the cluster.
 * The authorisation modes are set with the `kube-apiserver --authorization-mode=$ACCESS_MODE1,$ACCESS_MODE2`. When multiple authorisation modes are configured, the access request is checked by going to each mode sequentially until access is granted or all nodes have been visited and no access is granted.
-![authorisation-v5.png](authorisation-v5.png)
+![images/authorisation-v5.png](images/authorisation-v5.png)
 
 ### 6.4.1) RBAC
 
 * RBAC is commonly used for authentication in many applications. Because it is easy to maintain a single role for many users, than maintaining ABAC for many users.
 * When using RBAC, you need to either create a Role and RoleBinding. The **Role** provides the authorised access details and the **RoleBinding** links a user to a Role. This can be created with YAML definition files or imperative commands.
 
-![authorisation-v6.png](authorisation-v6.png)
+![images/authorisation-v6.png](images/authorisation-v6.png)
 
 ```bash
 # Create a Role
@@ -963,7 +979,7 @@ kubectl auth can-i $API_GROUP_VERB $K8S_OBJECT --as $USER
 
 * RBAC can cover namespaces and specific objects within a namespace. Use the `/roles/[i]/resourceNames` array to specific which objects.
 
-![authorisation-v7.png](authorisation-v7.png)
+![images/authorisation-v7.png](images/authorisation-v7.png)
 
 ### 6.4.2) Namespaced vs Cluster Scoped
 
@@ -974,7 +990,7 @@ kubectl auth can-i $API_GROUP_VERB $K8S_OBJECT --as $USER
 * ClusterRoles and ClusterRoleBindings are created within the cluster, i.e. they cover all namespaces within the cluster.
 * A ClusterRole can be used to grant access to all resources in all namespaces.
 
-![scope-v1.png](scope-v1.png)
+![images/scope-v1.png](images/scope-v1.png)
 
 ```bash
 # View all namespaced scoped objects
@@ -1010,20 +1026,20 @@ The details for this can be found in in the developer's course under the section
   * The registry used to pull images is assumed to be https://docker.io and this is added implicitly. e.g. `image: nginx` becomes `image: docker.io/nginx/nginx`
   * You can add whatever image registry you like, you just need to specify it like `image: $REPO_URL/$REPO_USERNAME/$IMAGE_NAME`.
 
-![image-security-v1.png](image-security-v1.png)
+![images/image-security-v1.png](images/image-security-v1.png)
 
 * To access a private image repository in Docker you need to:
   1. Log in with `docker login $REPO_URL` with a username and password.
   2. Run the app with `docker run $REPO_URL/$USERNAME/$IMAGE_NAME`
 
-![image-security-v2.png](image-security-v2.png)
+![images/image-security-v2.png](images/image-security-v2.png)
 
 * To access a private image repository in k8s you need to:
   1. Create a Docker Registry Secret for the docker credentials. `kubectl create secret docker-registry $NAME --docker-server=$URL --docker-username=$USER --docker-password=$PASSWORD --docker-email=$EMAIL`
   2. Supply the `/spec/imagePullSecrets/[i]/name` with the Docker Registry Secret.
   3. Supply the `/spec/containers/[i]/image: $REPO_URL/$USERNAME/$IMAGE_NAME` in the YAML definition file.
 
-![image-security-v3.png](image-security-v3.png)
+![images/image-security-v3.png](images/image-security-v3.png)
 
 ## 6.5) Network Policies
 
@@ -1039,33 +1055,33 @@ The details for this can be found in in the developer's course under the section
 
 * Docker stores its local data inside of `/var/lib/docker`.
 
-![docker-storage-v1.png](docker-storage-v1.png)
+![images/docker-storage-v1.png](images/docker-storage-v1.png)
 
 * When Docker builds images, it builds them in a layered architecture. Every line in a Docker File is created in `/var/lib/image` as its own layer. Each layer only stores what has changed since the previous layer.
 * The final image will have mutliple layers in it. When rebuilding an image the layer will only change if the Docker File has changed.
 * The layered image approach means Docker can save time when building and space storing image layers. It does this by reusing layers.
 
-![docker-storage-v2.png](docker-storage-v2.png)
+![images/docker-storage-v2.png](images/docker-storage-v2.png)
 
 * All of the layers that were used to build a Docker Image become read only when inside a container. They are known as the **Image Layer**. The same Image Layer is shared by all containers using this image.
 * A running container has a writeable layer called ther **Container Layer**. All new files created in the container are in the Container Layer. If you try to make any changes to files inside of a container that are from the Image Layer, they will be copied to the Container Layer and all changes will be made there. This is called **Copy On Write.**
 
-![docker-storage-v3.png](docker-storage-v3.png)
+![images/docker-storage-v3.png](images/docker-storage-v3.png)
 
-![docker-storage-v4.png](docker-storage-v4.png)
+![images/docker-storage-v4.png](images/docker-storage-v4.png)
 
 * The Container Layer and its data is destroyed when the container exits. If you want to data to persist after that container is destory, you need to use a Docker Volume.
 * There are 2 types of mounting in Docker:
   1. **Volume mounting** is using a Docker Volume inside of `/var/lib/docker/volumes/`
-  2. **Bind mounting** is using a path from the filesystem on the Docker host. 
+  2. **Bind mounting** is using a path from the filesystem on the Docker host.
 
-![docker-storage-v5.png](docker-storage-v5.png)
+![images/docker-storage-v5.png](images/docker-storage-v5.png)
 
 **Note:** Using `--mount` is prefered over the original `-v` when mounting Volumes.
 
 * The **Storage Driver** controls how images and containers are stored and managed on your Docker host. The selection of the Storage Driver is determined by what the underlying O/S supports. There are many Storage Drivers.
 
-![docker-storage-v6.png](docker-storage-v6.png)
+![images/docker-storage-v6.png](images/docker-storage-v6.png)
 
 https://docs.docker.com/storage/storagedriver/select-storage-driver/
 
@@ -1082,11 +1098,11 @@ https://docs.docker.com/engine/extend/plugins_volume/#docker-volume-plugins
 * The **Container Network Interface (CNI)** is a standard that provides the details on how to create third party networking solution plugins to interact with the k8s cluster without having their code in the k8s code base.
 * The **Container Storage Interface (CSI)** is a standard that provides the details on how to create third party storage solution plugins to interact with the k8s cluster without having their code in the k8s code base.
 
-![cluster-interfaces-v1.png](cluster-interfaces-v1.png)
+![images/cluster-interfaces-v1.png](images/cluster-interfaces-v1.png)
 
 **Note:** The CSI is a universal standard that exists outside of k8s and allows a number of container orchestration tools to interface with third party storage plugins.
 
-![cluster-interfaces-v2.png](cluster-interfaces-v2.png)
+![images/cluster-interfaces-v2.png](images/cluster-interfaces-v2.png)
 
 ## 7.2) k8s Storage
 
@@ -1114,7 +1130,7 @@ The details for this can be found in in the developer's course under the section
 
 * A **Computer Network** is a group of connected computing devices that can communicate with each other.
 
-![network-basics-v1.png](network-basics-v1.png)
+![images/network-basics-v1.png](images/network-basics-v1.png)
 
 * A computing device on a network must have a **Network Interface** which allows traffic to flow into and out of the computing device. These can be physical cards (i.e. NICs) installed into the computing device or a virtual interface made from software only.
 * A network interface requires an IP address so it can communicate with other devices on the network.
@@ -1158,13 +1174,13 @@ sysctl -w net.ipv4.ip_forward=1
 
 * **Switches** connect devices within a network and forward data packets to and from those devices. Unlike a router, a switch only sends data to the single device it is intended for, not to networks of multiple devices. Thus they are only used for devices on the same network.
 
-![network-basics-v2.png](network-basics-v2.png)
+![images/network-basics-v2.png](images/network-basics-v2.png)
 
 * **Routers** select paths for data packets to cross networks and reach their destinations. Routers do this by connecting with different networks and forwarding data from network to network. They are required for internet connectivity and home users will have a small switch, router, and modem combination device.
 
-![network-basics-v3.png](network-basics-v3.png)
+![images/network-basics-v3.png](images/network-basics-v3.png)
 
-![network-basics-v4.png](network-basics-v4.png)
+![images/network-basics-v4.png](images/network-basics-v4.png)
 
 * A **Gateway** is a network node that serves as an access point to another network, often involving not only a change of network addressing, but also a different networking technology. This is also known as the Route.
 
@@ -1178,7 +1194,7 @@ ip -c -h r
 ip route add $CIDR via $GATEWAY_IP_ADDRESS
 ```
 
-![network-basics-v5.png](network-basics-v5.png)
+![images/network-basics-v5.png](images/network-basics-v5.png)
 
 * A **Default Gateway** is the node in a computer network using that serves as the forwarding host (i.e. router) to other networks when no other route specification matches the destination IP address of a packet. This is typically used for internet connectivity as its easier to say forward all traffic to any address that the gateway doesn't know about, rather than listing every address on the internet!
 
@@ -1190,7 +1206,7 @@ ip route add default via $DEFAULT_GATEWAY_IP_ADDRESS
 ip route add 0.0.0.0 via $DEFAULT_GATEWAY_IP_ADDRESS
 ```
 
-![network-basics-v6.png](network-basics-v6.png)
+![images/network-basics-v6.png](images/network-basics-v6.png)
 
 * **Note:** When troubleshooting internet connectivity issues, a good place to start is checking the default gateway.
 
@@ -1203,8 +1219,8 @@ ip route add 0.0.0.0 via $DEFAULT_GATEWAY_IP_ADDRESS
   1. Add a route from Host A to Host C via Host B `ip route add 192.168.2.0/24 via 192.168.1.6`
   2. Add a route from Host C to Host A via Host B `ip route add 192.168.1.0/24 via 192.168.2.6`
   3. Allow packet forwarding between network interfaces on Host B `echo 1 > /proc/sys/net/ipv4/ip_forward`
-  
-![network-basics-v7.png](network-basics-v7.png)
+
+![images/network-basics-v7.png](images/network-basics-v7.png)
 
 ### 8.1.2) DNS
 
@@ -1219,22 +1235,22 @@ cat >> `/etc/hosts
 $IP_ADDRESS $HOSTNAME
 ```
 
-![dns-basics-v1.png](dns-basics-v1.png)
+![images/dns-basics-v1.png](images/dns-basics-v1.png)
 
 * Local DNS hostname resolution does not scale though, as every host needs to be updated.
 
-![dns-basics-v2.png](dns-basics-v2.png)
+![images/dns-basics-v2.png](images/dns-basics-v2.png)
 
 * A DNS nameserver is used for centralised DNS hostname resolution. This is known as a nameserver. The IP address of the DNS nameserver can be found at `/etc/resolv.conf`. The DNS nameserver listens on port 53 by default and there are many software solutions available for this.
 
 **Note:** On a host running SystemD, `/etc/resolv.conf` is a symlink to `/run/systemd/resolve/resolv.conf` and the address in there will be `127.0.0.53`. This is the address that `systemd-resolved` is listening for DNS queries. The real IP addresses of the nameservers are in `/run/systemd/resolve/resolv.conf`.
 
-![dns-basics-v3.png](dns-basics-v3.png)
+![images/dns-basics-v3.png](images/dns-basics-v3.png)
 
 * The default order of searching for nameservers is `/etc/hosts` and then `/etc/resolv.conf` but this can be changed. To change this, update `/etc/nsswitch.conf` and the `hosts:` line.
 * When trying to reach Internet hostnames, you will need to use a public internet DNS nameserver like Google's `8.8.8.8` or Cloudflare's `1.1.1.1` and they will be able to resolve any DNS queries that your local nameservers cannot resolve. If you have a DNS nameserver then you should add this there, otherwise in the local file is okay.
 
-![dns-basics-v4.png](dns-basics-v4.png)
+![images/dns-basics-v4.png](images/dns-basics-v4.png)
 
 ```bash
 # Query a nameserver for DNS resolution
@@ -1251,7 +1267,7 @@ dig $DOMAIN
 
 * A **Domain Name** is an alphanumeric name with one or more periods, e.g. https://www.google.com and each entry is called a label. Domain names act as a pointer to an IP address on a computer network such as the Internet. They are used as they are easy for humans to remember.
 
-![domain-name-basics-v1.png](domain-name-basics-v1.png)
+![images/domain-name-basics-v1.png](images/domain-name-basics-v1.png)
 
 * There a 4 levels in the entire domain name:
   1. **Root level domain** is the highlest level in the DNS hierarchy. It does not have a formal name and its label in the DNS hierarchy is typically an empty string. It sometimes can be represented as a single dot. e.g. `www.google.com.` the final dot is the root level domain.
@@ -1259,7 +1275,7 @@ dig $DOMAIN
   3. **Domain** name is owned by a person or company and is used to host their services.
   4. **Subdomains** are used to group things together under the domain. e.g. with Google `www` is for their search engine, `maps` is for Google Maps, `mail` is for GMail and so forth. You can have as many subdomains as you like.
 
-![domain-name-basics-v2.png](domain-name-basics-v2.png)
+![images/domain-name-basics-v2.png](images/domain-name-basics-v2.png)
 
 **Note:** The domain name forms a tree structure.
 
@@ -1275,15 +1291,15 @@ https://www.cloudflare.com/en-gb/learning/dns/dns-server-types/
   5. On behalf of the DNS Resolver, the TLD Server checks its DNS cache to see if it knows the answer. If yes hostname is resolved, if no it points to the authoriatve namesever, i.e. the nameserver at the domain itself.
   6. On behalf of the DNS Resolver, the authoriatve namesever replies what the IP address is for the DNS query.
 
-![dns-basics-v5.png](dns-basics-v5.png)
+![images/dns-basics-v5.png](images/dns-basics-v5.png)
 
 **Note:** Steps 1 and 2 are ommitted from the picture above.
 
 * The `/etc/resolve.conf` file can have an entry called `search $DOMAIN` which means everytime you enter a subdomain it will automatically search the nameserver for `$SUBDOMAIN.$DOMAIN`.
 
-![dns-basics-v6.png](dns-basics-v6.png)
+![images/dns-basics-v6.png](images/dns-basics-v6.png)
 
-![dns-basics-v7.png](dns-basics-v7.png)
+![images/dns-basics-v7.png](images/dns-basics-v7.png)
 
 #### 8.1.2.3) DNS Record Types
 
@@ -1296,7 +1312,7 @@ https://www.cloudflare.com/en-gb/learning/dns/dns-records/
   2. **AAAA** maps a domain to an IPv6 address.
   3. **CNAME (Canonical Name)** forwards the traffic for one domain or subdomain to another domain. It does not provide an IP address. https://www.cloudflare.com/en-gb/learning/dns/dns-records/dns-cname-record/
 
-![dns-basics-v8.png](dns-basics-v8.png)
+![images/dns-basics-v8.png](images/dns-basics-v8.png)
 
 ### 8.1.3) CoreDNS
 
@@ -1307,7 +1323,7 @@ https://www.cloudflare.com/en-gb/learning/dns/dns-records/
 * It can be deployed as an O/S service from a binary or as a `kube-system` Pod on the Master Nodes.
 * In a basic set up, the `/etc/hosts` file of the nameserver has all of the DNS entries added to it and then that is passed into CoreDNS via a `Corefile`. You can also use k8s plugins to do this.
 
-![coredns-v1.png](coredns-v1.png)
+![images/coredns-v1.png](images/coredns-v1.png)
 
 ### 8.1.4) Linux Network Namespaces
 
@@ -1320,7 +1336,7 @@ arp -n
 
 * **Network Namespaces** are used by CRE to implement network isolation. The network namespace needs it own virtual network interface as it cannot see or use the CRE host network interfaces.
 
-![network-namespaces-v1.png](network-namespaces-v1.png)
+![images/network-namespaces-v1.png](images/network-namespaces-v1.png)
 
 ```bash
 # Create a network namespace
@@ -1337,14 +1353,14 @@ ip -n $NAMESPACE link
 * You can connect 2 network namespaces via their virtual network interfaces using a virtual ethernet cable, called a pipe.
 * **VETH (Virtual Ethernet)** are a local ethernet tunnel. They are created in pairs and packets transmitted between the 2 are immediately received. VETHs are used to connect network namespaces together, which also includes the host's main network namespace. https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking/#veth
 
-![veth.png](veth.png)
+![images/veth.png](images/veth.png)
 
 ```bash
 # Create a virtual ethernet cable (i.e. pipe) between 2 virtual network interfaces on separate network namespaces
 ip link add $VIRTUAL_INTERFACE_A type veth peer name $VIRTUAL_INTERFACE_B
 ```
 
-![network-namespaces-v2.png](network-namespaces-v2.png)
+![images/network-namespaces-v2.png](images/network-namespaces-v2.png)
 
 ```bash
 # Attach each virtual interface to their respective network namespace
@@ -1366,7 +1382,7 @@ ip netns exec $NAMESPACE_A ping $IP_ADDRESS
 ip -n $NAMESPACE_A del $VIRTUAL_INTERFACE_A
 ```
 
-![network-namespaces-v3.png](network-namespaces-v3.png)
+![images/network-namespaces-v3.png](images/network-namespaces-v3.png)
 
 ```bash
 # Create a virtual switch using Linux Bridge. This appears as an interface on the CRE host.
@@ -1376,7 +1392,7 @@ ip link add $VIRTUAL_SWITCH type bridge
 ip link set $VIRTUAL_SWITCH up
 ```
 
-![network-namespaces-v4.png](network-namespaces-v4.png)
+![images/network-namespaces-v4.png](images/network-namespaces-v4.png)
 
 ```bash
 # Create new virtual ethernet cables and interfaces that connect to the virtual switch
@@ -1391,7 +1407,7 @@ ip -n $NAMESPACE_A addr add $IP_ADDRESS dev $VIRTUAL_INTERFACE_A
 ip -n $NAMESPACE_A link set $VIRTUAL_INTERFACE_A up
 ```
 
-![network-namespaces-v5.png](network-namespaces-v5.png)
+![images/network-namespaces-v5.png](images/network-namespaces-v5.png)
 
 **Note:** If you really wanted to access the virtual switch from the CRE host, you just need to add an IP address to the virtual switch on the CRE host. `ip addr add $CIDR dev $VIRTUAL_INTERFACE_A`
 
@@ -1403,14 +1419,14 @@ ip netns exec $NAMESPACE ip route add $TARGET_CIDR via $CRE_HOST_VIRTUAL_INTERFA
 ip netns exec $NAMESPACE route
 ```
 
-![network-namespaces-v6.png](network-namespaces-v6.png)
+![images/network-namespaces-v6.png](images/network-namespaces-v6.png)
 
 ```bash
 # Enable NAT on CRE host to translate from virtual network interface IP address to the physical NIC IP address
 iptables -t nat -A POSTROUTING -s $CRE_HOST_VIRTUAL_INTERFACE_CIDR -j MASQUERADE
 ```
 
-![network-namespaces-v7.png](network-namespaces-v7.png)
+![images/network-namespaces-v7.png](images/network-namespaces-v7.png)
 
 ```bash
 # Add a default gateway to allow egress traffic to the internet
@@ -1420,7 +1436,7 @@ ip netns exec $NAMESPACE ip route add default via $CRE_HOST_VIRTUAL_INTERFACE_IP
 iptables -t nat -A PREROUTING --dport 80 --to-destination $CRE_HOST_PHYSICAL_NIC_IP_ADDRESS:$PORT -j DNAT
 ```
 
-![network-namespaces-v8.png](network-namespaces-v8.png)
+![images/network-namespaces-v8.png](images/network-namespaces-v8.png)
 
 **Note:** When trying to troubleshoot connectivity between network namespaces, check that you are using CIDR addresses and check firewall rules.
 
@@ -1438,11 +1454,11 @@ iptables -t nat -A PREROUTING --dport 80 --to-destination $CRE_HOST_PHYSICAL_NIC
 
 * When you run a Docker container, you have different networking options to choose from. Some are:
   * **None network**, the Docker container is not attached to any network and cannot be accessed external and it cannot access anything itself.
-  ![docker-networking-v1.png](docker-networking-v1.png)
+  ![images/docker-networking-v1.png](images/docker-networking-v1.png)
   * **Host network**, the Docker container is attached the CRE host network. So there is no isolation between the CRE host network and the Docker container network. Thus a Docker container listening on port 80 can be accessed via the CRE host's `$CRE_HOST_IP_ADDRESS:80`
-  ![docker-networking-v2.png](docker-networking-v2.png)
+  ![images/docker-networking-v2.png](images/docker-networking-v2.png)
   * **Bridge network**, a virtual internal private network is created using Linux namespaces and the Docker containers attach to it.
-  ![docker-networking-v3.png](docker-networking-v3.png)
+  ![images/docker-networking-v3.png](images/docker-networking-v3.png)
 
 ### 8.2.1) Docker Bridge Network
 
@@ -1465,15 +1481,15 @@ ip -c -h a
   * Bring all the interfaces UP.
   * Enable NAT for external communication.
 
-![docker-networking-v4.png](docker-networking-v4.png)
+![images/docker-networking-v4.png](images/docker-networking-v4.png)
 
 * VETH pairs can be identified by using numbers, and odd and even combination is used.
 
-![docker-networking-v5.png](docker-networking-v5.png)
+![images/docker-networking-v5.png](images/docker-networking-v5.png)
 
 * The Docker container needs to have its port mapped to a CRE host port. This is so traffic sent to the host can be forwarded to the container. This is done through NAT.
 
-![docker-networking-v6.png](docker-networking-v6.png)
+![images/docker-networking-v6.png](images/docker-networking-v6.png)
 
 ## 8.3) Container Network Interface (CNI)
 
@@ -1487,17 +1503,17 @@ ip -c -h a
   * Bring all the interfaces UP.
   * Enable NAT for external communication.
 
-![cni-v1.png](cni-v1.png)
+![images/cni-v1.png](images/cni-v1.png)
 
 * So the **Container Network Interface (CNI)** standard was created as a centralised approach that every CRE solution can follow. The CNI does all the required tasks to get a container attached to a bridge network.
 
-![cni-v2.png](cni-v2.png)
-  
+![images/cni-v2.png](images/cni-v2.png)
+
 * The exception is Docker, they developed their own which is called the **Container Network Model (CNM)**. The CNM does all the required tasks to get a container attached to a bridge network. Docker can implement CNI, but you must use the None Network and then do it yourself manually.
 
 **Note:** k8s using the None Network with Docker and implements a CNI as its container networking solution.
 
-![cni-v3.png](cni-v3.png)
+![images/cni-v3.png](images/cni-v3.png)
 
 * The programs implementing the CNI are called plugins. Some CNI network plugins are:
   * Flannel
@@ -1518,7 +1534,7 @@ ip -c -h a
 
 **Note:** When troubleshooting why the cluster isn't working, check that the required ports are open with `ss -lntp`.
 
-![node-networking-ports-v1.png](node-networking-ports-v1.png)
+![images/node-networking-ports-v1.png](images/node-networking-ports-v1.png)
 
 * Master Node ports:
   * 6443: the `kube-apiserver` listens for API requests on this port.
@@ -1531,9 +1547,9 @@ ip -c -h a
   * 10250: all `kubelet` agents listens on this port.
   * 30000-32767: Services use this port range to listen on.
 
-![node-networking-ports-v2.png](node-networking-ports-v2.png)
-![node-networking-ports-v3.png](node-networking-ports-v3.png)
-![node-networking-ports-v4.png](node-networking-ports-v4.png)
+![images/node-networking-ports-v2.png](images/node-networking-ports-v2.png)
+![images/node-networking-ports-v3.png](images/node-networking-ports-v3.png)
+![images/node-networking-ports-v4.png](images/node-networking-ports-v4.png)
 
 ### 8.4.2) Pod Networking
 
@@ -1552,7 +1568,7 @@ ip -c -h a
   * Add routes between the bridge interfaces and Nodes
   * Enable NAT for external communication.
 
-![pod-networking-v1.png](pod-networking-v1.png)
+![images/pod-networking-v1.png](images/pod-networking-v1.png)
 
 ### 8.4.3) CNI In k8s
 
@@ -1576,7 +1592,7 @@ l /etc/cni/net.d
 
 #### 8.4.3.1) CNI Weave
 
-* A CNI agent is placed on each Node. 
+* A CNI agent is placed on each Node.
 * The CNI agents communicate with each about networking information for Nodes and the k8s objects within them. Each agent stores a topology of the entire cluster's set up so they know exactly what to do.
 * The CNI agents are responsible for all network traffic between Nodes and the k8s objects within them.
 * The CNI agent creates it own bridge network on each Node and assigns IP addresses to them. These bridge networks are used to communicate between Nodes. There are a few steps in this process:
@@ -1585,7 +1601,7 @@ l /etc/cni/net.d
   * Node B's agent strips away the encapsulation and the original packet is sent on to its original desitination.
 * A single Pod may be attached to multiple bridge networks, e.g. the Docker bridge and CNI bridge. The CNI makes sure the Pod gets the correct routes so it can use the CNI bridge network.
 
-![weave-cni-v1.png](weave-cni-v1.png)
+![images/weave-cni-v1.png](images/weave-cni-v1.png)
 
 * You will need to use third party documentation to deploy a third party's CNI. The CNI can be deployed daemons or services at the O/S level, or deployed as control plane Pods. The Pods will be deployed as a DaemonSet to ensure each Node in the cluster has one CNI Pod on it.
 
@@ -1598,7 +1614,7 @@ l /etc/cni/net.d
   * DHCP plugin.
   * host-local plugin.
 
-![ipman-weave-v1.png](ipman-weave-v1.png)
+![images/ipman-weave-v1.png](images/ipman-weave-v1.png)
 
 * Weave by default uses `10.32.0.0/12` for the entire network. This about 1 million IP addresses for the Node. This IP address is able to be changed when you deploy Weave.
 
@@ -1616,7 +1632,7 @@ HostMin: 10.32.0.1
 HostMax: 10.47.255.254
 Hosts/Net: 1048574
 ```
-![ipman-weave-v2.png](ipman-weave-v2.png)
+![images/ipman-weave-v2.png](images/ipman-weave-v2.png)
 
 ### 8.4.4) Service Networking
 
@@ -1627,7 +1643,7 @@ Hosts/Net: 1048574
   * The `kubelet` agent invokes the CNI plugin to set up the Pod network configuration.
   * When the ClusterIP Service is created, it is given an IP address. The `kube-proxy` agent takes this IP address and sets up forwarding from the ClusterIP Service IP address and port to the IP address and port of the Pod.
 
-![services-networking-v1.png](services-networking-v1.png)
+![images/services-networking-v1.png](images/services-networking-v1.png)
 
 **Note:** There isn't actually a ClusterIP Service object, it is just a series of IP Tables rules to provide the ClusterIP Service functionality. These rules are created across the cluster on all Nodes.
 
@@ -1638,7 +1654,7 @@ Hosts/Net: 1048574
 * The IP forwarding mode can be set using the `--proxy-mode` when configuring `kube-proxy`.
 * The IP addresses assigned when creating Services can be set using the `--service-cluster-ip-range` when configuring `kube-apiserver`.
 
-![services-networking-v2.png](services-networking-v2.png)
+![images/services-networking-v2.png](images/services-networking-v2.png)
 
 
 ```bash
@@ -1670,28 +1686,28 @@ cat /var/log/kube-proxy.log
 
 * The Node name and its IP address will be recorded in a DNS nameserver somewhere.
 
-![dns-in-k8s-v1.png](dns-in-k8s-v1.png)
+![images/dns-in-k8s-v1.png](images/dns-in-k8s-v1.png)
 
 * A DNS solution to handle internal Cluster DNS resolution is installed by default, unless you are setting up the Cluster manually. Prior to version 1.12 this was `kube-dns` but now CoreDNS is recommended.
 
-![dns-in-k8s-v2.png](dns-in-k8s-v2.png)
+![images/dns-in-k8s-v2.png](images/dns-in-k8s-v2.png)
 
 * Whenever a Services is created, k8s creates a DNS record for it. It maps the name and IP address, so any Pod in the same namespace can access the Pod via the Service using the Service name.
-  
-![dns-in-k8s-v3.png](dns-in-k8s-v3.png)
+
+![images/dns-in-k8s-v3.png](images/dns-in-k8s-v3.png)
 
 * If the Pod is in another namespace, it must use `$SERVICE_NAME.$NAMESPACE.svc.cluster.local` to access the Pod through the Service.
 
-![dns-in-k8s-v4.png](dns-in-k8s-v4.png)
+![images/dns-in-k8s-v4.png](images/dns-in-k8s-v4.png)
 
 * All Services are grouped into a sub-domain called `svc`.
 * All Services and Pods are grouped into a root domain for the cluster called `cluster.local`.
 
-![dns-in-k8s-v5.png](dns-in-k8s-v5.png)
+![images/dns-in-k8s-v5.png](images/dns-in-k8s-v5.png)
 
 * Pods do not get a DNS record by default, but this can be turned on. The Pod's DNS record name is its IP address with the dots replaced by dashes. They then can be reached on `$POD.$NAMESPACE.pod.cluster.local`
 
-![dns-in-k8s-v6.png](dns-in-k8s-v6.png)
+![images/dns-in-k8s-v6.png](images/dns-in-k8s-v6.png)
 
 **Note:** `$SERVICE.$NAMESPACE.svc.cluster.local` is the fully qualified domain name.
 
@@ -1699,16 +1715,16 @@ cat /var/log/kube-proxy.log
 
 * Rather then adding an entry into every Pod's `/etc/hosts` file, every Pod's `/etc/resolv.conf` points to a DNS nameserver with all the DNS records. You could do this manually.
 
-![dns-in-k8s-v7.png](dns-in-k8s-v7.png)
+![images/dns-in-k8s-v7.png](images/dns-in-k8s-v7.png)
 
-![dns-in-k8s-v8.png](dns-in-k8s-v8.png)
+![images/dns-in-k8s-v8.png](images/dns-in-k8s-v8.png)
 
 * By default it is handled automatically by the DNS solution installed by k8s. Prior to version 1.12 this was `kube-dns` but now it is CoreDNS.
 * CoreDNS is deployed as Pods in `kube-system` namespace via a Deployment. A ClusterIP Service called `kube-dns` is created for the CoreDNS Pods. This is how all other k8s objects communicate with the CoreDNS Pods.
 * The IP address of the `kube-dns` ClusterIP Service is the IP address used as the DNS nameserver.
 * The `kubelet` agent is reponsible for configuring Pod DNS nameservers to point to the CoreDNS ClusterIP Service `kube-dns` IP address.
 
-![dns-in-k8s-v9.png](dns-in-k8s-v9.png)
+![images/dns-in-k8s-v9.png](images/dns-in-k8s-v9.png)
 
 * The `/etc/coredns/Corefile` within the CoreDNS Pod contains the configuration details for CoreDNS. It is a ConfigMap mounted as a Volume so you can easily make changes to it. This file contains:
   * A number of plugins handling different functionality. They are highlighted orange in the picture below.
@@ -1717,12 +1733,12 @@ cat /var/log/kube-proxy.log
     * `pods insecure` will create DNS record entries for Pods with the DNS name having the IP address dots replaced with dashes.
   * `proxy`is the plugin that handles any DNS resolution that `kubernetes` cannot handle. For example trying to reach an IP address on the internet.
 
-![dns-in-k8s-v10.png](dns-in-k8s-v10.png)
+![images/dns-in-k8s-v10.png](images/dns-in-k8s-v10.png)
 
 * The CoreDNS Pods watch the Cluster for new Services and everytime one is created it will create a new DNS record for it. It does this Pods as well if the `pods insecure` option is on within its `/etc/coredns/Corefile` `kubernetes` plugin.
 * If you use `nslookup` to lookup the DNS record for a k8s Service using any combination of the domain through to the fully qualified domain, you will always receive the fully qualified domain name `$SERVICE.$NAMESPACE.svc.cluster.local`. This is the `/etc/resolv.conf` file has a `search` entry for it.
 
-![dns-in-k8s-v11.png](dns-in-k8s-v11.png)
+![images/dns-in-k8s-v11.png](images/dns-in-k8s-v11.png)
 
 * If you allow Pods to have a DNS record created, you must always use the fully qualified domain name to resolve the Pod. `$POD.$NAMESPACE.pod.cluster.local`.
 
@@ -1743,13 +1759,13 @@ The details for this can be found in in the developer's course under the section
   * What is the cluster's purpose?
     * Education - use MiniKube or kubeadm
     * Dev / test - use kubeadm or cloud.
-    ![cluster-design-v1.png](cluster-design-v1.png)  
+    ![images/cluster-design-v1.png](images/cluster-design-v1.png)
     * Production - use kubeadm or cloud.
-    ![cluster-design-v2.png](cluster-design-v2.png)
+    ![images/cluster-design-v2.png](images/cluster-design-v2.png)
   * Where will it be hosted?
     * In the cloud.
     * On premesis.
-    ![cluster-design-v3.png](cluster-design-v3.png)
+    ![images/cluster-design-v3.png](images/cluster-design-v3.png)
   * What type of workloads will the cluster run?
     * How many applications will be hosted?
       * Few vs many.
@@ -1757,23 +1773,23 @@ The details for this can be found in in the developer's course under the section
       * Web, data science, etc.
     * What compute resources will the applications need?
       * CPU, memory, and disk.
-    ![cluster-design-v4.png](cluster-design-v4.png)
+    ![images/cluster-design-v4.png](images/cluster-design-v4.png)
     * What type of network traffic will the applications generate?
       * Burst traffic vs heavy sustained traffice.
   * Do you need high availability?
-  ![cluster-design-v5.png](cluster-design-v5.png)
-  ![cluster-design-v6.png](cluster-design-v6.png)
+  ![images/cluster-design-v5.png](images/cluster-design-v5.png)
+  ![images/cluster-design-v6.png](images/cluster-design-v6.png)
 
 * k8s only supports running on Linux.
 * There are 2 types of k8s deployment solutions
   1. **Turnkey solutions**, are when you provision the hosts to install k8s on and do all of the configuration and maintenance yourself.
   2. **Hosted solutions** are when a third party provides the hosts to install k8s on and the third party does all the configuration and maintenance.
 
-![cluster-design-v7.png](cluster-design-v7.png)
+![images/cluster-design-v7.png](images/cluster-design-v7.png)
 
-![cluster-design-v8.png](cluster-design-v8.png)
+![images/cluster-design-v8.png](images/cluster-design-v8.png)
 
-![cluster-design-v9.png](cluster-design-v9.png)
+![images/cluster-design-v9.png](images/cluster-design-v9.png)
 
 # 9.1) High Availability (HA)
 
@@ -1783,14 +1799,14 @@ The details for this can be found in in the developer's course under the section
 * **High availability** means you redundancy across every componenet in your system, which avoids having a single point of failure.
 * In k8s HA is achieved by having multiple Master Nodes, multiple Worker Nodes, and possibly separate hosts for ETCD.
 
-![high-availability-v1.png](high-availability-v1.png)
+![images/high-availability-v1.png](images/high-availability-v1.png)
 
 ## 9.1.1) Kube API Server
 
 * In a HA setup, the `kube-apiserver` on all Master Nodes can be run in 'active active' mode. An API request must only be sent to one of them. `kubectl` can only be configured with one Master Node to send API requests to. To use multiple `kube-apiservers` with `kubectl`, a load balancer (e.g. nginx) sits infront of the Master Nodes and splits traffic between them. The `kubectl` points to the load balancer.
 * **Active / Active** mode means all of the multiple components are active and doing their job.
 
-![high-availability-v2.png](high-availability-v2.png)
+![images/high-availability-v2.png](images/high-availability-v2.png)
 
 ### 9.1.2) Scheduler & Controller Manager
 
@@ -1798,10 +1814,10 @@ The details for this can be found in in the developer's course under the section
 * **Active / Standby** mode means that only one of many components is active and doing its job, and the rest are doing nothing while in standby.
 * When configuring the Controller Manager, the `--leader-elect true` option is used. The Controller Managers will try to gain a lock (i.e. lease) on the `kube-controller-manager` Endpoint, and whoever gets this lock becomes the active and the rest are passive. The default settings for this are:
   * `--leader-elect-lease-duration` is 15 seconds and this determines how long the leader lock lasts for.
-  * `--leader-elect-renew-deadline` is 10 seconds and this determines how often to renew the current lock. 
+  * `--leader-elect-renew-deadline` is 10 seconds and this determines how often to renew the current lock.
   * `--leader-elect-retry-period` is 2 seconds and this determines how often all of the components vying for the lock will request the lock.
 
-![high-availability-v3.png](high-availability-v3.png)
+![images/high-availability-v3.png](images/high-availability-v3.png)
 
 **Note:** Both the Controller Manager and Scheduler use this locking mechanism and configuration options.
 
@@ -1809,31 +1825,31 @@ The details for this can be found in in the developer's course under the section
 
 * In k8s there are 2 deployment topologies for ETCD:
   1. Installing ETCD on the Master Node with the rest of the Control Plane components.
-  ![high-availability-v4.png](high-availability-v4.png)
+  ![images/high-availability-v4.png](images/high-availability-v4.png)
   2. Installing ETCD on its own host separate to the Master Nodes.
-   ![high-availability-v5.png](high-availability-v5.png)
+   ![images/high-availability-v5.png](images/high-availability-v5.png)
 
 **Note:** Regardless of the toplogy used to deploy ETCD, the configuration option `--etcd-servers` in the `kube-apiserver` set up configuration options is used to tell the `kube-apiserver` where to look for ETCD. Having 1 or 2 ETCD instances doesn't offer any redundancy value.
 
-![high-availability-v6.png](high-availability-v6.png)
+![images/high-availability-v6.png](images/high-availability-v6.png)
 
 * When running multiple ETCD servers:
   * The data is replicated across all of the ETCD servers.
-  ![etcd-ha-v1.png](etcd-ha-v1.png)
+  ![images/etcd-ha-v1.png](images/etcd-ha-v1.png)
   * You can read data from any ETCD server.
-  ![etcd-ha-v2.png](etcd-ha-v2.png)
+  ![images/etcd-ha-v2.png](images/etcd-ha-v2.png)
   * You can only write to one ETCD server, known as the leader. If any write requests go to non-leaders they will forward the write request to the leader. The write is only considered complete when the majority of ETCD nodes have performed the write.
-  ![etcd-ha-v3.png](etcd-ha-v3.png)
-  ![etcd-ha-v4.png](etcd-ha-v4.png)
+  ![images/etcd-ha-v3.png](images/etcd-ha-v3.png)
+  ![images/etcd-ha-v4.png](images/etcd-ha-v4.png)
 * Leader election in ETCD is done by the RAFT protocol.
   * When the ETCD cluster is set up, a random timer is given to all ETCD nodes and leader will be the Node where the random timer expires first.
   * The leader tells the other ETCD nodes that it is the leader and the other ETCD nodes acknowledge this.
   * The leader periodically tells the other ETCD nodes it is still the leader. If other ETCD nodes don't received this period message, the leader election is done again.
 * The majority (i.e. quorum) algorithm for ETCD clusters is `Number of ETCD nodes / 2 + 1`
-![etcd-ha-v5.png](etcd-ha-v5.png)
+![images/etcd-ha-v5.png](images/etcd-ha-v5.png)
 * The number of ETCD hosts should be only odd numbers greater than or equal to 3. As this provides the best fault tolerances against network segmentation. The minumum required amount of ETCD nodes in HA is 3, and 5 ETCD nodes is the point of diminishing return.
-![etcd-ha-v6.png](etcd-ha-v6.png)
-![etcd-ha-v7.png](etcd-ha-v7.png)
+![images/etcd-ha-v6.png](images/etcd-ha-v6.png)
+![images/etcd-ha-v7.png](images/etcd-ha-v7.png)
 * When configuring ETCD for the first time, `--initial-cluster` option is important as it configures the address of all ETCD peers in the ETCD cluster.
 
 # 10) Installing A Cluster With Kubeadm
@@ -1847,7 +1863,7 @@ The details for this can be found in in the developer's course under the section
     * On Worker Node, join the cluster with the output from `kubeadm init` on Master.
     * On Master Node, install Weave CNI in the exam with https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/
 
-![kubeadm-v1.png](kubeadm-v1.png)
+![images/kubeadm-v1.png](images/kubeadm-v1.png)
 
 **Note:** When `kubectl get nodes` reports Cluster Nodes as NotReady this means the CNI network plugin hasn't been installed.
 
@@ -2109,7 +2125,7 @@ ipcalc 10.32.0.0/12
 
 * [YAML](https://yaml.org/) is a human friendly data presentation standard for all programming languages.
 * YAML can store the same data as XML and JSON but in an easier way to read.
-![yaml-v1.png](yaml-v1.png)
+![images/yaml-v1.png](images/yaml-v1.png)
 * Some YAML syntax rules:
   * Like Python, YAML uses indentation for scope. The amount of spaces used in indentation must match.
   * Like Python, Lists are ordered and Dictionaries are unordered.
@@ -2174,11 +2190,11 @@ fruits:
 ## 12.2) JSON Basics
 
 * JSON can store the same data as XML and YAML.
-![yaml-v1.png](yaml-v1.png)
+![images/yaml-v1.png](images/yaml-v1.png)
 * YAML uses space identation to denotescope and JSON uses spaces and curly braces to denote scope.
-![json-v1.png](json-v1.png)
+![images/json-v1.png](images/json-v1.png)
 * YAML uses `- list-item` for lists and JSON uses `[list-item]`.
-![json-v2.png](json-v2.png)
+![images/json-v2.png](images/json-v2.png)
 * YAML uses `key: value` for dictionaries and JSON uses `{ key: value }`.
 * You can easily convert between YAML and JSON with https://www.json2yaml.com/
 * All programming languages should support JSON.
@@ -2263,26 +2279,26 @@ fruits:
 ## 12.3) JSON Path Basics
 
 * In databases you can use SQL to query and return data. In JSON you can use JSON path to query and return data.
-![jsonpath-v1.png](jsonpath-v1.png)
-![jsonpath-v2.png](jsonpath-v2.png)
+![images/jsonpath-v1.png](images/jsonpath-v1.png)
+![images/jsonpath-v2.png](images/jsonpath-v2.png)
 * All results from a JSON Path query are returned as an array.
 * The root element in JSON for a dictionary is `$`
 * Use dot notation `key.value` to access dictionary elements.
 * Use bracket notation and indices `[i]` to access list elements.
-![jsonpath-v3.png](jsonpath-v3.png)
+![images/jsonpath-v3.png](images/jsonpath-v3.png)
 * The root element in JSON for a list is `$[]`
 * Like Python, list elements start at 0 and the standard list operations exist.
-![jsonpath-v4.png](jsonpath-v4.png)
+![images/jsonpath-v4.png](images/jsonpath-v4.png)
 * You can write selection statements with list items with `[?( @.item operator expression )]`.
   * The `$()` means you are writing a selection statement.
   * The `@.item` refers to key in the list.
   * The `operator` will be something like `==` or `!=`.
   * The `expression` will be something like a string or number.
 
-![jsonpath-v5.png](jsonpath-v5.png)
+![images/jsonpath-v5.png](images/jsonpath-v5.png)
 * You can use `*` as a wild card in JSON path. It can mean any property in a dictionary and any item within a list.
-![jsonpath-v6.png](jsonpath-v6.png)
-![jsonpath-v7.png](jsonpath-v7.png)
+![images/jsonpath-v6.png](images/jsonpath-v6.png)
+![images/jsonpath-v7.png](images/jsonpath-v7.png)
 * These are some of the list operations supported in JSON Path:
   * First element = `[0]`
   * Third element = `[2]`
@@ -2303,7 +2319,7 @@ fruits:
 * Why does JSON Path work with `kubectl`?
   * Everytime you run a `kubectl` command it gets sent to the `kube-apiserver`. The `kube-apiserver` responds with JSON, which is then displayed in a predetermined format based on the `kubectl` command you ran. So you can use JSON Path to customise the returned JSON.
 
-![jsonpath-and-kubectl-v1.png](jsonpath-and-kubectl-v1.png)
+![images/jsonpath-and-kubectl-v1.png](images/jsonpath-and-kubectl-v1.png)
 
 * There are 4 steps to using JSON Path with `kubectl`
   1. Identiy the `kubectl` that will return the data you need.
@@ -2311,17 +2327,17 @@ fruits:
   3. Look at the returned data and work out the JSON Path query. `$` is not mandatory with `kubectl` JSON.
   4. Run the JSON Path query with `kubectl -o jsonpath='{$JSON_PATH}'` The JSON Path command must be inside single quotes and matching curly braces, e.g. `'{ ... }'`
 
-![jsonpath-and-kubectl-v2.png](jsonpath-and-kubectl-v2.png)
+![images/jsonpath-and-kubectl-v2.png](images/jsonpath-and-kubectl-v2.png)
 
 * You can merge multiple JSON Path queries into one by separating them via a comma. e.g. `'{$JSON_PATH1,$JSON_PATH2}'`
 * You can add special characters to format the output, such as `\t` for tab and `\n` for newline.
 * You can write loops in JSON Path with `'{range .JSON_PATH_ITEMS[*]}{$JSON_PATH_ITEM}{end}'`
-![jsonpath-and-kubectl-v3.png](jsonpath-and-kubectl-v3.png)
-![jsonpath-and-kubectl-v4.png](jsonpath-and-kubectl-v4.png)
+![images/jsonpath-and-kubectl-v3.png](images/jsonpath-and-kubectl-v3.png)
+![images/jsonpath-and-kubectl-v4.png](images/jsonpath-and-kubectl-v4.png)
 * It can be easier to use custom columns than using the loop. You can create custom columns with `-o=custom-columns=$COLUMN_NAME:$JSON_PATH`
-![jsonpath-and-kubectl-v5.png](jsonpath-and-kubectl-v5.png)
+![images/jsonpath-and-kubectl-v5.png](images/jsonpath-and-kubectl-v5.png)
 * You can sort data with `--sort-by=$JSON_PATH`
-![jsonpath-and-kubectl-v6.png](jsonpath-and-kubectl-v6.png)
+![images/jsonpath-and-kubectl-v6.png](images/jsonpath-and-kubectl-v6.png)
 
 **Note:** It is a good idea to install `jq` when working with JSON. It will display JSON output in a colourised and formatted way.
 
