@@ -16,7 +16,19 @@
       - [TLS Basics](#tls-basics)
       - [TLS In k8s](#tls-in-k8s)
     - [Authorisation](#authorisation)
+    - [Kubelet Security](#kubelet-security)
+    - [kubectl Proxy & Port Forward](#kubectl-proxy--port-forward)
+    - [k8s Dashboard](#k8s-dashboard)
+      - [Securing k8s Dashboard](#securing-k8s-dashboard)
+    - [k8s Software](#k8s-software)
+      - [Versions](#versions)
+      - [Verifying Application Binaries](#verifying-application-binaries)
+      - [Cluster Upgrades](#cluster-upgrades)
     - [Network Policies](#network-policies)
+    - [Ingress](#ingress)
+    - [Docker](#docker)
+      - [Service Configuration](#service-configuration)
+      - [Daemon Security](#daemon-security)
 - [3) System Hardening](#3-system-hardening)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
@@ -115,11 +127,63 @@ See [CKA Kube Config](../03.administrator/README.md#6223-kube-config)
 
 ### Authorisation
 
+See [CKA API Groups](../03.administrator/README.md#63-api-groups)
+
 See [CKA Authorisation](../03.administrator/README.md#64-authorisation)
+
+### Kubelet Security
+
+`kubeadm` doesn't automatically deploy `kubelet`, you need to do that manually. You should configure it securely before you manually deploy it. You can configure `kubelet` 2 ways:
+1. Updating the flags in `kubelet` service file.
+2. Updating the entries `kubelet` YAML config file. This is preferred and by default `kubeadm` installs this file at `/var/lib/kubelet/config.yaml` and this file uses camelCase.
+
+**Note:** The flags in the service file take precedence over the entries in the YAML config file.
+
+Use `ps aux | grep kubelet | grep config` to see where the `kubelet` YAML config file is, again by default `kubeadm` installs this file at `/var/lib/kubelet/config.yaml`.
+
+The main things to secure within `kubelet` are:
+* The 2 ports that `kubelet` serves on:
+  * 10250 serves API with authenticated full access. The authentication depends on what mode is set. e.g. `curl -sk https://localhost:10250/pods/` will show you all Pods running in the cluster.
+  * 10255 serves API with unauthenticated read only access. e.g. `curl -sk https://localhost:10255/metrics` will show you metrics for the cluster.
+* By default the authentication mode is always allow.
+
+You can secure `kubelet` via the service file or the YAML config file.
+* The 2 ports that `kubelet` serves on can be secured by:
+  * The API being served on port 10250 can be turned off by setting anonymous auth off. You can also change this API's authentication mode to use either x509 client certificates or API access tokens. Remember that the `kube-apiserver` is also a client so will require client access.
+  * The API being served on port 10255 can be turned off by setting the port to 0.
+* The default authorization can be updated to Webhook for example, which will delegate authorization to the `kube-apiserver`.
+
+![images/securing-kubelet-1.png](images/securing-kubelet-1.png)
+
+### kubectl Proxy & Port Forward
+
+### k8s Dashboard
+
+#### Securing k8s Dashboard
+
+### k8s Software
+
+#### Versions
+
+#### Verifying Application Binaries
+
+#### Cluster Upgrades
+
+See [CKA Cluster Upgrades](#52-cluster-upgrades)
 
 ### Network Policies
 
-[CKA Network Policies](../03.administrator/README.md#65-network-policies)
+See [CKA Network Policies](../03.administrator/README.md#65-network-policies)
+
+### Ingress
+
+See [CKA Ingress](../03.administrator/README.md#846-ingress)
+
+### Docker
+
+#### Service Configuration
+
+#### Daemon Security
 
 # 3) System Hardening
 
