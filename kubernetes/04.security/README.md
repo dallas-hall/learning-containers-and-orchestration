@@ -157,6 +157,41 @@ You can secure `kubelet` via the service file or the YAML config file.
 
 ### kubectl Proxy & Port Forward
 
+You can connect a variety of ways to the cluster.
+* Using `kubectl` directly with the `$KUBECONFIG`.
+![images/kubectl-connection-1.png](images/kubectl-connection-1.png)
+* Using `curl` on port 6443, remember you need to specify client certificate and key.
+![images/kubectl-connection-2.png](images/kubectl-connection-2.png)
+* Using `kubectl proxy` with the `$KUBECONFIG` via localhost loopback address..
+* Using `kubectl port-forward` with the `$KUBECONFIG`.
+
+![images/kubectl-connection-3.png](images/kubectl-connection-3.png)
+
+`kubectl proxy` opens proxy port to API server. It uses the `$KUBECONFIG` file to connection properties.
+
+```bash
+# Run the proxy
+kubectl proxy
+Starting to serve on 127.0.0.1:8001
+
+# View all API end points
+curl -k localhost:8001
+```
+
+![images/kubectl-connection-4.png](images/kubectl-connection-4.png)
+
+
+`kubectl port-forward` opens a port to target deployment pods.
+
+```bash
+# Run the port forward
+kubectl port-forward pod/$POD_NAME $LOCAL_PORT:$POD_PORT
+kubectl port-forward svc/$SERVICE_NAME $LOCAL_PORT:$SERVICE_PORT
+
+# View the forwarded app
+curl -k localhost:$LOCAL_PORT
+```
+
 ### k8s Dashboard
 
 #### Securing k8s Dashboard
