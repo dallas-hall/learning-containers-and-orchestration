@@ -194,7 +194,29 @@ curl -k localhost:$LOCAL_PORT
 
 ### k8s Dashboard
 
+https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+
+The k8s dashboard is a web based UI that can used to view and create cluster objects. It is a powerful tool that needs to be safeguarded. Tesla had their k8s cluster hijacked to mine cryptocurrency through this feature after they exposed it to the internet.
+
+![images/k8s-dashboard.png](images/k8s-dashboard.png)
+
+![images/k8s-dashboard-2.png](images/k8s-dashboard-2.png)
+
+You can deploy the k8s dashboard through the YAML file at the k8s dashboard GitHub repository. The dashboard is now by default only accessible through a ClusterIP Service object making it available for local access only. You can get around this by using the Kube Proxy and accessing the ClusterIP service that way.
+
+![images/k8s-dashboard-3.png](images/k8s-dashboard-3.png)
+
+![images/k8s-dashboard-4.png](images/k8s-dashboard-4.png)
+
+You could change the ClusterIP service to a NodePort service and gate access to that with some kind of IdAM solution.
+
 #### Securing k8s Dashboard
+
+When you access the k8s dashboard you get 2 authentication options:
+* Token access from an existing Role or ClusterRole token that is stored in a Secret.
+* KUBECONFIG access.
+
+![images/k8s-dashboard-5.png](images/k8s-dashboard-5.png)
 
 ### k8s Software
 
