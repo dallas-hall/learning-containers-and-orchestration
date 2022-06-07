@@ -37,10 +37,10 @@
 - [5) Cluster Maintenance](#5-cluster-maintenance)
   - [5.1) O/S Upgrades](#51-os-upgrades)
   - [5.2) Software Versions](#52-software-versions)
-  - [5.2) Cluster Upgrades](#52-cluster-upgrades)
-    - [5.2.1) Master Upgrade](#521-master-upgrade)
-    - [5.2.1) Worker Upgrade](#521-worker-upgrade)
-  - [5.2) Backup & Restore Methods](#52-backup--restore-methods)
+  - [5.3) Cluster Upgrades](#53-cluster-upgrades)
+    - [5.3.1) Master Upgrade](#531-master-upgrade)
+    - [5.3.2) Worker Upgrade](#532-worker-upgrade)
+  - [5.4) Backup & Restore Methods](#54-backup--restore-methods)
 - [6) Security](#6-security)
   - [6.1) Primitives](#61-primitives)
   - [6.1) Authentication](#61-authentication)
@@ -505,7 +505,7 @@ kubectl uncordon $NODE
 
 ![images/semantic-versioning-v3.png](images/semantic-versioning-v3.png)
 
-## 5.2) Cluster Upgrades
+## 5.3) Cluster Upgrades
 
 * Searching for 'upgrading kubeadm' in the k8s documentation page brings up [upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) which has all the steps you need to upgrade via kubeadm.
 * The Kube API Server is the primary component in the control plane, no other core k8s control plane components can have a higher version than it. But they can be at lower versions, the rules are:
@@ -532,7 +532,7 @@ kubectl uncordon $NODE
   2. You can upgrade the Worker Nodes one at a time. This has no outage for users.
   3. You can add new Worker Nodes to the cluster that already have the desired k8s version and then remove old Worker Nodes from the cluster. This has no outage for users and is easily done in cloud environments.
 
-### 5.2.1) Master Upgrade
+### 5.3.1) Master Upgrade
 
 https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrading-control-plane-nodes
 
@@ -567,7 +567,7 @@ sudo systemctl restart kubelet
 kubectl uncordon $MASTER_NODE
 ```
 
-### 5.2.1) Worker Upgrade
+### 5.3.2) Worker Upgrade
 
 **Note:** When upgrading the cluster, all `kubectl` commands must be run on the Master Node. e.g. `kubectl drain $WORKER_NODE` must be run on the Master Node.
 
@@ -594,7 +594,7 @@ sudo systemctl restart kubelet
 kubectl uncordon $WORKER_NODE
 ```
 
-## 5.2) Backup & Restore Methods
+## 5.4) Backup & Restore Methods
 
 * There are 2 things to consider when backing up:
   1. k8s objects
