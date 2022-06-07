@@ -213,20 +213,46 @@ You could change the ClusterIP service to a NodePort service and gate access to 
 #### Securing k8s Dashboard
 
 When you access the k8s dashboard you get 2 authentication options:
-* Token access from an existing Role or ClusterRole token that is stored in a Secret.
+* Token access from an existing Role or ClusterRole token that is stored in a Secret. The token within the secret must be base64 decoded first.
 * KUBECONFIG access.
 
 ![images/k8s-dashboard-5.png](images/k8s-dashboard-5.png)
+
+https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
+
+You can combine existing ClusterRoles with Roles or ServiceAccounts to grant access within namespaces or the cluster itself.
 
 ### k8s Software
 
 #### Versions
 
+See [CKA Software Versions](../03.administrator/README.md#52-software-versions)
+
 #### Verifying Application Binaries
+
+The k8s binaries are available at the [k8s GitHub release page](https://github.com/kubernetes/kubernetes/releases). You must confirm all downloaded binary hashes against the hashes provided there.
+
+![images/k8s-binaries.png](images/k8s-binaries.png)
+
+```bash
+# Method 1 - automatic check
+# Create checksum file
+cat > ${k8s_BINARY}.sha512
+${k8s_BINARY} ${DOWNLOAD_PAGE_k8s_BINARY_SHA512_HASH}
+^D
+
+# Check the file against the checksum
+sha512sum -c ${k8s_BINARY}.sha512
+
+# Method 2 - manual check
+sha512sum ${k8s_BINARY}
+
+# Cross check hash against the hash on the page.
+```
 
 #### Cluster Upgrades
 
-See [CKA Cluster Upgrades](#52-cluster-upgrades)
+See [CKA Cluster Upgrades](../03.administrator/README.md#53-cluster-upgrades)
 
 ### Network Policies
 
