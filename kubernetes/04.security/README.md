@@ -27,8 +27,11 @@
     - [Network Policies](#network-policies)
     - [Ingress](#ingress)
     - [Docker](#docker)
-      - [Service Configuration](#service-configuration)
-      - [Daemon Security](#daemon-security)
+      - [Securing The Docker Daemon](#securing-the-docker-daemon)
+      - [System Service vs Daemon](#system-service-vs-daemon)
+      - [Unix Socket vs TCP/IP Socket](#unix-socket-vs-tcpip-socket)
+      - [TLS Encryption](#tls-encryption-1)
+      - [Client Certificates](#client-certificates)
 - [3) System Hardening](#3-system-hardening)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
@@ -276,7 +279,17 @@ kubectl create ing my-ingress --rule="wear.example.com/wear*=wear-service:8080"
 
 ### Docker
 
-#### Service Configuration
+#### Securing The Docker Daemon
+
+The Docker Daemon needs to be secured because anyone with access to it can:
+* Delete any Docker object, e.g. containers or volumes.
+* Create any Docker objects, e.g. container with a cryptominer.
+* Run a privileged container and gain root access to the CRE host.
+
+The host running the Docker Daemon needs securing as well. See (System Hardening)[#3-system-hardening]
+
+
+#### System Service vs Daemon
 
 The Docker daemon can be installed as a system service. You could also just run Docker daemon commands as well.
 
@@ -292,11 +305,15 @@ dockerd
 dockerd --debug
 ```
 
+#### Unix Socket vs TCP/IP Socket
+
 The Docker Daemon listens on a Unix socket at `/var/run/docker.sock`. A [Unix socket](https://serverfault.com/a/124518) is an inter-process communication mechanism that allows bidirectional data exchange between processes running on the same machine. This means the Docker Daemon is only accessible on the same host.
 
 ![images/docker-daemon-1.png](images/docker-daemon-1.png)
 
-If you bound it to a IP socket via the host's network interface it would be accessible on the network. [IP sockets](https://serverfault.com/a/124518), especially TCP/IP sockets, are a mechanism allowing communication between processes over the network. In some cases you can use TCP/IP sockets to talk with processes running on the same computer by using the loopback interface.
+[IP sockets](https://serverfault.com/a/124518), especially TCP/IP sockets, are a mechanism allowing communication between processes over the network. In some cases you can use TCP/IP sockets to talk with processes running on the same computer by using the loopback interface.
+
+If you bound the Docker Daemon to an IP socket via the host's network interface it would be accessible on the network via anyone who can access that network interface. Do not do this over a public facing interface otherwise the public can access it.
 
 ```bash
 # Start Docker Daemon listening on a TCP/IP socket
@@ -304,19 +321,26 @@ If you bound it to a IP socket via the host's network interface it would be acce
 dockerd --host=tcp://$LOCAL_IP:2375
 ```
 
-The other host needs to use `DOCKER_HOST=tcp://$LOCAL_IP:2375` so its docker commands are sent to the external Docker Daemon.
+The other host needs to use `DOCKER_HOST=tcp://$LOCAL_IP:2375` so its docker commands are sent to the external Docker Daemon. Or use the equivalent `docker` command options.
 
 ![images/docker-daemon-2.png](images/docker-daemon-2.png)
 
-Exposing the Docker Daemon on a TCP/IP socket is a security risk as by default Docker has no authentication mechanism and no encryption. You can see up TLS with:
+Exposing the Docker Daemon on a TCP/IP socket is a security risk as by default Docker has no authentication mechanism and no encryption.
+
+#### TLS Encryption
+
+You can see up TLS with:
 
 ```bash
 # 2376 is the standard Docker port using encryption.
-dockerd --host=tcp://$LOCAL_IP:2376 \
+dockerd --host=tcp://$LOCAL_IP:2376
+# enable encryption
 --tls=true \
 --tlscert=/var/docker/server.crt \
 --tlskey=/var/docker/server.key
 ```
+
+The other host needs to use `DOCKER_HOST=tcp://$LOCAL_IP:2376` and `DOCKER_TLS=true` so its docker commands are sent to the external Docker Daemon using encryption. Or use the equivalent `docker` command options.
 
 ![images/docker-daemon-3.png](images/docker-daemon-3.png)
 
@@ -326,7 +350,25 @@ You can place Docker Daemon command line options into a JSON configuration file 
 
 This configuration file is also read when you start the Docker Daemon as a system service.
 
-#### Daemon Security
+#### Client Certificates
+
+You can set up TLS client authentication with:
+
+```bash
+# 2376 is the standard Docker port using encryption.
+dockerd --host=tcp://$LOCAL_IP:2376 \
+# enable encryption
+--tls=true \
+--tlscert=/var/docker/server.crt \
+--tlskey=/var/docker/server.key \
+# enable client certificates
+--tlsverify=true
+--tlscacert=/var/docker/ca.cert
+```
+
+![images/docker-daemon-5.png](images/docker-daemon-5.png)
+
+The client certificate can be supplied via the `docker` command option or placed into `~/.docker`. These client certificates must be signed by the Docker CA certificate.
 
 # 3) System Hardening
 
