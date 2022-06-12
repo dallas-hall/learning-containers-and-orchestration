@@ -33,6 +33,20 @@
       - [TLS Encryption](#tls-encryption-1)
       - [Client Certificates](#client-certificates)
 - [3) System Hardening](#3-system-hardening)
+  - [Principle Of Least Privilege (PoLP)](#principle-of-least-privilege-polp)
+  - [Minimising Host OS Footprint](#minimising-host-os-footprint)
+  - [Limiting Node Access](#limiting-node-access)
+  - [SSH Hardening](#ssh-hardening)
+  - [Privilege Escalation In Linux](#privilege-escalation-in-linux)
+  - [Removing Obsolete Packages & Services](#removing-obsolete-packages--services)
+  - [Restricting Kernel Modules](#restricting-kernel-modules)
+  - [Identifying & Disabling Open Ports](#identifying--disabling-open-ports)
+  - [Minimising AWS IAM Roles](#minimising-aws-iam-roles)
+  - [UFW Firewall Basics](#ufw-firewall-basics)
+  - [Seccomp](#seccomp)
+    - [Restricting Syscalls](#restricting-syscalls)
+    - [k8s](#k8s)
+  - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
@@ -371,6 +385,101 @@ dockerd --host=tcp://$LOCAL_IP:2376 \
 The client certificate can be supplied via the `docker` command option or placed into `~/.docker`. These client certificates must be signed by the Docker CA certificate.
 
 # 3) System Hardening
+
+## Principle Of Least Privilege (PoLP)
+
+**Principle Of Least Privilege (PoLP)** addresses access control and states that an individual should have only the minimum access privileges necessary to perform a specific job or task and nothing more.
+
+## Minimising Host OS Footprint
+
+We can reduce the attack surface by having a strong security posture and implementing best practices for securing networks, hosts, applications, and user accounts.
+
+![images/minimise-host-footprint.png](images/minimise-host-footprint.png)
+
+## Limiting Node Access
+
+The k8s Nodes should be deployed on a private network IP range and shouldn't be accessible from the internet directly, except via authorised channels like a VPN or from an allow listed CIDR range.
+
+![images/limit-node-access.png](images/limit-node-access.png)
+
+![images/limit-node-access-2.png](images/limit-node-access-2.png)
+
+SSH access within the private network must be restricted as well. Only cluster administrators will require SSH access.
+
+There are 4 types of Linux user accounts:
+1. **User accounts**, these are for people who can log into the system and may or may not have administrator access.
+2. **Superuser account**, the system account that can do anything on the system. Also known as root. User accounts can be granted access to this account.
+3. **System accounts**, typically created during the O/S installation for software that will not run as the superuser.
+4. Service accounts, are similar to the system accounts. They are created when when the service is installed and doesn't require to run as the superuser.
+
+![images/linux-users.png](images/linux-users.png)
+
+There are a variety of commands you can use to view information about Linux users.
+
+```bash
+# View information about the current user
+id
+
+# View the list of currently logged in users
+who
+
+# View the users who recently logged into the system
+last
+```
+
+![images/linux-users-2.png](images/linux-users-2.png)
+
+There are 3 popular files relating to Linux user accounts:
+
+1. `/etc/passwd` contains information about the user, such as:
+   1. Account name
+   2. User ID (uid)
+   3. Group name
+   4. Group ID (gid)
+   5. Login shell
+   6. Home directory
+2. `/etc/shadow` contains the hashed passwords of users.
+3. `/etc/group` contains information about groups such as:
+   1. Group name
+   2. Group ID (gid)
+   3. Group members (i.e. the users in that group.)
+
+![images/linux-users-3.png](images/linux-users-3.png)
+
+You can easily disable and delete users within Linux.
+* Disable users by setting their shell to `/bin/nologin` inside of `/etc/passwd`.
+* Delete users by using the `deluser $USERNAME` command.
+
+![images/linux-users-4.png](images/linux-users-4.png)
+
+You can easily remove users from groups that they shouldn't be in with the following commands:
+* `gpasswd -d $USERNAME $GROUPNAME` works on Red Hat and Debian based systems.
+* `deluser -d $USERNAME $GROUPNAME` works on Debian based systems.
+* `usermod -g $GROUPS_TO_STAY_IN $USERNAME` works on Red Hat and Debian based systems. Remeber that you are omitting any groups you want to remove the user from.
+
+![images/linux-users-5.png](images/linux-users-4.png)
+
+## SSH Hardening
+
+## Privilege Escalation In Linux
+
+## Removing Obsolete Packages & Services
+
+## Restricting Kernel Modules
+
+## Identifying & Disabling Open Ports
+
+## Minimising AWS IAM Roles
+
+## UFW Firewall Basics
+
+## Seccomp
+
+### Restricting Syscalls
+
+### k8s
+
+## Kernel Hardening With AppArmor
 
 # 4) Minimising Microservices Vulnerabilities
 
