@@ -386,6 +386,8 @@ The client certificate can be supplied via the `docker` command option or placed
 
 # 3) System Hardening
 
+Go to https://www.cisecurity.org/benchmark/distribution_independent_linux for Linux distribution independent advice.
+
 ## Principle Of Least Privilege (PoLP)
 
 **Principle Of Least Privilege (PoLP)** addresses access control and states that an individual should have only the minimum access privileges necessary to perform a specific job or task and nothing more.
@@ -461,7 +463,80 @@ You can easily remove users from groups that they shouldn't be in with the follo
 
 ## SSH Hardening
 
+SSH is used to securely connect to an external server with a username and password or via ssh key pairs. Here are some important things to remember about ssh:
+
+* The default connection strategy is username and password.
+* The default port for ssh 22.
+* The default directory for ssh files is `~/.ssh` for the client and server.
+* On the client:
+  * ssh keys are stored in `~/.ssh/id_$ALGORITHM`
+  * The global ssh configuration is stored in `/etc/ssh/ssh_config` which can be overriden with `~/.ssh/config`
+  * Metadata about ssh servers that have been connected to from this client is stored in `~/.ssh/known_hosts`
+* On the server:
+  * ssh keys copied from previously connected clients are are stored in `~/.ssh/authorized_keys`.
+  * The global ssh daemon configuration is stored in `/etc/ssh/sshd_config`
+
+```bash
+# Connect as the current user
+ssh $HOSTNAME
+ssh $IP_ADDRESS
+
+# Connect as a different user
+ssh $USERNAME@$HOSTNAME
+ssh $USERNAME@$IP_ADDRESS
+```
+
+![images/ssh.png](images/ssh.png)
+
+It is not considered best practice to use username and passwords for ssh connections, you should use ssh keys instead. Remember that you need to use username and password to supply the key to the remote host.
+
+```bash
+# Create an ssh key, the default path is ~/.ssh/
+ssh-keygen
+ssh-keygen -t $ALGORITHM
+ssh-keygen -t $ALGORITHM -i $KEY_PATH
+```
+
+![images/ssh-2.png](images/ssh-2.png)
+
+```bash
+# Copy ssh key to a server
+ssh-copy-id -i $KEY_PATH $USERNAME@$HOSTNAME
+ssh-copy-id -i $KEY_PATH $USERNAME@$IP_ADDRESS
+```
+
+![images/ssh-3.png](images/ssh-3.png)
+
+CIS section 5.2 has elaborate steps to harden the ssh service. But the following basic steps should be used to harden ssh via the `/etc/ssh/sshd_config` file:
+* Disable root logins over ssh.
+* Disable password logins over ssh.
+
+![images/ssh-4.png](images/ssh-4.png)
+
+**Note:** Remember to restart the sshd service after making changes to the configuration.
+
 ## Privilege Escalation In Linux
+
+Using root as the daily driver account is a bad idea. But you will need to use the root user to perform some tasks within the system. The best way to do this is via `su` or `sudo`.
+* The `su` command will ask for the root account password before switching to the root user.
+* The `sudo` command will ask for the current user's account password before switching to the root user. That user must be granted `sudo` access within `/etc/sudoers` file or `/etc/sudoers.d/` included files.
+
+**Note:** You should update `/etc/sudoers` with `visudo` as this command will validate the file and make sure you don't make any breaking changes which may lock you out of the root account.
+
+![images/sudo.png](images/sudo.png)
+
+Once you have granted `sudo` access you could then disable the root user account by updating the root account shell to `/usr/sbin/nologin` inside of `/etc/passwd`.
+
+[The syntax](https://askubuntu.com/a/118227) for `/etc/sudoers` is:
+* Comments are lines that start with a `#`
+* The first field is the user or group that privileges are being granted to. Groups must begin with a percent sign, e.g. `%sudo`
+* The second field is which host the user can use `sudo` on. By default this is ALL and on a typical setup this just means localhost. If you were sharing this file across mutiple hosts you can supply hostnames here.
+* The third field enclosed in brackets is the users `-u` and which groups `-g` can be used to run commands. By default this is ALL which means any user or group.
+* The forth field is the command(s) that can be run. By default this is ALL which means any command.
+
+![images/sudo-2.png](images/sudo-2.png)
+
+You can make `sudo` switching passwordless with `$USER ALL=(ALL:ALL) NOPASSWD:ALL` inside of `/etc/sudoers`
 
 ## Removing Obsolete Packages & Services
 
