@@ -36,7 +36,8 @@
   - [Principle Of Least Privilege (PoLP)](#principle-of-least-privilege-polp)
   - [Minimising Host OS Footprint](#minimising-host-os-footprint)
   - [Limiting Node Access](#limiting-node-access)
-  - [SSH Hardening](#ssh-hardening)
+  - [SSH](#ssh)
+    - [Hardening](#hardening)
   - [Privilege Escalation In Linux](#privilege-escalation-in-linux)
   - [Removing Obsolete Packages & Services](#removing-obsolete-packages--services)
     - [Software](#software)
@@ -465,7 +466,7 @@ You can easily remove users from groups that they shouldn't be in with the follo
 
 ![images/linux-users-5.png](images/linux-users-4.png)
 
-## SSH Hardening
+## SSH
 
 SSH is used to securely connect to an external server with a username and password or via ssh key pairs. Here are some important things to remember about ssh:
 
@@ -510,6 +511,8 @@ ssh-copy-id -i $KEY_PATH $USERNAME@$IP_ADDRESS
 ```
 
 ![images/ssh-3.png](images/ssh-3.png)
+
+### Hardening
 
 CIS section 5.2 has elaborate steps to harden the ssh service. But the following basic steps should be used to harden ssh via the `/etc/ssh/sshd_config` file:
 * Disable root logins over ssh.
@@ -628,6 +631,36 @@ It is security best practise to disable and disallow unnecessary kernel modules.
 In k8s to common kernel modules to disable are sctp and dccp. CIS section 3.4 has elaborate steps to harden kernel modules.
 
 ## Identifying & Disabling Open Ports
+
+When applications and services they can bind to a port on the host's network interface. Once bound, the host's IP address and this port can allow traffic into the host.
+
+![images/ports.png](images/ports.png)
+
+You can view all the ports currently be used by the system in a variety of ways, 2 common approaches are `netstat` and `ss`.
+
+```bash
+# View all TCP and UPD ports on the system, regardless of their state
+ss -antup
+netstat -antup
+
+# View listening TCP only
+ss -lntp
+netstat -lntp
+
+# View listening UDP only
+ss -ltup
+netstat -ltup
+```
+
+You can check what a port is doing by looking it up in SystemD services, e.g. `cat /etc/services | fgrep -w $PORT`.
+
+![images/ports-2.png](images/ports-2.png)
+
+The k8s documentation [Ports & Protocols page](https://kubernetes.io/docs/reference/ports-and-protocols/) has a list of what ports are required by a k8s cluster.
+
+![images/ports-3.png](images/ports-3.png)
+
+**Note:** These ports will differ depending on how you install the cluster, e.g. kubeadm vs Rancher, etc.
 
 ## Minimising AWS IAM Roles
 
