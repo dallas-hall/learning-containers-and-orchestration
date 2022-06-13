@@ -39,6 +39,8 @@
   - [SSH Hardening](#ssh-hardening)
   - [Privilege Escalation In Linux](#privilege-escalation-in-linux)
   - [Removing Obsolete Packages & Services](#removing-obsolete-packages--services)
+    - [Software](#software)
+    - [Services](#services)
   - [Restricting Kernel Modules](#restricting-kernel-modules)
   - [Identifying & Disabling Open Ports](#identifying--disabling-open-ports)
   - [Minimising AWS IAM Roles](#minimising-aws-iam-roles)
@@ -101,6 +103,8 @@ The CIS Benchmark suite covers cloud infrastructure, operating systems, networki
 CIS-CAT Lite can run the CIS Benchmarks and apply remediation processes automatically.
 
 https://learn.cisecurity.org/cis-cat-lite
+
+Go to https://www.cisecurity.org/benchmark/distribution_independent_linux for Linux distribution independent advice.
 
 ### CIS Benchmarks For k8s
 
@@ -539,6 +543,73 @@ Once you have granted `sudo` access you could then disable the root user account
 You can make `sudo` switching passwordless with `$USER ALL=(ALL:ALL) NOPASSWD:ALL` inside of `/etc/sudoers`
 
 ## Removing Obsolete Packages & Services
+
+### Software
+
+Best practice dictates to ensure only the required software is installed on the system and to ensure that software is kept up to date.
+
+```bash
+# Ubuntu - install a package
+apt install $PACKAGE_NAME
+
+# Ubuntu - remove a package
+apt remove $PACKAGE_NAME
+
+# Ubuntu - refresh package cache data
+apt update
+
+# Ubuntu -- upgrade all packages
+apt upgrade
+
+# Ubuntu - refresh package cache data and upgrade all packages
+apt update -y && apt upgrade
+```
+
+![images/apt.png](images/apt.png)
+
+```bash
+# Red Hat - install a package
+dnf install $PACKAGE_NAME
+
+# Red Hat - remove a package
+dnf remove $PACKAGE_NAME
+
+# Red Hat - refresh package cache data and upgrade all packages
+dnf upgrade --refresh
+```
+
+### Services
+
+You should also only enable O/S services that are needed. Remember that service files are installed when the package is installed, these may or may not be automatically enabled and started.
+
+O/S service files are located in `/lib/systemd/system/$SERVICE_NAME`
+
+```bash
+# View all services on the system
+systemctl list-units --type service
+
+# Check the service's status
+systemctl status $SERVICE_NAME
+
+# Start a service
+systemctl start $SERVICE_NAME
+systemctl restart $SERVICE_NAME
+
+# Automatically start a service at boot time
+systemctl enable  $SERVICE_NAME
+
+# Stop a service
+systemctl stop $SERVICE_NAME
+
+# Disable a service from automatically starting at boot time
+systemctl disable $SERVICE_NAME
+```
+
+![images/services.png](images/services.png)
+
+![images/services-2.png](images/services-2.png)
+
+CIS section 2 has elaborate steps to harden the O/S services.
 
 ## Restricting Kernel Modules
 
