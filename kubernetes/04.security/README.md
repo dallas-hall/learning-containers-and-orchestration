@@ -613,6 +613,20 @@ CIS section 2 has elaborate steps to harden the O/S services.
 
 ## Restricting Kernel Modules
 
+**Kernel modules** are pieces of code that can be loaded and unloaded into the kernel upon demand. They extend the functionality of the kernel without needing to reboot the system. A common example of this is a GPU hardware device driver being loaded as a kernel module after a GPU has been installed.
+
+![images/kernel-modules.png](images/kernel-modules.png)
+
+You can manually load a kernel module into the kernel using `modprobe $MODULE_NAME`. You can list all running kernel modules using `lsmod`.
+
+![images/kernel-modules-2.png](images/kernel-modules-2.png)
+
+It is security best practise to disable and disallow unnecessary kernel modules. You can disallow kernel modules by adding them to a deny list which is typically stored at `/etc/modprobe.d/blacklist.conf`. This file can be called anything but must have the `.conf` extension. A reboot is required to add a kernel module to the deny list.
+
+![images/kernel-modules-3.png](images/kernel-modules-3.png)
+
+In k8s to common kernel modules to disable are sctp and dccp. CIS section 3.4 has elaborate steps to harden kernel modules.
+
 ## Identifying & Disabling Open Ports
 
 ## Minimising AWS IAM Roles
