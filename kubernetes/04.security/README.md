@@ -45,7 +45,8 @@
   - [Restricting Kernel Modules](#restricting-kernel-modules)
   - [Identifying & Disabling Open Ports](#identifying--disabling-open-ports)
   - [Cloud IdAM](#cloud-idam)
-  - [UFW Firewall Basics](#ufw-firewall-basics)
+  - [Restricting Network Access](#restricting-network-access)
+    - [UFW Firewall Basics](#ufw-firewall-basics)
   - [Seccomp](#seccomp)
     - [Restricting Syscalls](#restricting-syscalls)
     - [k8s](#k8s)
@@ -692,7 +693,77 @@ Cloud providers typically provide automated tools for reviewing security configu
 
 ![images/cloud-6.png](images/cloud-6.png)
 
-## UFW Firewall Basics
+## Restricting Network Access
+
+A common approach to restricting network access is having active firewalls on networks devices like routers and proxies, and also having firewalls and disabling services on clients as well.
+
+A **firewall** is a way to protect machines from any unwanted traffic from outside through firewall rules. These rules are used to sort the incoming traffic and either block it or allow through.
+
+![images/network.png](images/network.png)
+
+![images/network-2.png](images/network-2.png)
+
+What is `0.0.0.0`? It depends on the context.
+* In the context of routing it means the default route.
+* In the context of servers it means all IPv4 addresses on the local machine.
+* In all other contexts it means no particular address.
+
+image.png
+### UFW Firewall Basics
+
+**Uncomplicated firewall (UFW)** is a frontend for managing firewall rules in Arch Linux, Debian, or Ubuntu. UFW is used through the command line and aims to make firewall configuration easy. Under the hood it is creating iptables or nftables rules. [Linode](https://www.linode.com/docs/guides/configure-firewall-with-ufw/) has a good guide on this.
+
+```bash
+# Install and start ufw
+apt update
+apt install ufw
+systemctl enable ufw
+systemctl start ufw
+
+# Check firewall rule status.
+ufw status
+
+# Allow all outbound connections
+ufw default allow outgoing
+
+# Block all inbound connections
+ufw default deny incoming
+```
+
+![images/network-3.png](images/network-3.png)
+
+**Note:** `ufw` is inactive by default when installed.
+
+```bash
+# Allow ssh
+ufw allow ssh
+ufw allow 22
+
+# Allow HTTP traffic via TCP
+ufw allow http/tcp
+ufw allow 80/tcp
+
+# Allow ssh from a specific IP
+ufw allow from $IP_ADDRESS to any port 22 proto tcp
+
+# Block a specific port that is already listening
+ufw deny $PORT
+```
+
+![images/network-4.png](images/network-4.png)
+
+```bash
+# Enable the firewall and its current rules
+ufw enable
+
+# Delete a rule
+ufw delete $RULE
+ufw delete $RULE_NUMBER_FROM_STATUS
+```
+
+![images/network-5.png](images/network-5.png)
+
+![images/network-6.png](images/network-6.png)
 
 ## Seccomp
 
