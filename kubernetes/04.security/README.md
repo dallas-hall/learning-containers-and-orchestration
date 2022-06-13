@@ -44,7 +44,7 @@
     - [Services](#services)
   - [Restricting Kernel Modules](#restricting-kernel-modules)
   - [Identifying & Disabling Open Ports](#identifying--disabling-open-ports)
-  - [Minimising AWS IAM Roles](#minimising-aws-iam-roles)
+  - [Cloud IdAM](#cloud-idam)
   - [UFW Firewall Basics](#ufw-firewall-basics)
   - [Seccomp](#seccomp)
     - [Restricting Syscalls](#restricting-syscalls)
@@ -588,7 +588,7 @@ You should also only enable O/S services that are needed. Remember that service 
 O/S service files are located in `/lib/systemd/system/$SERVICE_NAME`
 
 ```bash
-# View all services on the system
+# View all active services on the system
 systemctl list-units --type service
 
 # Check the service's status
@@ -662,7 +662,35 @@ The k8s documentation [Ports & Protocols page](https://kubernetes.io/docs/refere
 
 **Note:** These ports will differ depending on how you install the cluster, e.g. kubeadm vs Rancher, etc.
 
-## Minimising AWS IAM Roles
+## Cloud IdAM
+
+**Note:** This is NOT on the exam, for education only.
+
+Security concepts like least privilege for accounts apply to cloud environments as well. The root account in Linux equates to the Windows admin user and AWS Root account.
+
+![images/cloud.png](images/cloud.png)
+
+When you sign up to AWS you get an AWS Root account for that subscription. With that account you have full access to any AWS object. This account shouldn't be used for the daily driver so you must use it to create additional user accounts.
+
+![images/cloud-2.png](images/cloud-2.png)
+
+AWS IAM Polcies are used to grant authorised access to AWS users and groups to AWS resources (e.g. user can access an s3 bucket.). There are many types of [AWS policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html). AWS IAM supports ABAC and RBAC, RBAC is preferred.
+
+ABAC
+
+![images/cloud-3.png](images/cloud-3.png)
+
+RBAC
+
+![images/cloud-4.png](images/cloud-4.png)
+
+IAM Roles allow AWS services to interact with other AWS services.
+
+![images/cloud-5.png](images/cloud-5.png)
+
+Cloud providers typically provide automated tools for reviewing security configurations within their environments. AWS has the AWS Trusted Advisor, GCP has Security Command Center, and Azure has the Azure Advisor.
+
+![images/cloud-6.png](images/cloud-6.png)
 
 ## UFW Firewall Basics
 
