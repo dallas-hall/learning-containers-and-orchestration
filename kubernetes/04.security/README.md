@@ -746,6 +746,9 @@ ufw allow 80/tcp
 # Allow ssh from a specific IP
 ufw allow from $IP_ADDRESS to any port 22 proto tcp
 
+# Allow specific range
+ufw allow ${START}:${END}/$PROTOCOL
+
 # Block a specific port that is already listening
 ufw deny $PORT
 ```
@@ -758,12 +761,19 @@ ufw enable
 
 # Delete a rule
 ufw delete $RULE
+
+ufw status numbered
 ufw delete $RULE_NUMBER_FROM_STATUS
 ```
 
 ![images/network-5.png](images/network-5.png)
 
 ![images/network-6.png](images/network-6.png)
+
+```bash
+# Reset to defaults
+ufw reset
+```
 
 ## Seccomp
 
