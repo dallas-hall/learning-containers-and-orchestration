@@ -47,9 +47,10 @@
   - [Cloud IdAM](#cloud-idam)
   - [Restricting Network Access](#restricting-network-access)
     - [UFW Firewall Basics](#ufw-firewall-basics)
-  - [Seccomp](#seccomp)
-    - [Restricting Syscalls](#restricting-syscalls)
-    - [k8s](#k8s)
+  - [Linux Syscalls](#linux-syscalls)
+    - [AquaSec Tracee](#aquasec-tracee)
+    - [Restricting Syscalls With Seccomp](#restricting-syscalls-with-seccomp)
+    - [Seccomp Within k8s](#seccomp-within-k8s)
   - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
@@ -775,11 +776,117 @@ ufw delete $RULE_NUMBER_FROM_STATUS
 ufw reset
 ```
 
-## Seccomp
+## Linux Syscalls
 
-### Restricting Syscalls
+The **kernel** is a computer program at the core of a computer's O/S and generally has complete control over everything in the system. It is O/S code that is always resident in memory, and facilitates interactions between hardware and software components.
 
-### k8s
+The simplified answer is that computer memory gets divided into 2 separate memory locations, kernel space and user space. Kernel space is where kernel code is stored and executed. User space is where everything else is stored and is executed.
+
+https://unix.stackexchange.com/questions/87625/what-is-difference-between-user-space-and-kernel-space
+
+![images/syscalls.png](images/syscalls.png)
+
+A **system call (syscall)** is a function that allows a process from user space to communicate with the Linux kernel. There are over 400 syscalls, for example `execve` is used to execute a binary.
+
+![images/syscalls-2.png](images/syscalls-2.png)
+
+You can trace the syscalls being made by a process using `strace`.
+
+```bash
+# Trace the syscalls of a command about to be executed
+strace $COMMAND
+```
+
+The output below means:
+* Call `execve` to execut the program with the following parameters:
+  * Execution path.
+  * Command & arguments
+  * The amount of environment variables the command inherited. This number will match `env | wc -l`
+
+![images/syscalls-3.png](images/syscalls-3.png)
+
+```bash
+# Get PID of running command
+pidof $RUNNING_CMD
+
+# Trace the syscalls of a command already running
+strace -p $RUNNING_CMD
+```
+
+![images/syscalls-4.png](images/syscalls-4.png)
+
+Use `strace -c` to view a summary of the entire syscall output.
+
+![images/syscalls-5.png](images/syscalls-5.png)
+
+### AquaSec Tracee
+
+Is an open source tool that uses EBPF and can be used to trace syscalls from a container at runtime. It is easy to run this as a Docker container but it requires a couple of Docker Volume mounts and to run in privileged mode.
+
+![images/tracee.png](images/tracee.png)
+
+Can be used to trace syscalls from a single command.
+
+![images/tracee-2.png](images/tracee-2.png)
+
+Can be used to trace syscalls from all new processes in a running container.
+
+![images/tracee-3.png](images/tracee-3.png)
+
+Can be used to trace syscalls from all processes in a new container.
+
+![images/tracee-4.png](images/tracee-4.png)
+
+### Restricting Syscalls With Seccomp
+
+There are over 400 syscalls in Linux and it is doubtful that an application needs acecss to all of them. By default the Linux kernel will allow any syscalls to be made by any programs running in user space. You can restrict what syscalls an app has access to with a tool like Seccomp.
+
+**Seccomp** stands for secure computing mode and has been a feature of the Linux kernel since version 2.6.12 in 2005. It can be used to sandbox the privileges of a process, restricting the calls it is able to make from userspace into the kernel.
+
+![images/syscalls-6.png](images/syscalls-6.png)
+
+```bash
+# Check to see if seccomp is running
+grep -i seccomp /boot/config-$(uname -r)
+```
+
+![images/seccomp.png](images/seccomp.png)
+
+```bash
+# Check the seccomp filtering level of a running processing
+ps aux | grep $PROCESS
+grep -i seccomp /proc/$PID/status
+```
+
+![images/seccomp-2.png](images/seccomp-2.png)
+
+
+Seccomp has 3 modes:
+
+0. Disabled.
+1. Strict mode, only allows `[read, write, exit, rt_sigreturn]`
+2. Filtered, used to create allow list and deny lists.
+
+![images/seccomp-3.png](images/seccomp-3.png)
+
+Docker uses this Seccomp mode 2 and applies syscall filters via a JSON file. The default Docker Seccomp deny list JSON file blocks about 60 syscalls on all containers when the CRE host has Seccomp enabled.
+
+![images/seccomp-5.png](images/seccomp-5.png)
+
+The Docker Seccomp JSON file has 3 elements:
+1. Architectures array filled with all the CPU architectures it applies to.
+2. Syacalls array filled with all the syscalls it is blocking or allowing.
+3. Default action determins what to do with syscalls not defined inside the syscalls array.
+
+![images/seccomp-4.png](images/seccomp-4.png)
+
+**Note:** `SCMP_ACT_ERRNO` will reject all other syscalls and `SCMP_ACT_ALLOW` will allow all other syscalls.
+
+You can create additional Seccomp filters to augment the default Docker deny list.
+
+![images/seccomp-6.png](images/seccomp-6.png)
+
+### Seccomp Within k8s
 
 ## Kernel Hardening With AppArmor
 
