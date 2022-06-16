@@ -54,6 +54,7 @@
   - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
     - [Overview](#overview)
     - [Creating Profiles](#creating-profiles)
+  - [Linux Capabilites](#linux-capabilites)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
@@ -919,6 +920,8 @@ Remember you can use Tracee for this as well.
 
 ## Kernel Hardening With AppArmor
 
+https://wiki.ubuntu.com/AppArmor
+
 ### Overview
 
 Seccomp profiles can only limit access to syscalls, which cannot block access to some resources. e.g. accessing a file or directory. The AppArmor kernel module can be used to gate resource and Linux capabilities access. It is conceptually similar to SELinux. AppArmor is configured with simple text files.
@@ -965,6 +968,43 @@ The below profile denies mounting entire file system `/` as read only.
 
 ### Creating Profiles
 
+https://documentation.suse.com/sles/15-SP1/html/SLES-all/cha-apparmor-commandline.html#sec-apparmor-commandline-profiling-summary-genprof
+
+AppArmor comes with tools that help you build profiles.
+
+```bash
+# Install the AA tools package
+apt install apparmor-tools
+
+# Use AA tools to create a profile
+aa-genprof $SCRIPT
+
+# Run the $SCRIPT in another terminal and answer the questions
+```
+
+![images/apparmor-5.png](images/apparmor-5.png)
+
+![images/apparmor-6.png](images/apparmor-6.png)
+
+The `aa-genprof` command will ask security related questions about the script you are running so it can create the profile. The most common options are (I)nherit which is for allowing processes and child processes, (A)llow filesystem access, and (D)eny filesystem access.
+
+https://documentation.suse.com/sles/15-SP1/html/SLES-all/cha-apparmor-commandline.html#ex-apparmor-commandline-profiling-summary-genprof-learn
+
+https://documentation.suse.com/sles/15-SP1/html/SLES-all/cha-apparmor-commandline.html#ex-apparmor-commandline-profiling-summary-genprof-perms
+
+![images/apparmor-7.png](images/apparmor-7.png)
+
+AppArmor profiles are stored at `/etc/apparmor.d/` and you can run them by `apparmor_parser /etc/apparmor.d/$PROFILE`.
+
+You can disable a program with:
+```bash
+apparmor_parser -R /etc/apparmor.d/$PROFILE
+ln -s /etc/apparmor.d/$PROFILE /etc/apparmor.d/disable/
+```
+
+## Linux Capabilites
+
+See [CKAD Security Contexts](../02.applications-developer/README.md#security-contexts)
 
 
 # 4) Minimising Microservices Vulnerabilities
