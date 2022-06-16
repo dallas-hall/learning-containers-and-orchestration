@@ -52,6 +52,8 @@
     - [Restricting Syscalls With Seccomp](#restricting-syscalls-with-seccomp)
     - [Seccomp Within k8s](#seccomp-within-k8s)
   - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
+    - [Overview](#overview)
+    - [Creating Profiles](#creating-profiles)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
@@ -888,7 +890,82 @@ You can create additional Seccomp filters to augment the default Docker deny lis
 
 ### Seccomp Within k8s
 
+You can use `amicontained` to view the Seccomp status and the blocked syscalls inside of a container. k8s doesn't use Seccomp by default. You can add this under `/spec/securityContext/seccompProfile/type`, valid settings are:
+* Unconfined, Seccomp turned off.
+* RuntimeDefault, the CRE default. e.g. Docker blocks about 60 syscalls by default.
+* Localhost, use a custom Seccomp JSON file. This path is relative to the default Seccomp path which is `/var/lib/kubelet/seccomp` by default.
+
+![images/seccomp-7.png](images/seccomp-7.png)
+
+You should also add `/spec/containers/[i]/securityContext/allowPrivilegeEscalation` as False to stop a container from being able to escalate privileges.
+
+![images/seccomp-8.png](images/seccomp-8.png)
+
+![images/seccomp-9.png](images/seccomp-9.png)
+
+To use a custom local Seccomp JSON file, create the folder `/var/lib/kubelet/seccomp/profiles` and create your custom JSON file in there. Call that from  `/spec/securityContext/seccompProfile/localhostProfile`.
+
+![images/seccomp-10.png](images/seccomp-10.png)
+
+The logs for the custom Seccomp JSON file are located in `/var/logs/syslog`.
+
+![images/seccomp-11.png](images/seccomp-11.png)
+
+![images/seccomp-12.png](images/seccomp-12.png)
+
+Remember you can use Tracee for this as well.
+
+**EXAM TIP:** You shouldn't have to create a custom Seccomp profile from scratch, but you will need to be able to copy an existing one to all nodes on the cluster and use it to create Pods.
+
 ## Kernel Hardening With AppArmor
+
+### Overview
+
+Seccomp profiles can only limit access to syscalls, which cannot block access to some resources. e.g. accessing a file or directory. The AppArmor kernel module can be used to gate resource and Linux capabilities access. It is conceptually similar to SELinux. AppArmor is configured with simple text files.
+
+```bash
+# Check if apparmor is running
+systemctl status apparmor
+```
+
+In k8s the AppArmor kernel modules needs to be loaded into the kernel of all the Nodes.
+
+```bash
+# Check if the AppArmor kernel module is running, returns Y for yes or N or No.
+cat /sys/module/apparmor/parameters/enabled
+
+# Check if the AppArmor profile has been loaded into the kernel. Prints out all the loaded profiles.
+cat /sys/kernel/security/apparmor/profiles
+
+# Or use an AppArmor tool
+aa-status
+```
+
+AppArmor profiles can be loaded in 3 different modes:
+1. **Enforce:** AppArmor enforces its loaded profiles.
+2. **Complain:** AppArmor allows the application to function but logs any events that breach its loaded profiles.
+3. **Unconfined:** AppArmor does nothing.
+
+![images/apparmor.png](images/apparmor.png)
+
+The below profile denies write access to the entire file system `/`.
+* `file` is shorthand for allowing complete access to entire file system.
+* `deny /** w` denies write access to the entire file system.
+So the below profile allows read only access to the entire filesystem.
+
+![images/apparmor-2.png](images/apparmor-2.png)
+
+The below profile denies write access to the file system within `/proc`.
+
+![images/apparmor-3.png](images/apparmor-3.png)
+
+The below profile denies mounting entire file system `/` as read only.
+
+![images/apparmor-4.png](images/apparmor-4.png)
+
+### Creating Profiles
+
+
 
 # 4) Minimising Microservices Vulnerabilities
 
