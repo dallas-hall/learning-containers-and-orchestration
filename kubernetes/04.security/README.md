@@ -54,6 +54,7 @@
   - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
     - [Overview](#overview)
     - [Creating Profiles](#creating-profiles)
+    - [In k8s](#in-k8s)
   - [Linux Capabilites](#linux-capabilites)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
 - [5) Supply Chain Security](#5-supply-chain-security)
@@ -1002,10 +1003,31 @@ apparmor_parser -R /etc/apparmor.d/$PROFILE
 ln -s /etc/apparmor.d/$PROFILE /etc/apparmor.d/disable/
 ```
 
+### In k8s
+
+Using AppArmor in k8s it is still in beta. The runtime requirements are:
+* AppArmor kernel module is loaded in all the Nodes.
+* AppArmor profile is loaded in the kernel on all the Nodes.
+* Requires a CRE that supports AppArmor.
+* Apply the AppArmor profile against the container you want to use it on. This needs to be done as an annotation.
+
+![images/apparmor-8.png](images/apparmor-8.png)
+
+![images/apparmor-9.png](images/apparmor-9.png)
+
+**Note:** The sytax for the AppArmor profile is `localhost/$PROFILE_NAME` with the profile coming from `/etc/apparmor.d/`.
+
 ## Linux Capabilites
 
 See [CKAD Security Contexts](../02.applications-developer/README.md#security-contexts)
 
+There are 2 types of processes, unprivilged processes (uid != 0) and privileged processes (uid = 0). In Linux kernel versions < 2.2 privileged processes could do anything and unprivileged proccesses had a lot of kernel restrictions. In Linux kernel versions >= 2.2 Linux capabilities were added and privileged processes could have restricted privileged access.
+
+![images/linux-capabilities.png](images/linux-capabilities.png)
+
+You can use `getcap $PATH` to view the Linux capabilities used by an application. You can use `getpcap $PID` to view the Linux capabilities used by a process.
+
+![images/linux-capabilities-2.png](images/linux-capabilities-2.png)
 
 # 4) Minimising Microservices Vulnerabilities
 
