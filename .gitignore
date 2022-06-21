@@ -6,3 +6,6 @@ docker/for-beginners/example-voting-app/
 
 # Kubespray repo
 **/kubespray/
+
+# Scandir for ClamAV
+**/scandir/
