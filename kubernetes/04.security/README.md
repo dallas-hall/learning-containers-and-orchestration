@@ -1104,6 +1104,31 @@ You can write your own admission controllers and use the `MutatingAdmissionWebho
 
 ## Pod Security Policies
 
+**NOTE:** PodSecurityPolicy is deprecated as of Kubernetes v1.21, and will be removed in v1.25!
+
+A **Pod Security Policy** is a cluster-level resource that controls security sensitive aspects of the pod specification. They define a set of conditions that a pod must run with in order to be accepted into the system, as well as defaults for the related fields. They are an example of a validating and mutating Admission Controller. It can be enabled like any other Admission Controller through the `kube-apiserver` startup options.
+
+![images/pod-security-policy-1.png](images/pod-security-policy-1.png)
+
+Once enabled, create a PSP object.
+
+![images/pod-security-policy-2.png](images/pod-security-policy-2.png)
+
+Unfortunately by default the Admission Controller will not have access to PSP objects API, you need to update RBAC for that.
+
+![images/pod-security-policy-3.png](images/pod-security-policy-3.png)
+
+To fix this, create a Role and RoleBinding using the default Service Account from the PSP object's namespace.
+
+![images/pod-security-policy-4.png](images/pod-security-policy-4.png)
+
+![images/pod-security-policy-5.png](images/pod-security-policy-5.png)
+
+Again, PSP are an example of a validating and mutating Admission Controller.
+
+![images/pod-security-policy-6.png](images/pod-security-policy-6.png)
+
+
 ## Open Policy Agent
 
 ### In k8s
