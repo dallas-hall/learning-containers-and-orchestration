@@ -57,6 +57,19 @@
     - [In k8s](#in-k8s)
   - [Linux Capabilites](#linux-capabilites)
 - [4) Minimising Microservices Vulnerabilities](#4-minimising-microservices-vulnerabilities)
+  - [Security Contexts](#security-contexts)
+  - [Admission Contollers](#admission-contollers)
+    - [Validating & Mutating](#validating--mutating)
+  - [Pod Security Policies](#pod-security-policies)
+  - [Open Policy Agent](#open-policy-agent)
+    - [In k8s](#in-k8s-1)
+  - [Secrets](#secrets)
+  - [Container Sandboxing](#container-sandboxing)
+  - [Kata Containers](#kata-containers)
+  - [Using Runtimes In k8s](#using-runtimes-in-k8s)
+  - [TLS Extras](#tls-extras)
+    - [One Way vs Mutual](#one-way-vs-mutual)
+    - [Pod To Pod TLS](#pod-to-pod-tls)
 - [5) Supply Chain Security](#5-supply-chain-security)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
 
@@ -1019,8 +1032,6 @@ Using AppArmor in k8s it is still in beta. The runtime requirements are:
 
 ## Linux Capabilites
 
-See [CKAD Security Contexts](../02.applications-developer/README.md#security-contexts)
-
 There are 2 types of processes, unprivilged processes (uid != 0) and privileged processes (uid = 0). In Linux kernel versions < 2.2 privileged processes could do anything and unprivileged proccesses had a lot of kernel restrictions. In Linux kernel versions >= 2.2 Linux capabilities were added and privileged processes could have restricted privileged access.
 
 ![images/linux-capabilities.png](images/linux-capabilities.png)
@@ -1029,7 +1040,91 @@ You can use `getcap $PATH` to view the Linux capabilities used by an application
 
 ![images/linux-capabilities-2.png](images/linux-capabilities-2.png)
 
+See [CKAD Security Contexts](../02.applications-developer/README.md#security-contexts) for adding and removing Linux Capabilities to Pods and containers.
+
 # 4) Minimising Microservices Vulnerabilities
+
+## Security Contexts
+
+See [CKAD Security Contexts](../02.applications-developer/README.md#security-contexts)
+
+## Admission Contollers
+
+Every request through `kubectl` goes through the following stages:
+1. Authenticate the user sending the request. Typically done with certificates.
+2. Validate the request being made.
+3. Retrieve or update the data from ETCD
+4. Send a response
+
+![images/admission-controller.png](images/admission-controller.png)
+
+![images/admission-controller-2.png](images/admission-controller-2.png)
+
+RBAC is good but limited. Admission Controllers provide extended functionality to RBAC.
+
+**An admission controller** is a piece of code that intercepts requests to the Kubernetes API server prior to persistence of the object, but after the request is authenticated and authorized. Admission controllers may be "validating", "mutating", or both. Mutating controllers may modify related objects to the requests they admit, validating controllers only verify.
+
+![images/admission-controller-3.png](images/admission-controller-3.png)
+
+![images/admission-controller-4.png](images/admission-controller-4.png)
+
+You can see the list of currently running admission controllers by using:
+
+```bash
+# Systemctl
+kube-apiserver -h | grep admission-plugins
+
+# Kubeabm
+kubectl -n kube-system exec kube-apiserver-controlplane -- kube-apiserver -h | grep admission-plugins
+```
+
+![images/admission-controller-5.png](images/admission-controller-5.png)
+
+You can add and remove admission controllers via the `kube-apiserver` options when it starts.
+
+![images/admission-controller-6.png](images/admission-controller-6.png)
+
+### Validating & Mutating
+
+**Validating** admission controllers will only verify the submitted request is able to be executed. For example, the `NamespaceLifecycle` admission controller will make sure that requests to a non-existent namespace are rejected and that the default namespaces such as `default`, `kube-system` and `kube-public` cannot be deleted.
+
+**Mutating** admission controllers will modify the submitted request before it is executed. For example, the DefaultStorageClass admission controller will automatically add the `/spec/storageClassName` field to all requests where it is missing.
+
+There are admission controllers that can be do both. Typically mutating admission controllers run first before validating admission controllers, this gives the mutating admission controller a chance to modify the request to pass the validation.
+
+![images/admission-controller-7.png](images/admission-controller-7.png)
+
+You can write your own admission controllers and use the `MutatingAdmissionWebhook` and the `ValidatingAdmissionWebhook` to call them from the server you are hosting them on. That server must respond with the expected JSON response. The server could be hosted as a Pod in the Cluster.
+
+![images/admission-controller-8.png](images/admission-controller-8.png)
+
+![images/admission-controller-9.png](images/admission-controller-9.png)
+
+**EXAM TIP:** You won't have to write your own webhook in the exam.
+
+## Pod Security Policies
+
+## Open Policy Agent
+
+### In k8s
+
+## Secrets
+
+See [CKA Secrets](../03.administrator/README.md#44-secrets)
+
+## Container Sandboxing
+
+## Kata Containers
+
+## Using Runtimes In k8s
+
+## TLS Extras
+
+### One Way vs Mutual
+
+### Pod To Pod TLS
+
+
 
 # 5) Supply Chain Security
 
