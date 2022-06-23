@@ -1205,6 +1205,10 @@ spec:
 
 * When using volumes, every key in the Secret has a file created with the key as the filename and the value as the file contents.
 
+![images/secrets.png](images/secrets.png)
+
+![images/secrets-2.png](images/secrets-2.png)
+
 ## 2.4) Security
 
 ### Docker Security
