@@ -1128,10 +1128,51 @@ Again, PSP are an example of a validating and mutating Admission Controller.
 
 ![images/pod-security-policy-6.png](images/pod-security-policy-6.png)
 
+```bash
+kubectl $CMD podsecuritypolicy
+kubectl $CMD psp
+```
 
 ## Open Policy Agent
 
+[Open Policy Agent (OPA)](https://www.openpolicyagent.org/) is an authorisation policy application. It provides a high-level declarative policy language for policy as code and an API that can be called by your software for authorisation decisions.
+
+![images/open-policy-agent-1.png](images/open-policy-agent-1.png)
+
+```bash
+# Run OPA binary in server mode on port 8181, by default has no authentication or authorisation
+./opa run -s
+
+# Load a policy into OPA
+curl -X PUT --data-binary @my-policy.rego https://localhost:8181/v1/policies/my-policy
+
+# View existing OPA policies
+cutl http://localhost:8181/v1/policies
+```
+
+![images/open-policy-agent-3.png](images/open-policy-agent-3.png)
+
+You can test and validate your policies in the [Rego Playground](https://play.openpolicyagent.org/) and OPA also provides a way to validate them through the command line via `opa test -v`
+
+![images/open-policy-agent-4.png](images/open-policy-agent-4.png)
+
+![images/open-policy-agent-5.png](images/open-policy-agent-5.png)
+
+**EXAM TIP:** You won't have to write your OPA policy but you should be able to load one.
+
 ### In k8s
+
+You can deploy OPA as an Admission Controller in k8s through. It was originally deployed like this:
+
+![images/open-policy-agent-6.png](images/open-policy-agent-6.png)
+
+![images/open-policy-agent-7.png](images/open-policy-agent-7.png)
+
+But now it can be easily deployed with [OPA Gatekeeper.](https://www.openpolicyagent.org/docs/latest/kubernetes-introduction/#what-is-opa-gatekeeper)
+
+![images/open-policy-agent-2.png](images/open-policy-agent-2.png)
+
+**EXAM TIP:** OPA Gatekeeper is not in the exam.
 
 ## Secrets
 
