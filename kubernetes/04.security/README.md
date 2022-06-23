@@ -64,7 +64,9 @@
   - [Open Policy Agent](#open-policy-agent)
     - [In k8s](#in-k8s-1)
   - [Secrets](#secrets)
-  - [Container Sandboxing](#container-sandboxing)
+  - [Sandboxing](#sandboxing)
+    - [Virtual Machines](#virtual-machines)
+    - [Containers](#containers)
   - [Kata Containers](#kata-containers)
   - [Using Runtimes In k8s](#using-runtimes-in-k8s)
   - [TLS Extras](#tls-extras)
@@ -1168,6 +1170,13 @@ You can deploy OPA as an Admission Controller in k8s through. It was originally 
 
 ![images/open-policy-agent-7.png](images/open-policy-agent-7.png)
 
+The `kube-mgmt` sidecar container is used to cache k8s objects and also load policies into OPA via a ConfigMap.
+
+```bash
+# Create an OPA CM from the command line
+kubectl create cm $NAME --from-file=$REGO_FILE
+```
+
 But now it can be easily deployed with [OPA Gatekeeper.](https://www.openpolicyagent.org/docs/latest/kubernetes-introduction/#what-is-opa-gatekeeper)
 
 ![images/open-policy-agent-2.png](images/open-policy-agent-2.png)
@@ -1178,7 +1187,35 @@ But now it can be easily deployed with [OPA Gatekeeper.](https://www.openpolicya
 
 See [CKA Secrets](../03.administrator/README.md#44-secrets)
 
-## Container Sandboxing
+## Sandboxing
+
+**Sandboxing** is a software management strategy that isolates applications from critical system resources and other programs. Sandboxing helps reduce the impact any individual program or app will have on your system.
+
+### Virtual Machines
+
+Virtual machines provide better sandboxing than containers because each VM has its own O/S kernel running on the hypervisor and hardware.
+
+![images/sandboxing.png](images/sandboxing.png)
+
+Even cloud hosted VMs are running with their own kernel
+
+![images/sandboxing-2.png](images/sandboxing-2.png)
+
+ A mutli-tenanted environment means there are multiple VMs running on the same hardware which are hosting different customers.
+
+![images/sandboxing-3.png](images/sandboxing-3.png)
+
+### Containers
+
+Containers are worse than VMs at sandboxing because they are sharing the kernel with the CRE host from their Linux namespace.
+
+![images/sandboxing-4.png](images/sandboxing-4.png)
+
+![images/sandboxing-5.png](images/sandboxing-5.png)
+
+The problem is that every container on the CRE host is making syscalls to the same kernel and there have been exploits developed to break out of the container and into the CRE host.
+
+![images/sandboxing-6.png](images/sandboxing-6.png)
 
 ## Kata Containers
 
