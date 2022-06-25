@@ -77,18 +77,21 @@
     - [One Way TLS Vs Two Way TLS](#one-way-tls-vs-two-way-tls)
     - [Pod To Pod mTLS](#pod-to-pod-mtls)
 - [5) Supply Chain Security](#5-supply-chain-security)
-  - [Image Security](#image-security)
+  - [Image Terminology](#image-terminology)
   - [Image Security Best Practices](#image-security-best-practices)
-    - [Image Cohesion & Modularity](#image-cohesion--modularity)
+    - [Cohesion & Modularity](#cohesion--modularity)
     - [State Persistance](#state-persistance)
-    - [Choosing A Base Image](#choosing-a-base-image)
-    - [Use Slim/Minimal Images](#use-slimminimal-images)
+    - [Official Base Images](#official-base-images)
+    - [Slim/Minimal Vs Fat Images](#slimminimal-vs-fat-images)
     - [Dev Vs Prod Images](#dev-vs-prod-images)
     - [Distroless Images](#distroless-images)
-    - [Official Registries](#official-registries)
-  - [Allow Listing Image Registries](#allow-listing-image-registries)
-  - [Static Analysis](#static-analysis)
-  - [Dynamic Anaylsis](#dynamic-anaylsis)
+    - [Image Registries](#image-registries)
+      - [Public Official Registries](#public-official-registries)
+      - [Private Internal Registries](#private-internal-registries)
+      - [Allowlisting Image Registries](#allowlisting-image-registries)
+  - [Image Scanning](#image-scanning)
+    - [Static Analysis](#static-analysis)
+    - [Dynamic Anaylsis](#dynamic-anaylsis)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
 
 # 1) Understanding The k8s Attack Surface
@@ -1366,7 +1369,7 @@ In k8s Istio works by injecting a sidecar container into each Pod. Everytime the
 
 # 5) Supply Chain Security
 
-## Image Security
+## Image Terminology
 
 A **parent image** is the image you use to build your application. A **base image** is an image that has no parent image and is built from scratch.
 
@@ -1378,7 +1381,7 @@ It is a good idea to minimise the base image attack surface as much as possible 
 
 ## Image Security Best Practices
 
-### Image Cohesion & Modularity
+### Cohesion & Modularity
 
 Images should be highly cohesive and modular, meaning that they only have 1 application installed into them and be used as modules connecting to any other images or applications.
 
@@ -1388,11 +1391,11 @@ Images should be highly cohesive and modular, meaning that they only have 1 appl
 
 An applications state should never be stored in the container because containers are ephemeral.  Always store application state in an external volume or caching application (e.g. Redis).
 
-### Choosing A Base Image
+### Official Base Images
 
-How do you choose a base image? Look at your technical requirements to answer that question. Want to run a webserver? Then choose httpd or nginx. Once the base image has been chosen, you must make sure that you are using the latest official image for that application.
+How do you choose a base image? Look at your technical requirements to answer that question. For example, want to run a webserver? Then choose httpd or nginx or a webserver base image. Once the base image has been chosen, you must make sure that you are using the latest official image for that application.
 
-### Use Slim/Minimal Images
+### Slim/Minimal Vs Fat Images
 
 Consider using the slim/minimal versions of images as this makes pulling them faster, they are more efficient when running, and also contain less vulnerabilities as their attack surface is smaller. Only install what you need and remove anything that you don't need, e.g. uninstall package managers.
 
@@ -1406,23 +1409,118 @@ Have separate images that run in the development environment and the production 
 
 Google provides some images that only contain the application and libraries, they have no package managers, shells, text editors, etc.
 
-### Official Registries
+### Image Registries
+
+#### Public Official Registries
 
 Only use official registries to download offical base images. Remember that the image name inside a Pod definition file gets expanded following the Docker conventions. So if you don't supply a username for official images the `library` username is injected. And if you don't supply a registry address the `docker.io` website is injected.
 
 ![images/images-4.png](images/images-4.png)
 
-There are many official registries, e.g. `gcr.io` for Google's container registry. You will also need to login to access private registries. In k8s can access private registries with a Docker Secret object with `kubectl create secret docker-registry $NAME $OPTIONS`
+There are many official registries, e.g. `gcr.io` for Google's container registry.
+
+#### Private Internal Registries
+
+You will also need to login to access private registries. In k8s can access private registries with a Docker Secret object with `kubectl create secret docker-registry $NAME $OPTIONS` and inject that into the Pod via `/spec/imagePullSecrets/[i]/name:$NAME`
 
 ![images/images-5.png](images/images-5.png)
 
 ![images/images-6.png](images/images-6.png)
 
-## Allow Listing Image Registries
+#### Allowlisting Image Registries
 
-## Static Analysis
+Without restrictions in place, anyone who can create a Pod can create one using any image they have access to and introduce security vulnerabilities. You can block this by using a variety of AdmissionController options:
 
-## Dynamic Anaylsis
+
+Create your own validating AdmissionController webhook.
+
+![images/images-7.png](images/images-7.png)
+
+Use a third party tool like Open Policy Agent as an AdmissionController.
+
+![images/images-8.png](images/images-8.png)
+
+Configure an existing AdmissionController called [ImagePolicyWebhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagepolicywebhook).
+
+![images/images-9.png](images/images-9.png)
+
+The **ImagePolicyWebhook** Admission Controller allows a backend webhook to make admission decisions.
+
+**Note:** This must be enabled like all other [Admission Controller](./README.md#admission-contollers) plugins. The `ImagePolicyWebhook` Admission Controlle is passed into `kube-apiserver` through the `--admission-control-config-file` option.
+
+![images/images-11.png](images/images-11.png)
+
+The `ImagePolicyWebhook` Admission Controller is configured by the `AdmissionConfiguration` Object. The configuration can be supplied in the YAML definition file or referrenced from an external YAML or JSON file.
+
+This is an example of the `ImagePolicyWebhook` configuration external file referenced in the `AdmissionConfiguration` YAML definition file.
+
+External confiugration file:
+
+```yaml
+# ImagePolicyWebhook configuration in external file
+imagePolicy:
+  kubeConfigFile: /path/to/kubeconfig/for/backend
+  # time in s to cache approval
+  allowTTL: 50
+  # time in s to cache denial
+  denyTTL: 50
+  # time in ms to wait between retries
+  retryBackoff: 500
+  # determines behavior if the webhook backend fails
+  defaultAllow: true
+```
+
+YAML definition file:
+
+```yaml
+# k8s AdmissionConfiguration YAML definition
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: ImagePolicyWebhook
+  path: imagepolicyconfig.yaml
+...
+```
+
+This is an example of the `ImagePolicyWebhook` configuration within the `AdmissionConfiguration` YAML definition file.
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: ImagePolicyWebhook
+  configuration:
+    imagePolicy:
+      kubeConfigFile: /path/to/kubeconfig/for/backend
+      allowTTL: 50
+      denyTTL: 50
+      retryBackoff: 500
+      defaultAllow: true
+```
+
+The `ImagePolicyWebhook` config file must reference a KUBECONFIG formatted file which sets up the connection to the backend. It is required that the backend communicate over TLS.
+
+```yaml
+# clusters refers to the remote service.
+clusters:
+- name: name-of-remote-imagepolicy-service
+  cluster:
+    certificate-authority: /path/to/ca.pem    # CA for verifying the remote service.
+    server: https://images.example.com/policy # URL of remote service to query. Must use 'https'.
+
+# users refers to the API server's webhook configuration.
+users:
+- name: name-of-api-server
+  user:
+    client-certificate: /path/to/cert.pem # cert for the webhook admission controller to use
+    client-key: /path/to/key.pem          # key matching the cert
+```
+
+## Image Scanning
+
+### Static Analysis
+
+### Dynamic Anaylsis
 
 
 
