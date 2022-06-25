@@ -48,9 +48,11 @@
   - [Restricting Network Access](#restricting-network-access)
     - [UFW Firewall Basics](#ufw-firewall-basics)
   - [Linux Syscalls](#linux-syscalls)
-    - [AquaSec Tracee](#aquasec-tracee)
-    - [Restricting Syscalls With Seccomp](#restricting-syscalls-with-seccomp)
-    - [Seccomp Within k8s](#seccomp-within-k8s)
+    - [Tracing Syscalls](#tracing-syscalls)
+      - [AquaSec Tracee](#aquasec-tracee)
+    - [Restricting Syscalls](#restricting-syscalls)
+      - [Seccomp](#seccomp)
+        - [Seccomp Within k8s](#seccomp-within-k8s)
   - [Kernel Hardening With AppArmor](#kernel-hardening-with-apparmor)
     - [Overview](#overview)
     - [Creating Profiles](#creating-profiles)
@@ -67,12 +69,26 @@
   - [Sandboxing](#sandboxing)
     - [Virtual Machines](#virtual-machines)
     - [Containers](#containers)
-  - [Kata Containers](#kata-containers)
-  - [Using Runtimes In k8s](#using-runtimes-in-k8s)
+      - [gVisor](#gvisor)
+      - [kata Containers](#kata-containers)
+      - [Container Runtime Classes](#container-runtime-classes)
+        - [Using Specific Container Runtime Classes](#using-specific-container-runtime-classes)
   - [TLS Extras](#tls-extras)
-    - [One Way vs Mutual](#one-way-vs-mutual)
-    - [Pod To Pod TLS](#pod-to-pod-tls)
+    - [One Way TLS Vs Two Way TLS](#one-way-tls-vs-two-way-tls)
+    - [Pod To Pod mTLS](#pod-to-pod-mtls)
 - [5) Supply Chain Security](#5-supply-chain-security)
+  - [Image Security](#image-security)
+  - [Image Security Best Practices](#image-security-best-practices)
+    - [Image Cohesion & Modularity](#image-cohesion--modularity)
+    - [State Persistance](#state-persistance)
+    - [Choosing A Base Image](#choosing-a-base-image)
+    - [Use Slim/Minimal Images](#use-slimminimal-images)
+    - [Dev Vs Prod Images](#dev-vs-prod-images)
+    - [Distroless Images](#distroless-images)
+    - [Official Registries](#official-registries)
+  - [Allow Listing Image Registries](#allow-listing-image-registries)
+  - [Static Analysis](#static-analysis)
+  - [Dynamic Anaylsis](#dynamic-anaylsis)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
 
 # 1) Understanding The k8s Attack Surface
@@ -838,7 +854,9 @@ Use `strace -c` to view a summary of the entire syscall output.
 
 ![images/syscalls-5.png](images/syscalls-5.png)
 
-### AquaSec Tracee
+### Tracing Syscalls
+
+#### AquaSec Tracee
 
 Is an open source tool that uses EBPF and can be used to trace syscalls from a container at runtime. It is easy to run this as a Docker container but it requires a couple of Docker Volume mounts and to run in privileged mode.
 
@@ -856,7 +874,9 @@ Can be used to trace syscalls from all processes in a new container.
 
 ![images/tracee-4.png](images/tracee-4.png)
 
-### Restricting Syscalls With Seccomp
+### Restricting Syscalls
+
+#### Seccomp
 
 There are over 400 syscalls in Linux and it is doubtful that an application needs acecss to all of them. By default the Linux kernel will allow any syscalls to be made by any programs running in user space. You can restrict what syscalls an app has access to with a tool like Seccomp.
 
@@ -905,7 +925,7 @@ You can create additional Seccomp filters to augment the default Docker deny lis
 
 ![images/seccomp-6.png](images/seccomp-6.png)
 
-### Seccomp Within k8s
+##### Seccomp Within k8s
 
 You can use `amicontained` to view the Seccomp status and the blocked syscalls inside of a container. k8s doesn't use Seccomp by default. You can add this under `/spec/securityContext/seccompProfile/type`, valid settings are:
 * Unconfined, Seccomp turned off.
@@ -1193,43 +1213,218 @@ See [CKA Secrets](../03.administrator/README.md#44-secrets)
 
 ### Virtual Machines
 
-Virtual machines provide better sandboxing than containers because each VM has its own O/S kernel running on the hypervisor and hardware.
+Virtual machines provide basic sandboxing from other VMs on the same hypervisor because each VM has its own O/S and its own O/S kernel. But they does not provide a sandbox within themselves.
 
 ![images/sandboxing.png](images/sandboxing.png)
 
-Even cloud hosted VMs are running with their own kernel
+The VMs running in a multi-tenanted cloud environments are providing basic sandboxing because they have their own O/S and own O/S kernel. A mutli-tenanted environment means there are multiple VMs running on the same hardware which are hosting different customers.
 
 ![images/sandboxing-2.png](images/sandboxing-2.png)
 
- A mutli-tenanted environment means there are multiple VMs running on the same hardware which are hosting different customers.
+### Containers
+
+Containers do not provide sandboxing because even though they have their own O/S they are actually sharing the kernel with the CRE host and are merely a process running on the CRE host within their Linux namespace.
 
 ![images/sandboxing-3.png](images/sandboxing-3.png)
 
-### Containers
-
-Containers are worse than VMs at sandboxing because they are sharing the kernel with the CRE host from their Linux namespace.
-
 ![images/sandboxing-4.png](images/sandboxing-4.png)
+
+
+The problem is that every container on the CRE host is making syscalls from userspace to the same O/S kernel and there have been exploits developed to break out of the container and into the CRE host. An example of this is the Dirty COW exploit.
 
 ![images/sandboxing-5.png](images/sandboxing-5.png)
 
-The problem is that every container on the CRE host is making syscalls to the same kernel and there have been exploits developed to break out of the container and into the CRE host.
+Containers must be sandboxed with third party tools. Sandboxing can be achieved by restricting the syscalls they can make through tools like Seccomp, gVisor, kata Containers, etc. Other O/S hardening techniques like SELinux or AppArmor can be used as well to create a sandbox for the container.
+
+#### gVisor
+
+https://github.com/google/gvisor
+
+**gVisor** is an application kernel for containers. It limits the host kernel surface accessible to the application while still giving the application access to all the features it expects.
 
 ![images/sandboxing-6.png](images/sandboxing-6.png)
 
-## Kata Containers
+The gVisor Sentry component intercepts syscalls from the container and decides whether those syscalls are allowed or not. It provides gated access mechanisms to the Linux kernel, either directly or indirectly. .e.g file system access is handled by Gopher. This of course adds additional overhead which may slow the application down.
 
-## Using Runtimes In k8s
+![images/sandboxing-7.png](images/sandboxing-7.png)
+
+Importantly each container gets its own instance of gVisor, this provides additional isolation between containers.
+
+![images/sandboxing-8.png](images/sandboxing-8.png)
+
+#### kata Containers
+
+https://katacontainers.io/
+
+**Kata Containers** provide a secure container runtime with lightweight virtual machines that feel and perform like containers, but provide stronger workload isolation using hardware virtualization technology as a second layer of defense. This of course adds additional overhead which may slow the application down but also consumes more compute resources due to the additional VM.
+
+![images/sandboxing-9.png](images/sandboxing-9.png)
+
+Kata Containers typically cannot run on cloud service provides, because you would be trying to run a Kata Container VM inside of the cloud provider VM. VM nesting is typically not supported by cloud service providers.
+
+#### Container Runtime Classes
+
+https://opensource.com/article/21/9/container-runtimes
+
+**Lower-level Container runtimes** (e.g. runC) focus more on running containers, setting up namespace and cgroups for containers. **Higher-level container runtimes** or container runtime engines (e.g. Docker) focus on formats, unpacking, management, and image-sharing. They also provide APIs for developers.
+
+https://github.com/opencontainers/runc
+
+**runC** is a low-level container runtime CLI tool for spawning and running containers on Linux according to the OCI specification. It is used by Docker, CRIO, and containerd to run containers. Other container runtime classes are available, e.g. Kata Containers use kata-runtime and gVisor uses Runsc.
+
+![images/sandboxing-10.png](images/sandboxing-10.png)
+
+##### Using Specific Container Runtime Classes
+
+CREs allow you to choose which container runtime class to use.
+
+![images/sandboxing-11.png](images/sandboxing-11.png)
+
+This means that you can do this within k8s as well using the [RuntimeClass object](https://kubernetes.io/docs/concepts/containers/runtime-class/).
+
+Use `kubectl $CMD runtimeclasses` to interact with them.
+
+Create RuntimeClass with:
+
+```yaml
+# RuntimeClass is defined in the node.k8s.io API group
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  # The name the RuntimeClass will be referenced by.
+  # RuntimeClass is a non-namespaced resource.
+  name: myclass
+# The name of the corresponding CRI configuration
+handler: myconfiguration
+```
+
+Use Runtimeclass with:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  runtimeClassName: myclass
+  # ...
+```
+
+![images/sandboxing-12.png](images/sandboxing-12.png)
+
+This would mean you can't see the container process on the CRE host.
+
+![images/sandboxing-13.png](images/sandboxing-13.png)
+
+**EXAM TIP:** Know how to create and use a RuntimeClass. The exam cluster may use any of the runtime classes above.
 
 ## TLS Extras
 
-### One Way vs Mutual
+### One Way TLS Vs Two Way TLS
 
-### Pod To Pod TLS
+In **one way TLS**, only the client validates the server through its X.509 certificate to ensure that it receives data from the intended server. The server certificate is shared with the client. The server knows who the client is by the supplied username or account ID.
 
+![images/tls-extras.png](images/tls-extras.png)
 
+This is typically done between a person and a business or service.
+
+![images/tls-extras-2.png](images/tls-extras-2.png)
+
+In **two way TLS i.e. mutual TLS (mTLS)**, both the client and server authenticate each other through their X.509 certificates to ensure that both parties involved in the communication are trusted. The server certificate is shared with the client and the client certificate is shared with the server.
+
+![images/tls-extras-3.png](images/tls-extras-3.png)
+
+This is typically done in business to business (B2B) scenarios.
+
+![images/tls-extras-4.png](images/tls-extras-4.png)
+
+### Pod To Pod mTLS
+
+By default Pod to Pod communication is via unencrypted HTTP. mTLS (i.e. two way TLS) can be used to secure Pod to Pod communication via HTTPS. mTLS should not be done at the applicaiton layer, it should be down at the Pod layer to ensure encryption algorithm compatibility.
+
+![images/tls-extras-5.png](images/tls-extras-5.png)
+
+Applications still communicate with each other via HTTP but third party tools like Istio and Linkerd can be used to provide the HTTPS layer between Pods. Istio and Linkerd provide other features as well. collectively called a service mesh.
+
+![images/tls-extras-6.png](images/tls-extras-6.png)
+
+A **service mesh** is a dedicated infrastructure layer that you can add to your applications. It allows you to transparently add capabilities like observability, traffic management, and security, without adding them to your own code.
+
+![images/tls-extras-7.png](images/tls-extras-7.png)
+
+In k8s Istio works by injecting a sidecar container into each Pod. Everytime the main application goes to send a message the Istio sidecare container intercepts it and will decide if it can be encrypted or not. After the possible encryption, the Istio sidecar container sends the message to the other Istio sidecare container. The message is decrypted if needed and is passed along to its application. The application may be outside of the k8s cluster.
+
+![images/tls-extras-8.png](images/tls-extras-8.png)
+
+ The 2 sending modes supported by Istio are:
+1. **Permissive / Opportunistic:** will send via mTLS if possible otherwise use plain text.
+2. **Enforce / Strict:** will send via mTLS only.
+
+![images/tls-extras-9.png](images/tls-extras-9.png)
+
+![images/tls-extras-10.png](images/tls-extras-10.png)
 
 # 5) Supply Chain Security
+
+## Image Security
+
+A **parent image** is the image you use to build your application. A **base image** is an image that has no parent image and is built from scratch.
+
+![images/images.png](images/images.png)
+
+**Note:** the term base image can also be used to describe any image that was used to build a container.
+
+It is a good idea to minimise the base image attack surface as much as possible by using the recommended best practises.
+
+## Image Security Best Practices
+
+### Image Cohesion & Modularity
+
+Images should be highly cohesive and modular, meaning that they only have 1 application installed into them and be used as modules connecting to any other images or applications.
+
+![images/images-2.png](images/images-2.png)
+
+### State Persistance
+
+An applications state should never be stored in the container because containers are ephemeral.  Always store application state in an external volume or caching application (e.g. Redis).
+
+### Choosing A Base Image
+
+How do you choose a base image? Look at your technical requirements to answer that question. Want to run a webserver? Then choose httpd or nginx. Once the base image has been chosen, you must make sure that you are using the latest official image for that application.
+
+### Use Slim/Minimal Images
+
+Consider using the slim/minimal versions of images as this makes pulling them faster, they are more efficient when running, and also contain less vulnerabilities as their attack surface is smaller. Only install what you need and remove anything that you don't need, e.g. uninstall package managers.
+
+![images/images-3.png](images/images-3.png)
+
+### Dev Vs Prod Images
+
+Have separate images that run in the development environment and the production environment. The dev images will have lots of things needed to build and debug the application. The prod images will only have what is necessary to run the application, maybe some simple debugging tools as well. Alternatively you can have a debugging image in prod that can be turned on when neededing to debug and turned off at all other times.
+
+### Distroless Images
+
+Google provides some images that only contain the application and libraries, they have no package managers, shells, text editors, etc.
+
+### Official Registries
+
+Only use official registries to download offical base images. Remember that the image name inside a Pod definition file gets expanded following the Docker conventions. So if you don't supply a username for official images the `library` username is injected. And if you don't supply a registry address the `docker.io` website is injected.
+
+![images/images-4.png](images/images-4.png)
+
+There are many official registries, e.g. `gcr.io` for Google's container registry. You will also need to login to access private registries. In k8s can access private registries with a Docker Secret object with `kubectl create secret docker-registry $NAME $OPTIONS`
+
+![images/images-5.png](images/images-5.png)
+
+![images/images-6.png](images/images-6.png)
+
+## Allow Listing Image Registries
+
+## Static Analysis
+
+## Dynamic Anaylsis
+
+
 
 # 6) Monitoring, Logging, & Runtime Security
 
