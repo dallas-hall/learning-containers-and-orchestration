@@ -95,6 +95,10 @@
     - [Aquasec Trivy](#aquasec-trivy)
     - [Best Practices](#best-practices)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
+  - [Behavioural Analytics](#behavioural-analytics)
+  - [Falco](#falco)
+    - [Detecting Threats](#detecting-threats)
+    - [Configuration](#configuration)
 
 # 1) Understanding The k8s Attack Surface
 
@@ -1559,3 +1563,62 @@ You can apply several filter options to the `trivy` command to tailor its output
 
 # 6) Monitoring, Logging, & Runtime Security
 
+## Behavioural Analytics
+
+**Behavioral analysis** tries to identify malicious behavior by analyzing differences in normal and everyday activities. This can be applied to users and the system services.
+
+![images/falco.png](images/falco.png)
+
+## Falco
+
+[Falco](https://falco.org/) is tool that monitors syscalls from user space into kernel space and uses behaviour analysis to flag abnormal or malicious activities. It needs to be running at the kernel level as its own kernel module or using the extended berkley packet filter (eBPF) kernel module.
+
+![images/falco-2.png](images/falco-2.png)
+
+Falco can be installed a system service or as a Daemon Set via a Helm chart.
+
+### Detecting Threats
+
+```bash
+# Is it running?
+systemctl status falco
+
+# Tail the logs
+journalctl -fu falco
+```
+
+![images/falco-3.png](images/falco-3.png)
+
+Falco uses rules to detect abnormal and malicous behaviour. These rules are defined in YAML files. There are 3 sections, rules, lists, and macros.
+
+**Rules** define the conidtions for when an alert is triggered.
+
+![images/falco-4.png](images/falco-4.png)
+
+There is a variety of objects that you can use within rule conditions.
+
+![images/falco-5.png](images/falco-5.png)
+
+ **Lists**  define what to monitor.
+
+![images/falco-6.png](images/falco-6.png)
+
+ **Macros** can simplify rule logic by defining conditions inside the macro and calling the macro within the rule. You can create custom macros or use builtin ones.
+
+![images/falco-7.png](images/falco-7.png)
+
+### Configuration
+
+The global Falco configuration file is located at `/etc/falco/falco.yaml` and is used by Falco when it starts up.
+
+![images/falco-8.png](images/falco-8.png)
+
+![images/falco-9.png](images/falco-9.png)
+
+The global Falco rules files is located at `/etc/falco/falco_rules.yaml`. The builtin rules are defined here.
+
+![images/falco-10.png](images/falco-10.png)
+
+Any updates to the builtin rules should be applied to `/etc/falco/falco_rules.local.yaml` file so they are not overwritten when Falco is updated. Custom fules are defined here.
+
+![images/falco-11.png](images/falco-11.png)
