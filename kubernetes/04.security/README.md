@@ -89,9 +89,11 @@
       - [Public Official Registries](#public-official-registries)
       - [Private Internal Registries](#private-internal-registries)
       - [Allowlisting Image Registries](#allowlisting-image-registries)
+  - [Static Analysis & Dynamic Analysis](#static-analysis--dynamic-analysis)
+    - [kubesec](#kubesec)
   - [Image Scanning](#image-scanning)
-    - [Static Analysis](#static-analysis)
-    - [Dynamic Anaylsis](#dynamic-anaylsis)
+    - [Aquasec Trivy](#aquasec-trivy)
+    - [Best Practices](#best-practices)
 - [6) Monitoring, Logging, & Runtime Security](#6-monitoring-logging--runtime-security)
 
 # 1) Understanding The k8s Attack Surface
@@ -1516,13 +1518,44 @@ users:
     client-key: /path/to/key.pem          # key matching the cert
 ```
 
+## Static Analysis & Dynamic Analysis
+
+**Static analysis** is analysing computer software without executing the software. This is typically done for security auditing or debugging. **Dynamic analysis** is analysing computer software while executing the software. This is typically done for security auditing or debugging.
+
+### kubesec
+
+[kubesec](https://kubesec.io/) is a tool that can be used to do static analysis on k8s YAML defintion files. You can run this locally as a binary, use it via SaaS, or run it as a local webserver.
+
+![images/kubesec.png](images/kubesec.png)
+
+![images/kubesec-2.png](images/kubesec-2.png)
+
 ## Image Scanning
 
-### Static Analysis
+Image scanning is used to look for Common Vulnerabilities & Exposures (CVEs) with images. CVEs are bugs in software that are security vulnerabilites. CVEs are given a unique ID and a score ranking their severity. CVEs with high scores should be dealt with as soon as possible.
 
-### Dynamic Anaylsis
+![images/cve.png](images/cve.png)
 
+![images/cve-2.png](images/cve-2.png)
 
+### Aquasec Trivy
+
+[Trivy](https://www.aquasec.com/products/trivy/) is a product for vulnerability and infrastructure as code (IaC) scanning.
+
+![images/trivy.png](images/trivy.png)
+
+![images/trivy-2.png](images/trivy-2.png)
+
+You can apply several filter options to the `trivy` command to tailor its output. It can also scan Docker images from a tarball.
+
+![images/trivy-3.png](images/trivy-3.png)
+
+### Best Practices
+
+* Continually rescan images peridoically.
+* Use k8s Admission Controllers to scan images.
+* Have your own registry of pre-scanned images.
+* Integrate scanning into your CI/CD pipeline.
 
 # 6) Monitoring, Logging, & Runtime Security
 
