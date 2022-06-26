@@ -1666,6 +1666,14 @@ By default the `kube-apiserver` natively handles the [audit logging](https://kub
 Not all events are audit logged, because if they were the logs would be filled with too much noise. You can tailor which events are to be audit logged with the Policy object and pass in that file with the `kube-apiserver --audit-policy-file` option flag
 
 ```yaml
+# Log all requests at the Metadata level.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata
+```
+
+```yaml
 apiVersion: audit.k8s.io/v1 # This is required.
 kind: Policy
 # Don't generate audit events for all requests in RequestReceived stage.
