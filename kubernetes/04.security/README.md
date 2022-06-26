@@ -1622,3 +1622,5 @@ The global Falco rules files is located at `/etc/falco/falco_rules.yaml`. The bu
 Any updates to the builtin rules should be applied to `/etc/falco/falco_rules.local.yaml` file so they are not overwritten when Falco is updated. Custom fules are defined here.
 
 ![images/falco-11.png](images/falco-11.png)
+
+You can only hot reload Falco with `kill -1 $(cat /var/run/falco.pid)` which is silly.
