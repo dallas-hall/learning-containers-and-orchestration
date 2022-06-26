@@ -99,6 +99,10 @@
   - [Falco](#falco)
     - [Detecting Threats](#detecting-threats)
     - [Configuration](#configuration)
+  - [Mutable vs Immutable](#mutable-vs-immutable)
+    - [Infrastructure](#infrastructure)
+    - [Containers](#containers-1)
+  - [Audit Logs](#audit-logs)
 
 # 1) Understanding The k8s Attack Surface
 
@@ -1624,3 +1628,82 @@ Any updates to the builtin rules should be applied to `/etc/falco/falco_rules.lo
 ![images/falco-11.png](images/falco-11.png)
 
 You can only hot reload Falco with `kill -1 $(cat /var/run/falco.pid)` which is silly.
+
+## Mutable vs Immutable
+
+**Mutable objects** are able to changed once created and **immutable objects** cannot be changed once created.
+
+### Infrastructure
+
+This concept can be applied to infrastructure as well. Mutable infrastructure is when the existing infrastructure is updated in place, i.e a server is patched with the latest software. Conversely, immuatable infrastructure is when the existing infrastructure is replaced entirely with the new updated infrastructure.
+
+### Containers
+
+This concept can be applied to containaer as well. Mutable containers can be updated while they are running. Immutable containers cannot be updated while they are running, e.g. we can set the container's filesystem to be read only with `/spec/containers/[i]/securityContext/readOnlyRootFilessystem:true`. But a problem with this appraoch is that applications typically require to be able to write the filesystem while they run.
+
+![images/immutability.png](images/immutability.png)
+
+This can be fixed by creating temporary Volumes dedicated to the application, e.g. `emptyDir` Volumes.
+
+![images/immutability-2.png](images/immutability-2.png)
+
+You must not run containers as root even if the root filesystem is read only. This is because the `/proc` filesystem can still be changed on the container and in the host itself via the container.
+
+![images/immutability-3.png](images/immutability-3.png)
+
+Use Pod Security Policies to ensure these features are set correctly.
+
+## Audit Logs
+
+By default the `kube-apiserver` natively handles the [audit logging](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) of events within the cluster. There are 4 stages of events:
+1. **RequestReceived:** is logged as soon as the audit handler receives a request.
+2. **ResponseStarted:** is only logged for long running events, such the `--watch` flag.
+3. **ReponseComplete:** is logged once the final byte of the response body is sent.
+4. **Panic:** is logged when there is a failure or some issue.
+
+![images/auditing.png](images/auditing.png)
+
+Not all events are audit logged, because if they were the logs would be filled with too much noise. You can tailor which events are to be audit logged with the Policy object and pass in that file with the `kube-apiserver --audit-policy-file` option flag
+
+```yaml
+apiVersion: audit.k8s.io/v1 # This is required.
+kind: Policy
+# Don't generate audit events for all requests in RequestReceived stage.
+omitStages:
+  - "RequestReceived"
+# The thinsg to log
+rules:
+  # Log pod changes at RequestResponse level
+  - level: RequestResponse
+    resources:
+    - group: ""
+      # Resource "pods" doesn't match requests to any subresource of pods,
+      # which is consistent with the RBAC policy.
+      resources: ["pods"]
+  # Log "pods/log", "pods/status" at Metadata level
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+  ...
+```
+
+If `/rules/[i]/namespace` is not specified the rule will apply to all namespaces.
+If `/rules/[i]/verb` is not specified the rule will apply to all object actions, e.g. GET, DELETE, etc.
+The `/rules/[i]/level` fields defines how verbose the logging is, there are 4 options:
+1. **None:** don't log events that match this rule.
+2. **Metadata:** log the request metadata only.
+3. **Request:** log the metadata and the request data.
+4. **RequestResponse:** log the metadata, request data, and response data.
+
+![images/auditing-1.png](images/auditing-1.png)
+
+Audit logs can be stored in locations:
+1. **Log backend:** which is on a filesystem.
+2. **Webhook backend:** which is on an external HTTP API like Falco.
+
+The filesystem based audit logs location can be configured with the `kube-apiserver --audit-log-path` option flag. There are other flags for file size, etc.
+
+The webhook based audit logs location can be configured with the `kube-apiserver --audit-webhook-config-file` option flag.
+
+![images/auditing-2.png](images/auditing-2.png)
