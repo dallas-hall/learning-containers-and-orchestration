@@ -1663,7 +1663,7 @@ By default the `kube-apiserver` natively handles the [audit logging](https://kub
 
 ![images/auditing.png](images/auditing.png)
 
-Not all events are audit logged, because if they were the logs would be filled with too much noise. You can tailor which events are to be audit logged with the Policy object and pass in that file with the `kube-apiserver --audit-policy-file` option flag
+Not all events are audit logged, because if they were the logs would be filled with too much noise. You can tailor which events are to be audit logged with the Policy object and pass in that file with the `kube-apiserver --audit-policy-file` option flag.  If the flag is omitted, no events are logged.
 
 ```yaml
 # Log all requests at the Metadata level.
@@ -1711,6 +1711,8 @@ Audit logs can be stored in locations:
 2. **Webhook backend:** which is on an external HTTP API like Falco.
 
 The filesystem based audit logs location can be configured with the `kube-apiserver --audit-log-path` option flag. There are other flags for file size, etc.
+
+**EXAM TIP:** Remember to mount these files into the `kube-apiserver` Pod so they are accessible. Follow https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#log-backend for how to do this.
 
 The webhook based audit logs location can be configured with the `kube-apiserver --audit-webhook-config-file` option flag.
 
