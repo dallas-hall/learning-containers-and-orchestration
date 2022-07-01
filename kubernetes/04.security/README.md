@@ -698,8 +698,8 @@ ss -lntp
 netstat -lntp
 
 # View listening UDP only
-ss -ltup
-netstat -ltup
+ss -lnup
+netstat -lnup
 ```
 
 You can check what a port is doing by looking it up in SystemD services, e.g. `cat /etc/services | fgrep -w $PORT`.
@@ -744,9 +744,9 @@ Cloud providers typically provide automated tools for reviewing security configu
 
 ## Restricting Network Access
 
-A common approach to restricting network access is having active firewalls on networks devices like routers and proxies, and also having firewalls and disabling services on clients as well.
+A **firewall** is a network security device that monitors traffic to or from your network. It allows or blocks traffic based on a defined set of security rules. A firewall can be hardware, software, or both.
 
-A **firewall** is a way to protect machines from any unwanted traffic from outside through firewall rules. These rules are used to sort the incoming traffic and either block it or allow through.
+A common approach to restricting network access is having active firewalls on networks devices like routers and proxies, and also having firewalls and disabling services on clients as well.
 
 ![images/network.png](images/network.png)
 
