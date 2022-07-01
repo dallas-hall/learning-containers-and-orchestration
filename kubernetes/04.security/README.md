@@ -355,7 +355,7 @@ The Docker Daemon needs to be secured because anyone with access to it can:
 * Create any Docker objects, e.g. container with a cryptominer.
 * Run a privileged container and gain root access to the CRE host.
 
-The host running the Docker Daemon needs securing as well. See (System Hardening)[#3-system-hardening]
+The host running the Docker Daemon needs securing as well. See [System Hardening](#3-system-hardening)
 
 
 #### System Service vs Daemon
@@ -682,7 +682,7 @@ In k8s to common kernel modules to disable are sctp and dccp. CIS section 3.4 ha
 
 ## Identifying & Disabling Open Ports
 
-When applications and services they can bind to a port on the host's network interface. Once bound, the host's IP address and this port can allow traffic into the host.
+When applications and services run they can bind to a port on the host's network interface. Once bound, the host's IP address and this port can allow traffic into the host.
 
 ![images/ports.png](images/ports.png)
 
