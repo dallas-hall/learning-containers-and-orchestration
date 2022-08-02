@@ -165,6 +165,17 @@ https://www.cisecurity.org/cis-benchmarks/#kubernetes > Server Software > Virtua
 
 kube-bench can performan automated check on a k8s cluster to see if it is following security best practices from the k8s CIS Benchmark. It can install as a Docker container, as a Pod, or as a binary.
 
+```bash
+# Check all
+kube-bench run
+
+# Check master nodes only
+kube-bench run --targets=master
+
+# Check worker nodes only
+kube-bench run --targets=node
+```
+
 ## k8s Security Primitives
 
 See [CKA Security Primitives](../03.administrator/README.md#61-primitives)
@@ -317,9 +328,12 @@ ${k8s_BINARY} ${DOWNLOAD_PAGE_k8s_BINARY_SHA512_HASH}
 sha512sum -c ${k8s_BINARY}.sha512
 
 # Method 2 - manual check
-sha512sum ${k8s_BINARY}
+sha512sum ${k8s_BINARY} > ${k8s_BINARY}.hashes
+vi ${k8s_BINARY}.hashes
+# Paste in ${DOWNLOAD_PAGE_k8s_BINARY_SHA512_HASH}
+cat ${k8s_BINARY}.hashes | uniq
 
-# Cross check hash against the hash on the page.
+# 1 line means they are the same, 2 lines means they are different.
 ```
 
 #### Cluster Upgrades
@@ -754,10 +768,10 @@ A common approach to restricting network access is having active firewalls on ne
 
 What is `0.0.0.0`? It depends on the context.
 * In the context of routing it means the default route.
-* In the context of servers it means all IPv4 addresses on the local machine.
+* In the context of servers it means all local IPv4 addresses on the local machine.
+* In the context of binding ports, it means any IPv4 addresses.
 * In all other contexts it means no particular address.
 
-image.png
 ### UFW Firewall Basics
 
 **Uncomplicated firewall (UFW)** is a frontend for managing firewall rules in Arch Linux, Debian, or Ubuntu. UFW is used through the command line and aims to make firewall configuration easy. Under the hood it is creating iptables or nftables rules. [Linode](https://www.linode.com/docs/guides/configure-firewall-with-ufw/) has a good guide on this.
@@ -871,7 +885,7 @@ Use `strace -c` to view a summary of the entire syscall output.
 
 #### AquaSec Tracee
 
-Is an open source tool that uses EBPF and can be used to trace syscalls from a container at runtime. It is easy to run this as a Docker container but it requires a couple of Docker Volume mounts and to run in privileged mode.
+Is an open source tool that uses Extended Berkeley Packet Filter (eBPF) and can be used to trace syscalls from a container at runtime. It is easy to run this as a Docker container but it requires a couple of Docker Volume mounts and to run in privileged mode.
 
 ![images/tracee.png](images/tracee.png)
 
@@ -891,7 +905,7 @@ Can be used to trace syscalls from all processes in a new container.
 
 #### Seccomp
 
-There are over 400 syscalls in Linux and it is doubtful that an application needs acecss to all of them. By default the Linux kernel will allow any syscalls to be made by any programs running in user space. You can restrict what syscalls an app has access to with a tool like Seccomp.
+There are over 400 syscalls in Linux and it is doubtful that an application needs access to all of them. By default the Linux kernel will allow any syscalls to be made by any programs running in user space. You can restrict what syscalls an app has access to with a tool like Seccomp.
 
 **Seccomp** stands for secure computing mode and has been a feature of the Linux kernel since version 2.6.12 in 2005. It can be used to sandbox the privileges of a process, restricting the calls it is able to make from userspace into the kernel.
 
@@ -927,8 +941,8 @@ Docker uses this Seccomp mode 2 and applies syscall filters via a JSON file. The
 
 The Docker Seccomp JSON file has 3 elements:
 1. Architectures array filled with all the CPU architectures it applies to.
-2. Syacalls array filled with all the syscalls it is blocking or allowing.
-3. Default action determins what to do with syscalls not defined inside the syscalls array.
+2. Syscalls array filled with all the syscalls it is blocking or allowing.
+3. Default action determines what to do with syscalls not defined inside the syscalls array.
 
 ![images/seccomp-4.png](images/seccomp-4.png)
 
@@ -1182,7 +1196,7 @@ kubectl $CMD psp
 curl -X PUT --data-binary @my-policy.rego https://localhost:8181/v1/policies/my-policy
 
 # View existing OPA policies
-cutl http://localhost:8181/v1/policies
+curl http://localhost:8181/v1/policies
 ```
 
 ![images/open-policy-agent-3.png](images/open-policy-agent-3.png)
