@@ -9,3 +9,8 @@ docker/for-beginners/example-voting-app/
 
 # Scandir for ClamAV
 **/scandir/
+
+# Install binaries and packages
+*.rpm
+*.tgz
+*.tar.gz
