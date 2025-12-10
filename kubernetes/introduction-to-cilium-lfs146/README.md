@@ -38,6 +38,14 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
   - [Types Of Network Policy](#types-of-network-policy)
   - [k8s Network Policy](#k8s-network-policy)
   - [Cilium Network Policy](#cilium-network-policy)
+  - [Online Policy Editor](#online-policy-editor)
+  - [L7 Cilium Network Policy Capabiliites](#l7-cilium-network-policy-capabiliites)
+  - [L7 HTTP Policy](#l7-http-policy)
+  - [Labs](#labs)
+    - [Setup](#setup)
+    - [No Security](#no-security)
+    - [Applying L3/L4 Security](#applying-l3l4-security)
+    - [Applying L7 Security](#applying-l7-security)
 
 ## 1. Overview
 
@@ -405,4 +413,300 @@ CiliumNetworkPolicy extends the standard Kubernetes NetworkPolicy by adding adva
 * L3/L4 Ingress and Egress policy using [Entity matching](https://docs.cilium.io/en/latest/security/policy/language/#entities-based) for special entities
 * L3 Ingress and Egress policy using DNS FQDN matching.
 
-Examples of CiliumNetworkPolicy manifests are available in the [documentation])(https://docs.cilium.io/en/latest/security/policy/). Because reading policy YAML can be complex, the visual policy editor at [networkpolicy.io](https://editor.networkpolicy.io/?id=iqFBmqinwsQku5ir) helps understand and craft effective policies.
+Examples of CiliumNetworkPolicy manifests are available in the [documentation](https://docs.cilium.io/en/latest/security/policy/). Because reading policy YAML can be complex, the visual policy editor at [networkpolicy.io](https://editor.networkpolicy.io/?id=iqFBmqinwsQku5ir) helps understand and craft effective policies.
+
+### Online Policy Editor
+
+The https://networkpolicy.io policy editor provides a graphical interface for creating and exploring L3 and L4 network policies, supporting both Kubernetes NetworkPolicy and CiliumNetworkPolicy resources.
+
+![alt text](images/netpol01.png)
+
+Across the top, an interactive service map visualizes cluster traffic, with green lines for allowed and red lines for denied flows. Users can configure Ingress and Egress policies for internal or external endpoints through this UI.
+
+The lower left displays a read-only YAML version of the policy, viewable as either a Kubernetes or Cilium specification, which can be downloaded for use with kubectl. You can uploaded a policy to update the visualization and see how the policy works.
+
+The lower right offers a tutorial interface with common policy scenarios and supports uploading Hubble flows to generate policies based on observed traffic.
+
+### L7 Cilium Network Policy Capabiliites
+
+A key difference between CiliumNetworkPolicy and standard NetworkPolicy is support for L7 protocol-aware rules. Cilium enables crafting protocol-specific L7 policies for HTTP, Kafka, and DNS.
+
+These rules extend the Layer 4 `toPorts` section for both ingress and egress, making them easy to add to CiliumNetworkPolicy YAML manifests created with the NetworkPolicy.io editor.
+
+The attributes of L7 policy rules vary by protocol, with Cilium providing [detailed documentation](https://docs.cilium.io/en/latest/security/policy/language/#layer-7-examples).
+
+### L7 HTTP Policy
+
+When an L7 HTTP policy is active, the Cilium agent starts a local HTTP proxy on the node, and eBPF programs forward packets to it. This proxy interprets L7 rules and forwards packets if permitted. It also enables L7 observability in Hubble flows.
+
+L7 HTTP policies use several matching fields:
+
+* Path: POSIX regex for URL paths; if empty, all paths are allowed.
+* Method: HTTP method such as GET or POST; if empty, all methods are allowed.
+* Host: POSIX regex for the host header; if empty, all hosts are allowed.
+* Headers: Required HTTP headers; if empty, any headers are allowed.
+
+The following example policy extends an L4 rule for endpoints labeled `app=myService`, limiting them to TCP traffic on port 80 while allowing only specific HTTP API endpoints.
+
+* `GET /v1/path1` - This matches the exact path `/v1/path1`.
+* `PUT /v2/path2.*` - This matches all paths starting with `/v2/path2`.
+* `POST .*/path3` - This matches all paths ending in `/path3` with the additional constraint that the HTTP header `X-My-Header` must be set to true.
+
+ The `rules` block defines L7 logic that refines L4 ingress policy, adding fine-grained HTTP control through entries in the `toPorts` list.
+
+```yaml
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "l7-rule"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: myService
+  ingress:
+  - toPorts:
+    - ports:
+      - port: '80'
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: "/v1/path1"
+        - method: PUT
+          path: "/v2/path2.*"
+        - method: POST
+          path: ".*/path3"
+          headers:
+          - 'X-My-Header: true'
+```
+
+### Labs
+
+The following labs use the [official Cilium demo](https://docs.cilium.io/en/stable/gettingstarted/demo/).
+
+#### Setup
+
+```bash
+# Deploy the Cilium Death Star application demo,
+kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/http-sw-app.yaml
+ervice/deathstar created
+deployment.apps/deathstar created
+pod/tiefighter created
+pod/xwing created
+```
+
+We will create network policies to deny X-wings access to the Death Star.
+
+
+```bash
+# Check the deployment.
+k get po,svc,CiliumEndpoints
+AME                             READY   STATUS    RESTARTS   AGE
+pod/deathstar-74c8f5ff5c-64cxm   1/1     Running   0          95s
+pod/deathstar-74c8f5ff5c-r6kf6   1/1     Running   0          95s
+pod/tiefighter                   1/1     Running   0          95s
+pod/xwing                        1/1     Running   0          95s
+
+NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+service/deathstar    ClusterIP   10.96.76.196   <none>        80/TCP    95s
+service/kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP   11m
+
+NAME                                                  SECURITY IDENTITY   ENDPOINT STATE   IPV4           IPV6
+ciliumendpoint.cilium.io/deathstar-74c8f5ff5c-64cxm   6443                ready            10.244.2.65
+ciliumendpoint.cilium.io/deathstar-74c8f5ff5c-r6kf6   6443                ready            10.244.1.50
+ciliumendpoint.cilium.io/tiefighter                   40273               ready            10.244.1.101
+ciliumendpoint.cilium.io/xwing                        48010               ready            10.244.2.38
+```
+
+Each pod will get its own endpoint. Both `deathstar-*` endpoints share the same Identity ID because they have identical security-relevant labels. Cilium agents use this Identity ID to match endpoints with the relevant network policy, enabling efficient key-value lookups for eBPF programs in the network datapath.
+
+#### No Security
+
+```bash
+# Tiefighters should be able to land.
+k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+Ship landed
+
+# X-wings shouldn't be able to land.
+k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+Ship landed
+```
+
+The *deathstar* service allows only ships labeled `org=empire` to connect and request landing. However, without any enforced network policy rules, both *xwing* and *tiefighter* can currently request landing.
+
+```bash
+# View labels.
+k get po --show-labels
+
+NAME                         READY   STATUS    RESTARTS   AGE   LABELS
+deathstar-74c8f5ff5c-64cxm   1/1     Running   0          12m   app.kubernetes.io/name=deathstar,class=deathstar,org=empire,pod-template-hash=74c8f5ff5c
+deathstar-74c8f5ff5c-r6kf6   1/1     Running   0          12m   app.kubernetes.io/name=deathstar,class=deathstar,org=empire,pod-template-hash=74c8f5ff5c
+tiefighter                   1/1     Running   0          12m   app.kubernetes.io/name=tiefighter,class=tiefighter,org=empire
+xwing                        1/1     Running   0          12m   app.kubernetes.io/name=xwing,class=xwing,org=alliance
+```
+
+#### Applying L3/L4 Security
+
+In Cilium, security policies are defined using pod labels rather than IP addresses, ensuring policies apply to the correct pods regardless of their location or timing in the cluster.
+
+A basic policy limits deathstar landing requests to ships with the label `org=empire`, blocking any others from connecting. This L3/L4 network security policy filters traffic by IP and TCP protocols.
+
+Cilium also performs stateful connection tracking, automatically allowing reply packets from backend to frontend within the same TCP/UDP connection.
+
+```yaml
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "rule1"
+spec:
+  description: "L3-L4 policy to restrict deathstar access to empire ships only"
+  endpointSelector:
+    matchLabels:
+      org: empire
+      class: deathstar
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        org: empire
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+```
+
+CiliumNetworkPolicies use an endpointSelector to match pod labels and define applicable sources and destinations. The policy allows traffic from pods labeled `org=empire` to deathstar pods labeled `org=empire, class=deathstar` on TCP port 80.
+
+```bash
+# Apply the network policy.
+k apply -f netpol-deathstar-access.yaml
+
+ciliumnetworkpolicy.cilium.io/rule1 created
+
+# Tiefighters should be able to land.
+k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+Ship landed
+
+# X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
+k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+command terminated with exit code 28
+```
+
+To restrict a pod’s egress access to a limited number of services, create an egress policy for the client pod that references allowed services by name in the `toServices` attribute of the Egress policy. In this case, that would mean writing Egress for both xwing and tiefighter pods with differing `toServices` information. However, it’s much easier to meet the goal with a single Ingress policy that just allows Imperial units access to the Death Star API, and deny everything else access.
+
+Whether you should write Ingress or Egress policy comes down to a matter of intent. If you are trying to control what a pod is allowed to send information to, Egress is probably the policy you want to write. If you are trying to control which pods can initiate communication with a particular service or endpoint, then Ingress policy is most likely the simplest way to address that intent.
+
+```bash
+# Check the netpol.
+k -n kube-system exec cilium-49xf8 -- cilium-dbg endpoint list
+
+ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=value])                                                         IPv6   IPv4           STATUS
+           ENFORCEMENT        ENFORCEMENT
+339        Enabled            Disabled          6443       k8s:app.kubernetes.io/name=deathstar                                                       10.244.2.65    ready
+                                                           k8s:class=deathstar
+                                                           k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=default
+                                                           k8s:io.cilium.k8s.policy.cluster=kind-kind
+                                                           k8s:io.cilium.k8s.policy.serviceaccount=default
+                                                           k8s:io.kubernetes.pod.namespace=default
+                                                           k8s:org=empire
+...
+
+# Check the netpol.
+k describe cnp
+
+Name:         rule1
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  cilium.io/v2
+Kind:         CiliumNetworkPolicy
+Metadata:
+  Creation Timestamp:  2025-12-10T05:10:38Z
+  Generation:          1
+  Resource Version:    4016
+  UID:                 f3aa0176-262e-486b-8233-adc8c7ea83d2
+Spec:
+  Description:  L3-L4 policy to restrict deathstar access to empire ships only
+  Endpoint Selector:
+    Match Labels:
+      Class:  deathstar
+      Org:    empire
+  Ingress:
+    From Endpoints:
+      Match Labels:
+        Org:  empire
+    To Ports:
+      Ports:
+        Port:      80
+        Protocol:  TCP
+Status:
+  Conditions:
+    Last Transition Time:  2025-12-10T05:10:38Z
+    Message:               Policy validation succeeded
+    Status:                True
+    Type:                  Valid
+Events:                    <none>
+```
+
+#### Applying L7 Security
+
+In the simple scenario above, it was sufficient to either give tiefighter or xwing full access to deathstar’s API or no access at all. But to provide the strongest security (i.e., enforce least-privilege isolation) between microservices, each service that calls deathstar’s API should be limited to making only the set of HTTP requests it requires for legitimate operation.
+
+```bash
+# Break stuff.
+k exec tiefighter -- curl -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+
+Panic: deathstar exploded
+
+goroutine 1 [running]:
+main.HandleGarbage(0x2080c3f50, 0x2, 0x4, 0x425c0, 0x5, 0xa)
+        /code/src/github.com/empire/deathstar/
+        temp/main.go:9 +0x64
+main.main()
+        /code/src/github.com/empire/deathstar/
+        temp/main.go:5 +0x85
+```
+
+```yaml
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "rule1"
+spec:
+  description: "L7 policy to restrict access to specific HTTP call"
+  endpointSelector:
+    matchLabels:
+      org: empire
+      class: deathstar
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        org: empire
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      rules:
+        http:
+        - method: "POST"
+          path: "/v1/request-landing"
+```
+
+```bash
+# Update the existing rule.
+k apply -f netpol-deathstar-access2.yaml
+ciliumnetworkpolicy.cilium.io/rule1 configured
+
+# Test new rule by trying to break stuff.
+k exec tiefighter -- curl -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+Access denied
+
+# Tiefighters should still be able to land.
+k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+Ship landed
+
+# X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
+k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+command terminated with exit code 28
+```
+
+L3/L4 policy drops packets through eBPF programs in the Linux network datapath, effectively discarding them. L7 policy, using an embedded HTTP proxy, denies requests by returning an HTTP status response with a reason to the client. In both cases, packet drops can be tracked at the Death Star endpoint ingress using Hubble to inspect network flows.
