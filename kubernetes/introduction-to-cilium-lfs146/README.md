@@ -56,7 +56,7 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
     - [Single Node Flows](#single-node-flows)
     - [Cluster Wide Flows](#cluster-wide-flows)
     - [Denying DNS](#denying-dns)
-- [4. Metrics](#4-metrics)
+- [5. Metrics](#5-metrics)
   - [Operator Metrics](#operator-metrics)
   - [Agent Metrics](#agent-metrics)
   - [Hubble Metrics](#hubble-metrics)
@@ -64,6 +64,9 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
   - [Enabling Metrics](#enabling-metrics)
   - [Labs](#labs-1)
     - [Dashboards](#dashboards)
+- [6. Transparent Encryption](#6-transparent-encryption)
+  - [Why Use WireGuard or IPsec?](#why-use-wireguard-or-ipsec)
+  - [Enabling Transparent Encryption](#enabling-transparent-encryption)
 
 ## 1. Overview
 
@@ -255,7 +258,9 @@ Kind will create the cluster and will configure an associated kubectl context. C
 ```bash
 # Check our KUBECONFIG
 k config current-context
+```
 
+```
 kind-kind
 ```
 
@@ -266,7 +271,9 @@ Now you should be able to use kubectl and the Cilium CLI tool and interact with 
 ```bash
 # Check the k8s nodes
 k get no
+```
 
+```
 NAME                 STATUS     ROLES           AGE     VERSION
 kind-control-plane   NotReady   control-plane   5m40s   v1.34.0
 kind-worker          NotReady   <none>          5m31s   v1.34.0
@@ -524,15 +531,21 @@ The following labs use the [official Cilium demo](https://docs.cilium.io/en/stab
 ```bash
 # Deploy the Cilium Death Star application demo,
 k create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/http-sw-app.yaml
+```
 
+```
 ervice/deathstar created
 deployment.apps/deathstar created
 pod/tiefighter created
 pod/xwing created
+```
 
+```bash
 # Check the deployment.
 k get po,svc,CiliumEndpoints
+```
 
+```
 NAME                             READY   STATUS    RESTARTS   AGE
 pod/deathstar-74c8f5ff5c-64cxm   1/1     Running   0          95s
 pod/deathstar-74c8f5ff5c-r6kf6   1/1     Running   0          95s
@@ -559,12 +572,18 @@ We will eventually create network policies to deny X-wings access to the Death S
 ```bash
 # Tiefighters should be able to land.
 k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 Ship landed
+```
 
+```bash
 # X-wings shouldn't be able to land.
 k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 Ship landed
 ```
 
@@ -573,7 +592,9 @@ The *deathstar* service allows only ships labeled `org=empire` to connect and re
 ```bash
 # View labels.
 k get po --show-labels
+```
 
+```
 NAME                         READY   STATUS    RESTARTS   AGE   LABELS
 deathstar-74c8f5ff5c-64cxm   1/1     Running   0          12m   app.kubernetes.io/name=deathstar,class=deathstar,org=empire,pod-template-hash=74c8f5ff5c
 deathstar-74c8f5ff5c-r6kf6   1/1     Running   0          12m   app.kubernetes.io/name=deathstar,class=deathstar,org=empire,pod-template-hash=74c8f5ff5c
@@ -615,17 +636,27 @@ CiliumNetworkPolicies use an endpointSelector to match pod labels and define app
 ```bash
 # Apply the network policy.
 k create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/sw_l3_l4_policy.yaml
+```
 
+```
 ciliumnetworkpolicy.cilium.io/rule1 created
+```
 
+```bash
 # Tiefighters should be able to land.
 k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 Ship landed
+```
 
+```bash
 # X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
 k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 command terminated with exit code 28
 ```
 
@@ -636,7 +667,9 @@ Whether you should write Ingress or Egress policy comes down to a matter of inte
 ```bash
 # Check the netpol.
 k -n kube-system exec cilium-49xf8 -- cilium-dbg endpoint list
+```
 
+```
 ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=value])                                                         IPv6   IPv4           STATUS
            ENFORCEMENT        ENFORCEMENT
 339        Enabled            Disabled          6443       k8s:app.kubernetes.io/name=deathstar                                                       10.244.2.65    ready
@@ -647,10 +680,14 @@ ENDPOINT   POLICY (ingress)   POLICY (egress)   IDENTITY   LABELS (source:key[=v
                                                            k8s:io.kubernetes.pod.namespace=default
                                                            k8s:org=empire
 ...
+```
 
+```bash
 # Check the netpol.
 k describe cnp
+```
 
+```
 Name:         rule1
 Namespace:    default
 Labels:       <none>
@@ -692,7 +729,9 @@ In the simple scenario above, it was sufficient to either give tiefighter or xwi
 ```bash
 # Break stuff.
 k exec tiefighter -- curl --connect-timeout 3 -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+```
 
+```
 Panic: deathstar exploded
 
 goroutine 1 [running]:
@@ -732,22 +771,36 @@ spec:
 ```bash
 # Update the existing rule.
 k apply -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/sw_l3_l4_l7_policy.yaml
+```
 
+```
 ciliumnetworkpolicy.cilium.io/rule1 configured
+```
 
+```bash
 # Test new rule by trying to break stuff.
 k exec tiefighter -- curl --connect-timeout 3 -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+```
 
+```
 Access denied
+```
 
+```bash
 # Tiefighters should still be able to land. But for me it just wouldn't work on this request, it would just timeout. I tried with Kind and CLI or Helm, and Minikube with CLI or Helm and they all just timed out.
 k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 Ship landed
+```
 
+```bash
 # X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
 k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
 
+```
 command terminated with exit code 28
 ```
 
@@ -764,12 +817,18 @@ L3/L4 policy drops packets through eBPF programs in the Linux network datapath, 
 ```bash
 # Check the version.
 hubble version
+```
 
+```
 hubble v1.18.3@HEAD-c568539 compiled with go1.25.3 on linux/amd64
+```
 
+```bash
 # Check the status.
 hubble status
+```
 
+```
 Healthcheck (via localhost:4245): Ok
 Current/Max Flows: 9,526/12,285 (77.54%)
 Flows/s: 8.55
@@ -842,7 +901,6 @@ k -n kube-system exec -it pod/cilium-49xf8 -c cilium-agent -- hubble observe --f
 
 You can get a quick reference of the available filter options using `hubble observe --help`.
 
-
 #### Cluster Wide Flows
 
 The Hubble client in the Cilium agent container is limited to showing network flows local to its node, so running it on the wrong node yields no results. To view all flows for multi-endpoint services like Death Star, it must be run on every node hosting a pod. For cluster-wide observability, the Hubble Relay service must be enabled and exposed to local workstations (e.g. with [kubectl port-forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/) or Cilium CLI). With the Hubble CLI tool, users can view and filter flows across all Death Star endpoints, including dropped packets, without knowing which nodes to query, as Hubble Relay coordinates data from all node APIs.
@@ -851,13 +909,15 @@ The Hubble client in the Cilium agent container is limited to showing network fl
 ```bash
 # Forward Hubble Relay service.
 cilium hubble port-forward &
+```
 
+```
 ℹ️  Hubble Relay is available at 127.0.0.1:4245
+```
 
+```bash
 # Check logs.
 hubble observe --from-label "class=tiefighter" --to-label "class=deathstar"
-
-
 ```
 
 An easier way is to use the UI.
@@ -865,7 +925,9 @@ An easier way is to use the UI.
 ```bash
 # Run the Hubble UI
 cilium hubble ui
+```
 
+```
 ℹ️  Opening "http://localhost:12000" in your browser...
 ```
 
@@ -880,25 +942,35 @@ Click the Visual button to toggle on and off the display of some services, e.g. 
 ```bash
 # Deny xwing DNS.
 k apply -f netpol-deny-xwing-dns.yaml
+```
 
+```
 ciliumnetworkpolicy.cilium.io/xwing-dns-deny created
+```
 
+```bash
 # Test connectivity.
 k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.
 svc.cluster.local/v1/request-landing
+```
 
+```
 command terminated with exit code 28
+```
 
+```bash
 # Check logs.
 hubble observe --label="class=xwing" --to-namespace "kube-system" --last 1
+```
 
+```bash
 Dec 11 00:42:44.081: default/xwing:46786 (ID:49170) -> kube-system/coredns-66bc5c9577-vqjl5:53 (ID:16036) to-endpoint FORWARDED (UDP)
 Dec 11 00:52:43.025: default/xwing:32940 (ID:49170) <> kube-system/coredns-66bc5c9577-qxtdw:53 (ID:16036) Policy denied DROPPED (UDP)
 ```
 
 An EgressDeny policy on X-wing pods can be equivalently achieved with an IngressDeny policy on kube-dns service endpoint pods. Policy approaches offer flexibility when both source and destination are Cilium-managed endpoints.
 
-## 4. Metrics
+## 5. Metrics
 
 ### Operator Metrics
 
@@ -963,12 +1035,18 @@ You must use Helm chart options to configure the Cilium and Hubble Prometheus me
 ```bash
 # Add Cilium Helm repo.
 helm repo add cilium https://helm.cilium.io/
+```
 
+```
 "cilium" has been added to your repositories
+```
 
+```bash
 # Install Cilium with Helm.
 helm install cilium cilium/cilium --version 1.18.4 --namespace kube-system
+```
 
+```
 NAME: cilium
 LAST DEPLOYED: Thu Dec 11 14:47:14 2025
 NAMESPACE: kube-system
@@ -981,7 +1059,9 @@ You have successfully installed Cilium with Hubble.
 Your release version is 1.18.4.
 
 For any further help, visit https://docs.cilium.io/en/v1.18/gettinghelp
+```
 
+```bash
 # Wait for Cilium to finish installing.
 cilium status --wait
 
@@ -1006,8 +1086,6 @@ cilium status --wait
 
 # Run Hubble
 cilium hubble port-forward &
-
-ℹ️  Hubble Relay is available at 127.0.0.1:4245
 ```
 
 Now we need to enable Cilium metrics with Helm.
@@ -1041,12 +1119,14 @@ helm upgrade cilium cilium/cilium --version 1.18.4 \
   --set hubble.metrics.enableOpenMetrics=true \
   --set hubble.metrics.enabled="{dns,drop:sourceContext=pod;destinationContext=pod,tcp,flow,port-distribution,icmp,httpV2:exemplars=true;labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction}"
 
-
 # Wait for Cilium to finish upgrading.
 cilium status --wait
 
 # Check the upgrades
 k get -n kube-system pod/cilium-4skp4 -o json | jq .metadata.annotations
+```
+
+```json
 {
   "kubectl.kubernetes.io/default-container": "cilium-agent",
   "prometheus.io/port": "9962",
@@ -1061,7 +1141,9 @@ The Cilium project provides an example of a Prometheus and Grafana dashboard ser
 ```bash
 # Install Prometheus and Grafana dashboards
 k apply -f https://raw.githubusercontent.com/cilium/cilium/refs/heads/main/examples/kubernetes/addons/prometheus/monitoring-example.yaml
+```
 
+```
 namespace/cilium-monitoring created
 serviceaccount/prometheus-k8s created
 configmap/grafana-config created
@@ -1076,11 +1158,99 @@ service/grafana created
 service/prometheus created
 deployment.apps/grafana created
 deployment.apps/prometheus created
+```
 
+```bash
 # Port forward for browser access
 k -n cilium-monitoring port-forward service/grafana --address 0.0.0.0 --address :: 3000:3000
+```
 
+```
 Forwarding from 0.0.0.0:3000 -> 3000
 Forwarding from [::]:3000 -> 3000
+```
 
+## 6. Transparent Encryption
+
+Microservices in a Kubernetes cluster communicate across nodes on networks that may not be fully trusted. Encrypting node-to-node traffic prevents exposure of sensitive data and helps meet regulatory requirements. Since Kubernetes lacks built-in data-in-transit encryption, cluster administrators must implement it. Cilium provides an easy way to enable transparent node-to-node encryption using [WireGuard or IPSec](https://isovalent.com/blog/post/tutorial-transparent-encryption-with-ipsec-and-wireguard/) without changing application code or configuration.
+
+![alt text](images/encryption01.png)
+
+### Why Use WireGuard or IPsec?
+
+WireGuard and IPsec are in-kernel protocols that provide transparent traffic encryption. WireGuard is a simple, lightweight, peer-based VPN built into the Linux kernel that connects peers by exchanging public keys. IPsec is an older, FIPS-compliant alternative. When either protocol is enabled in Cilium, the Cilium agent on each node establishes secure tunnels to other Cilium-managed nodes in the cluster.
+
+### Enabling Transparent Encryption
+
+It is incredibly easy to set up transparent encryption in an existing Cilium-managed cluster. Use `cilium install --encryption wireguard` or added the Helm flags `--set encryption.enabled=true` and `--set encryption.type=wireguard`.
+
+```bash
+# Enable WireGuard - https://docs.cilium.io/en/latest/security/network/encryption-wireguard/
+helm upgrade cilium cilium/cilium --version 1.18.4 \
+  --namespace kube-system \
+  --set encryption.enabled=true \
+  --set encryption.type=wireguard
+
+# View Cilium-managed Kubernetes nodes (CiliumNode) and its new annotation holding the WireGuard public key for that node.
+k get -n kube-system CiliumNodes
+```
+
+```
+NAME                 CILIUMINTERNALIP   INTERNALIP   AGE
+kind-control-plane   10.0.0.177         10.89.0.7    49s
+kind-worker          10.0.1.84          10.89.0.6    50s
+kind-worker2         10.0.2.199         10.89.0.5    49s
+```
+
+```bash
+k get -n kube-system CiliumNode kind-worker -o json | jq .metadata.annotations
+```
+
+```json
+{
+  "network.cilium.io/wg-pub-key": "LNNETE70BctpdRHmFeTtHGCmZjZ8z7lhrvVZCh5Fpms="
+}
+```
+
+We can use the Cilium agent clients available in the Cilium agent pods to check if the Agent has enabled encryption.
+
+```bash
+# Use the Cilium agent clients available in the Cilium agent pods to check if the agent has enabled encryption.
+k exec -n kube-system -ti ds/cilium -- cilium status | grep -i encryption
+```
+
+This agent has WireGuard enabled, and it sees the expected number of peers (e.g. 2 peers in a 3-node cluster).
+
+```
+Encryption:              Wireguard       [NodeEncryption: Disabled, cilium_wg0 (Pubkey: Z0o7KkpLEh5t6Ztaa9OlujhUIEaZ7tpQFqdkyosioE0=, Port: 51871, Peers: 2)]
+```
+
+```bash
+# Look for the Cilium WireGuard interface
+k exec -n kube-system -ti ds/cilium -- ip link | grep cilium
+```
+
+```
+3: cilium_net@cilium_host: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default
+4: cilium_host@cilium_net: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+5: cilium_wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN mode DEFAULT group default
+6: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default
+```
+
+```bash
+# Connect to a Cilium agent so we can test WireGuard.
+k exec -n kube-system -ti pod/cilium-l97x2 -- /bin/bash
+
+# View traffic over the WireGuard link
+tcpdump -n -i cilium_wg0
+```
+
+```
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on cilium_wg0, link-type RAW (Raw IP), snapshot length 262144 bytes
+03:30:58.287339 IP 10.89.0.5.59844 > 10.89.0.7.8472: OTV, flags [I] (0x08), overlay 0, instance 30869
+IP 10.0.2.31.46243 > 10.0.0.178.53: 53859+ A? deathstar.default.svc.cluster.local.default.svc.cluster.local. (79)
+03:30:58.287352 IP 10.89.0.5.59844 > 10.89.0.7.8472: OTV, flags [I] (0x08), overlay 0, instance 30869
+IP 10.0.2.31.46243 > 10.0.0.178.53: 27493+ AAAA? deathstar.default.svc.cluster.local.default.svc.cluster.local. (79)
+...
 ```
