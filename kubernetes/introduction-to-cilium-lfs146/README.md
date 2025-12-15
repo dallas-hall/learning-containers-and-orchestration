@@ -46,6 +46,24 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
     - [No Security](#no-security)
     - [Applying L3/L4 Security](#applying-l3l4-security)
     - [Applying L7 Security](#applying-l7-security)
+- [4. Network Observability](#4-network-observability)
+  - [Hubble](#hubble)
+    - [Installing Hubble CLI](#installing-hubble-cli)
+    - [Introduction](#introduction)
+    - [Insightful](#insightful)
+    - [Components](#components)
+  - [Network Flows](#network-flows)
+    - [Single Node Flows](#single-node-flows)
+    - [Cluster Wide Flows](#cluster-wide-flows)
+    - [Denying DNS](#denying-dns)
+- [4. Metrics](#4-metrics)
+  - [Operator Metrics](#operator-metrics)
+  - [Agent Metrics](#agent-metrics)
+  - [Hubble Metrics](#hubble-metrics)
+    - [Context Options](#context-options)
+  - [Enabling Metrics](#enabling-metrics)
+  - [Labs](#labs-1)
+    - [Dashboards](#dashboards)
 
 ## 1. Overview
 
@@ -202,7 +220,7 @@ PATH="$HOME/go/bin:$PATH"
 export PATH
 ```
 
-Based on [Cilium create cluster](https://docs.cilium.io/en/latest/gettingstarted/k8s-install-default/#cilium-quick-installation)
+Based on [Cilium create cluster](https://docs.cilium.io/en/latest/gettingstarted/k8s-install-default/#cilium-quick-installation).
 
 ```yaml
 kind: Cluster
@@ -215,17 +233,27 @@ networking:
   disableDefaultCNI: true
 ```
 
+I eventually created this config file to enable the L7 proxy.
+
+```yaml
+```
+
+
 **NOTE:** I had to run this as root for it to work.
 
 ```bash
+# Install Kind
 /home/dallas/go/bin/kind create cluster --config=kind-config.yaml
+
+# Copy over KUBECONFIG
 cp ~/.kube/config ~dallas/.kube/config
 chown dallas: ~dallas/.kube/config
 ```
 
 Kind will create the cluster and will configure an associated kubectl context. Confirm your new kind cluster is the default kubectl context:
 
-```
+```bash
+# Check our KUBECONFIG
 k config current-context
 
 kind-kind
@@ -235,7 +263,8 @@ Now you should be able to use kubectl and the Cilium CLI tool and interact with 
 
 **Note:** Because you have created the cluster without a default CNI, the Kubernetes nodes are in a NotReady state:
 
-```
+```bash
+# Check the k8s nodes
 k get no
 
 NAME                 STATUS     ROLES           AGE     VERSION
@@ -252,7 +281,7 @@ Follow [these steps](https://docs.cilium.io/en/stable/gettingstarted/k8s-install
 
 ```bash
 # Use the Cilium CLI tool to install Cilium.
-cilium install
+cilium install --version 1.18.4
 
 # Wait for the deploayment to finish.
 cilium status --wait
@@ -281,8 +310,11 @@ Image versions         cilium             quay.io/cilium/cilium:v1.18.2@sha256:8
                        cilium-operator    quay.io/cilium/operator-generic:v1.18.2@sha256:cb4e4ffc5789fd5ff6a534e3b1460623df61cba00f5ea1c7b40153b5efb81805: 1
 ```
 
+[Followed these steps.](https://docs.cilium.io/en/stable/observability/hubble/setup/#hubble-setup)
+
 ```bash
-# Enable the Hubble UI.
+# Enable the Hubble and its UI.
+cilium hubble enable
 cilium hubble enable --ui
 ```
 
@@ -335,7 +367,10 @@ sudo sysctl fs.inotify.max_user_instances=512
 
 The Cilium CLI tool also provides a command to install a set of connectivity tests in a dedicated Kubernetes namespace. We can run these tests to validate that the Cilium install is fully operational:
 
-`cilium connectivity test --request-timeout 30s --connect-timeout 10s`
+```bash
+# Test the installation.
+cilium connectivity test --request-timeout 3s --connect-timeout 3s
+```
 
 The Cilium connectivity test suite has dozens of tests that verify network and policy enforcement functions. Expect the tests to take at least 10 minutes including image downloads. The connectivity tests require a cluster with at least two worker nodes. The test pods will not run on control-plane nodes. If you don't have two worker nodes, the test may stall waiting for deployments to complete.
 
@@ -441,10 +476,10 @@ When an L7 HTTP policy is active, the Cilium agent starts a local HTTP proxy on 
 
 L7 HTTP policies use several matching fields:
 
-* Path: POSIX regex for URL paths; if empty, all paths are allowed.
-* Method: HTTP method such as GET or POST; if empty, all methods are allowed.
-* Host: POSIX regex for the host header; if empty, all hosts are allowed.
-* Headers: Required HTTP headers; if empty, any headers are allowed.
+* **Path**: POSIX regex for URL paths; if empty, all paths are allowed.
+* **Method**: HTTP method such as GET or POST; if empty, all methods are allowed.
+* **Host**: POSIX regex for the host header; if empty, all hosts are allowed.
+* **Headers**: Required HTTP headers; if empty, any headers are allowed.
 
 The following example policy extends an L4 rule for endpoints labeled `app=myService`, limiting them to TCP traffic on port 80 while allowing only specific HTTP API endpoints.
 
@@ -488,20 +523,17 @@ The following labs use the [official Cilium demo](https://docs.cilium.io/en/stab
 
 ```bash
 # Deploy the Cilium Death Star application demo,
-kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/http-sw-app.yaml
+k create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/http-sw-app.yaml
+
 ervice/deathstar created
 deployment.apps/deathstar created
 pod/tiefighter created
 pod/xwing created
-```
 
-We will create network policies to deny X-wings access to the Death Star.
-
-
-```bash
 # Check the deployment.
 k get po,svc,CiliumEndpoints
-AME                             READY   STATUS    RESTARTS   AGE
+
+NAME                             READY   STATUS    RESTARTS   AGE
 pod/deathstar-74c8f5ff5c-64cxm   1/1     Running   0          95s
 pod/deathstar-74c8f5ff5c-r6kf6   1/1     Running   0          95s
 pod/tiefighter                   1/1     Running   0          95s
@@ -520,15 +552,19 @@ ciliumendpoint.cilium.io/xwing                        48010               ready 
 
 Each pod will get its own endpoint. Both `deathstar-*` endpoints share the same Identity ID because they have identical security-relevant labels. Cilium agents use this Identity ID to match endpoints with the relevant network policy, enabling efficient key-value lookups for eBPF programs in the network datapath.
 
+We will eventually create network policies to deny X-wings access to the Death Star.
+
 #### No Security
 
 ```bash
 # Tiefighters should be able to land.
-k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 Ship landed
 
 # X-wings shouldn't be able to land.
-k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 Ship landed
 ```
 
@@ -578,16 +614,18 @@ CiliumNetworkPolicies use an endpointSelector to match pod labels and define app
 
 ```bash
 # Apply the network policy.
-k apply -f netpol-deathstar-access.yaml
+k create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/sw_l3_l4_policy.yaml
 
 ciliumnetworkpolicy.cilium.io/rule1 created
 
 # Tiefighters should be able to land.
-k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 Ship landed
 
 # X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
-k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 command terminated with exit code 28
 ```
 
@@ -653,7 +691,7 @@ In the simple scenario above, it was sufficient to either give tiefighter or xwi
 
 ```bash
 # Break stuff.
-k exec tiefighter -- curl -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+k exec tiefighter -- curl --connect-timeout 3 -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
 
 Panic: deathstar exploded
 
@@ -693,20 +731,356 @@ spec:
 
 ```bash
 # Update the existing rule.
-k apply -f netpol-deathstar-access2.yaml
+k apply -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/sw_l3_l4_l7_policy.yaml
+
 ciliumnetworkpolicy.cilium.io/rule1 configured
 
 # Test new rule by trying to break stuff.
-k exec tiefighter -- curl -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+k exec tiefighter -- curl --connect-timeout 3 -s -XPUT deathstar.default.svc.cluster.local/v1/exhaust-port
+
 Access denied
 
-# Tiefighters should still be able to land.
-k exec tiefighter -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+# Tiefighters should still be able to land. But for me it just wouldn't work on this request, it would just timeout. I tried with Kind and CLI or Helm, and Minikube with CLI or Helm and they all just timed out.
+k exec tiefighter -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 Ship landed
 
 # X-wings shouldn't be able to land. Press ^C or wait for timeout as the traffic is blocked.
-k exec xwing -- curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+
 command terminated with exit code 28
 ```
 
 L3/L4 policy drops packets through eBPF programs in the Linux network datapath, effectively discarding them. L7 policy, using an embedded HTTP proxy, denies requests by returning an HTTP status response with a reason to the client. In both cases, packet drops can be tracked at the Death Star endpoint ingress using Hubble to inspect network flows.
+
+## 4. Network Observability
+
+### Hubble
+
+#### Installing Hubble CLI
+
+[Follow these steps.](https://docs.cilium.io/en/stable/observability/hubble/setup/index.html#install-the-hubble-client)
+
+```bash
+# Check the version.
+hubble version
+
+hubble v1.18.3@HEAD-c568539 compiled with go1.25.3 on linux/amd64
+
+# Check the status.
+hubble status
+
+Healthcheck (via localhost:4245): Ok
+Current/Max Flows: 9,526/12,285 (77.54%)
+Flows/s: 8.55
+Connected Nodes: 3/3
+```
+
+#### Introduction
+
+Hubble is a fully distributed networking observability platform built on Cilium and eBPF, providing deep, transparent visibility into service communication and network behavior. By leveraging eBPF, it offers programmable, low-overhead observability designed to maximize the capabilities of eBPF.
+
+#### Insightful
+
+Hubble can quickly help you answer many questions.
+
+Service dependencies & communication map
+* What services are communicating with each other? How frequently? What does the service dependency graph look like?
+* What HTTP calls are being made? What Kafka topics does a service consume from or produce to?
+
+Network monitoring & alerting
+* Is any network communication failing? Why is communication failing? Is it DNS? Is it an application or network problem? Is the communication broken on layer 4 (TCP) or layer 7 (HTTP)?
+* Which services have experienced a DNS resolution problem in the last 5 minutes? Which services have experienced an interrupted TCP connection recently or have seen connections timing out? What is the rate of unanswered TCP SYN requests?
+
+Application monitoring
+* What is the rate of 5xx or 4xx HTTP response codes for a particular service or across all clusters?
+* What is the 95th and 99th percentile latency between HTTP requests and responses in my cluster? Which services are performing the worst? What is the latency between services?
+
+Security observability
+* Which services had connections blocked due to network policy? What services have been accessed from outside the cluster? Which services have resolved a particular DNS name?
+
+All of this is made possible by eBPF, which provides deep visibility into the network datapath for all the application workloads running in your Kubernetes cluster. With Hubble, you are able to tap into this flow of information and filter it using contextual Kubernetes metadata.
+
+![alt text](images/hubble02.png)
+
+#### Components
+
+Hubble Server
+* Runs on each Kubernetes node as part of Cilium agent operations.
+* Implements the gRPC observer service, which provides access to network flows on a node.
+* Implements the gRPC peer service used by Hubble Relay to discover peer Hubble servers.
+
+Hubble Peer Kubernetes Service
+* Used by Hubble Relay to discover available Hubble servers in the cluster.
+
+Hubble Relay Kubernetes Deployment
+* Communicates with Cluster-wide Hubble Peer service to discover Hubble servers in the cluster.
+* Keeps persistent connections with Hubble server gRPC API.
+* Exposes API for cluster-wide observability.
+
+Hubble Relay Kubernetes Service
+* Used by the Hubble UI service.
+* Can be exposed for use by Hubble CLI tool.
+
+Hubble UI Kubernetes Deployment
+* Act as a service backend for Hubble UI Kubernetes service.
+
+Hubble UI Kubernetes Service
+* Used for cluster networking visualizations.
+
+### Network Flows
+
+Network flows are central to Hubble’s value, providing visibility into how packets move through a Cilium-managed Kubernetes cluster without analyzing packet contents. Flows include contextual metadata that identifies packet sources, destinations, and outcomes, overcoming the limitations of ephemeral pod IPs for filtering or metrics. This durable context can be exposed as Prometheus metric labels, enabling network dashboards to reflect application performance dynamically. This is an advantage of Cilium’s identity model in Cloud Native environments.
+
+#### Single Node Flows
+
+To view event flows on a specific Kubernetes node, run `hubble observe --follow` in the Cilium agent container on that node to see Cilium datapath verdicts for all packets entering and leaving that node. e.g.
+
+```bash
+k -n kube-system exec -it pod/cilium-49xf8 -c cilium-agent -- hubble observe --from-label "class=tiefighter" --to-label "class=deathstar"
+```
+
+You can get a quick reference of the available filter options using `hubble observe --help`.
+
+
+#### Cluster Wide Flows
+
+The Hubble client in the Cilium agent container is limited to showing network flows local to its node, so running it on the wrong node yields no results. To view all flows for multi-endpoint services like Death Star, it must be run on every node hosting a pod. For cluster-wide observability, the Hubble Relay service must be enabled and exposed to local workstations (e.g. with [kubectl port-forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/) or Cilium CLI). With the Hubble CLI tool, users can view and filter flows across all Death Star endpoints, including dropped packets, without knowing which nodes to query, as Hubble Relay coordinates data from all node APIs.
+
+
+```bash
+# Forward Hubble Relay service.
+cilium hubble port-forward &
+
+ℹ️  Hubble Relay is available at 127.0.0.1:4245
+
+# Check logs.
+hubble observe --from-label "class=tiefighter" --to-label "class=deathstar"
+
+
+```
+
+An easier way is to use the UI.
+
+```bash
+# Run the Hubble UI
+cilium hubble ui
+
+ℹ️  Opening "http://localhost:12000" in your browser...
+```
+
+This will port-forward the service to a local port on your machine and open up a browser window to the local port. The Hubble UI service provides an interactive service map view that you can drill down into and see specific parts of the network flow.
+
+![alt text](images/hubble03.png)
+
+Click the Visual button to toggle on and off the display of some services, e.g. CoreDNS.
+
+#### Denying DNS
+
+```bash
+# Deny xwing DNS.
+k apply -f netpol-deny-xwing-dns.yaml
+
+ciliumnetworkpolicy.cilium.io/xwing-dns-deny created
+
+# Test connectivity.
+k exec xwing -- curl --connect-timeout 3 -s -XPOST deathstar.default.
+svc.cluster.local/v1/request-landing
+
+command terminated with exit code 28
+
+# Check logs.
+hubble observe --label="class=xwing" --to-namespace "kube-system" --last 1
+
+Dec 11 00:42:44.081: default/xwing:46786 (ID:49170) -> kube-system/coredns-66bc5c9577-vqjl5:53 (ID:16036) to-endpoint FORWARDED (UDP)
+Dec 11 00:52:43.025: default/xwing:32940 (ID:49170) <> kube-system/coredns-66bc5c9577-qxtdw:53 (ID:16036) Policy denied DROPPED (UDP)
+```
+
+An EgressDeny policy on X-wing pods can be equivalently achieved with an IngressDeny policy on kube-dns service endpoint pods. Policy approaches offer flexibility when both source and destination are Cilium-managed endpoints.
+
+## 4. Metrics
+
+### Operator Metrics
+
+Cilium operator Prometheus metrics are enabled via a Helm chart option during installation. They provide observability for diagnosing and alerting on degraded operator performance. When enabled through supported methods, operator pods are annotated for Prometheus endpoint discovery. These metrics reflect the operator’s state and use the prefix "cilium_operator_".
+
+### Agent Metrics
+
+Cilium agent metrics cover operational aspects of Cilium. When enabled, cilium-agent pods start an embedded Prometheus metrics server and are annotated for Prometheus endpoint discovery.
+
+A headless cilium-agent Kubernetes service points to all Prometheus metrics endpoints from each agent’s embedded Envoy proxy. This service enables exposure of additional metrics endpoints, as a pod can only be annotated for a single Prometheus endpoint, allowing discovery via DNS requests.
+
+Cilium agent metrics are grouped into several [categories](https://docs.cilium.io/en/stable/observability/metrics/#id6), some important ones are:
+
+* **Cluster Health** - Statistics on unreachable nodes and agent health endpoints
+* **Node Connectivity** - Statistics covering latency to nodes across the network
+* **Cluster Mesh** - Statistics concerning peer clusters
+* **Datapath** - Statistics related to garbage collection of connection tracking
+* **IPSec** - Statistics associated with IPSec errors
+* **eBPF** - Statistics on eBPF map operations and memory use
+* **Drops/Forwards (L3/L4)** - Statistics on packet drops/forwards.
+* **Policy** - Statistics on active policy
+* **Policy L7 (HTTP/Kafka)** - Statistics for L7 policy redirects to embedded HTTP proxy
+* **Identity** - Statistics concerning Identity to IP address mapping
+* **Kubernetes** - Statistics concerning received Kubernetes events
+* **IPAM** - IP address allocation statistics
+
+These metrics, like the operator metrics, are provided primarily to help diagnose and alert on Cilium performance and are not associated with a particular workload.
+
+### Hubble Metrics
+
+Hubble metrics are based on network flow information and are used for understanding traffic flows. Hubble metric [categories](https://docs.cilium.io/en/stable/observability/metrics/#hubble-exported-metrics) include:
+
+* **DNS** - Statistics about DNS requests made
+* **Drop** - Statistics about packet drops
+* **Flow** - Statistics concerning total flows processed
+* **HTTP** - Statistics concerning HTTP requests
+* **TCP** - Statistics concerning TCP packets
+* **ICMP** - Statistics concerning ICMP packets
+* **Port Distribution** - Statistics concerning destination ports
+
+When Hubble metrics are enabled during installation, an annotated headless Kubernetes service named `hubble-metrics` is created to support Prometheus endpoint discovery. As no metrics are enabled by default, you must explicitly configure the desired Hubble metrics and their flow context mapped to Prometheus labels for the required granularity.
+
+#### Context Options
+
+Because flows contain extensive context, mapping all information to Prometheus metrics can cause high cardinality issues. You can select which flow details to include as labels and configure source and destination labels using the `sourceContext` and `destinationContext` options set to supported flow attributes such as pod-name or IP address. Consistent label use enables effective dashboarding and PromQL queries. Additional labels from flow data can be added through the `labelContext` option when higher cardinality is needed.
+
+### Enabling Metrics
+
+Each of the metric endpoints is associated with two annotations:
+
+1. `prometheus.io/port`
+2. `prometheus.io/scrape`
+
+The scrape config for the Prometheus server running in your cluster can be configured to find these annotations in pods and headless services that have them. The [Prometheus scrape config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) and [Cilium Prometheus deployment](https://github.com/cilium/cilium/tree/main/examples/kubernetes/addons/prometheus) can be used to help configure.
+
+You must use Helm chart options to configure the Cilium and Hubble Prometheus metrics.
+
+### Labs
+
+[Follow steps from here.](https://docs.cilium.io/en/stable/installation/k8s-install-helm/#install-cilium)
+
+```bash
+# Add Cilium Helm repo.
+helm repo add cilium https://helm.cilium.io/
+
+"cilium" has been added to your repositories
+
+# Install Cilium with Helm.
+helm install cilium cilium/cilium --version 1.18.4 --namespace kube-system
+
+NAME: cilium
+LAST DEPLOYED: Thu Dec 11 14:47:14 2025
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+You have successfully installed Cilium with Hubble.
+
+Your release version is 1.18.4.
+
+For any further help, visit https://docs.cilium.io/en/v1.18/gettinghelp
+
+# Wait for Cilium to finish installing.
+cilium status --wait
+
+# Reinstall the demo app.
+k apply -f https://raw.githubusercontent.com/cilium/cilium/refs/heads/main/examples/minikube/http-sw-app.yaml
+
+# I skipped the L7 netpol as it just wasn't working for me. I tried with Kind and Minikube and it just didn't work. So I just used the L3/L4 instead.
+k create -f https://raw.githubusercontent.com/cilium/cilium/1.18.4/examples/minikube/sw_l3_l4_policy.yaml
+```
+
+At this point we need to enable Hubble, we will do that with Helm.
+
+```bash
+# Enable Hubble - https://docs.cilium.io/en/stable/observability/hubble/setup/#hubble-setup
+helm upgrade cilium cilium/cilium --version 1.18.4 \
+   --namespace kube-system \
+   --reuse-values \
+   --set hubble.relay.enabled=true
+
+# Wait for Cilium to finish upgrading.
+cilium status --wait
+
+# Run Hubble
+cilium hubble port-forward &
+
+ℹ️  Hubble Relay is available at 127.0.0.1:4245
+```
+
+Now we need to enable Cilium metrics with Helm.
+
+NOTE: We need to make sure the previous flags are provided during the upgrade too.
+
+```bash
+# Enable Ciliumn metrics - https://docs.cilium.io/en/stable/observability/metrics/#cilium-metrics
+helm upgrade cilium cilium/cilium --version 1.18.4 \
+  --namespace kube-system \
+  --reuse-values \
+  --set hubble.relay.enabled=true \
+  --set prometheus.enabled=true \
+  --set operator.prometheus.enabled=true
+
+# Wait for Cilium to finish upgrading.
+cilium status --wait
+```
+
+Now we need to enable Hubble metrics with Helm.
+
+```bash
+# Enable Hubble metrics - https://docs.cilium.io/en/stable/observability/metrics/#cilium-metrics
+helm upgrade cilium cilium/cilium --version 1.18.4 \
+  --namespace kube-system \
+  --reuse-values \
+  --set hubble.relay.enabled=true \
+  --set prometheus.enabled=true \
+  --set operator.prometheus.enabled=true \
+  --set hubble.enabled=true \
+  --set hubble.metrics.enableOpenMetrics=true \
+  --set hubble.metrics.enabled="{dns,drop:sourceContext=pod;destinationContext=pod,tcp,flow,port-distribution,icmp,httpV2:exemplars=true;labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction}"
+
+
+# Wait for Cilium to finish upgrading.
+cilium status --wait
+
+# Check the upgrades
+k get -n kube-system pod/cilium-4skp4 -o json | jq .metadata.annotations
+{
+  "kubectl.kubernetes.io/default-container": "cilium-agent",
+  "prometheus.io/port": "9962",
+  "prometheus.io/scrape": "true"
+}
+```
+
+#### Dashboards
+
+The Cilium project provides an example of a Prometheus and Grafana dashboard service that you can install into your lab cluster right now so you can experience the joy of seeing Hubble metrics appearing in a dashboard.
+
+```bash
+# Install Prometheus and Grafana dashboards
+k apply -f https://raw.githubusercontent.com/cilium/cilium/refs/heads/main/examples/kubernetes/addons/prometheus/monitoring-example.yaml
+
+namespace/cilium-monitoring created
+serviceaccount/prometheus-k8s created
+configmap/grafana-config created
+configmap/grafana-cilium-dashboard created
+configmap/grafana-cilium-operator-dashboard created
+configmap/grafana-hubble-dashboard created
+configmap/grafana-hubble-l7-http-metrics-by-workload created
+configmap/prometheus created
+clusterrole.rbac.authorization.k8s.io/prometheus created
+clusterrolebinding.rbac.authorization.k8s.io/prometheus created
+service/grafana created
+service/prometheus created
+deployment.apps/grafana created
+deployment.apps/prometheus created
+
+# Port forward for browser access
+k -n cilium-monitoring port-forward service/grafana --address 0.0.0.0 --address :: 3000:3000
+
+Forwarding from 0.0.0.0:3000 -> 3000
+Forwarding from [::]:3000 -> 3000
+
+```

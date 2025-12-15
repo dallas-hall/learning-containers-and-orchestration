@@ -20,4 +20,3 @@ spec:
         http:
         - method: "POST"
           path: "/v1/request-landing"
-
