@@ -72,6 +72,12 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
   - [Kube-Proxy Functionality](#kube-proxy-functionality)
   - [Enabling Kube-Proxy Replacement](#enabling-kube-proxy-replacement)
 - [8. Cilium Cluster Mesh](#8-cilium-cluster-mesh)
+  - [Why Are Multiple Clusters Used](#why-are-multiple-clusters-used)
+  - [Cilium Cluster Mesh Benefits](#cilium-cluster-mesh-benefits)
+  - [Cluster Mesh Requirements](#cluster-mesh-requirements)
+  - [Cluster Mesh Architecture](#cluster-mesh-architecture)
+  - [Global Services](#global-services)
+  - [Network Policy](#network-policy)
 
 ## 1. Overview
 
@@ -1351,3 +1357,67 @@ cilium connectivity test --request-timeout 3s --connect-timeout 3s
 ```
 
 ## 8. Cilium Cluster Mesh
+
+https://docs.cilium.io/en/stable/network/servicemesh/
+
+[Cilium can run with Istio.](https://docs.cilium.io/en/stable/network/servicemesh/istio/)
+
+### Why Are Multiple Clusters Used
+
+There are several [real-world situations](https://cilium.io/blog/2019/03/12/clustermesh/) where a multiple Kubernetes cluster topology is used at production scale. Some common use cases are described below.
+
+**High availability** involves running Kubernetes clusters across multiple regions or availability zones with replicated services in each cluster. During outages, requests can fail over to other clusters. The focus is on temporary resource unavailability or misconfiguration in a cluster rather than complete regional failure. But complete regional failure can happen rarely.
+
+**Shared services** architecture has shifted from large multi-tenant clusters to separate clusters per tenant or service category, such as varying security levels. Common services like secrets management, logging, monitoring, and DNS remain shared across clusters to reduce operational overhead. This model prioritizes isolation, connecting tenant clusters only to shared services clusters, not to each other.
+
+**Stateful and stateless services differ in operational complexity.** Stateless services are easier to scale, migrate, and upgrade, keeping clusters agile. Stateful services add dependency complexity and require storage migration across providers. Running separate clusters for each isolates stateful dependencies and keeps stateless clusters independent.
+
+### Cilium Cluster Mesh Benefits
+
+Cilium Cluster Mesh connects multiple Cilium-managed clusters into a unified network, enabling pods to discover and access services across clusters regardless of their Kubernetes distribution. It provides pod IP routing via tunneling or direct routing without gateways, transparent service discovery with CoreDNS or kube-dns, cross-cluster network policy enforcement using Kubernetes or Cilium policies, and transparent encryption for all inter-node communication.
+
+### Cluster Mesh Requirements
+
+Before enabling Cluster Mesh, the following conditions must be met:
+
+* Each Kubernetes worker node must have a unique IP and full inter-node connectivity
+* Each cluster must have a unique PodCIDR range to avoid overlapping pod IPs
+* The network must support inter-cluster communication so Cilium agents can reach all Cluster Mesh API servers. Cloud environments typically use VPN peering or security group settings to allow node-to-node communication, with [firewall requirements](https://docs.cilium.io/en/stable/operations/system_requirements/#firewall-requirements) depending on Cilium’s routing mode.
+
+### Cluster Mesh Architecture
+
+The Cilium Cluster Mesh control plane uses a minimal, read-only etcd design.
+* Each cluster runs its own Cluster Mesh API Server with an etcd instance to track state.
+* Cilium agents in other clusters connect to these servers to watch and replicate multi-cluster state.
+* Access is secured with TLS certificates, and inter-cluster access is read-only to prevent failure propagation.
+* Configuration uses a Kubernetes secret containing remote etcd proxy addresses, cluster names, and access certificates.
+
+### Global Services
+
+Cross-cluster service load balancing is enabled by creating identical services in each cluster with the `annotation service.cilium.io/global: "true"`. Cilium agents detect this and load balance traffic across clusters. The `annotation service.cilium.io/shared:` can be set to true or false to include or exclude a cluster’s service, defaulting to true when global is enabled. The annotation `service.cilium.io/affinity:` set to local, remote, or none controls the preferred load-balancing destination.
+
+* Local favours healthly local endpoints and only use remote endpoints when all local ones are down.
+* Remote favours healthly remote endpoints and only use local endpoints when all remote ones are down.
+* None sets no preference between local and remote. It is the default affinity.
+
+### Network Policy
+
+After enabling Cluster Mesh, network policies can be used to secure cross-cluster pod-to-pod communication. By matching cluster name labels, policies can be defined with granular control across all connected clusters. The network policies still need to be deployed into all appropriate clusters.
+
+```yaml
+piVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "allow-cross-cluster"
+spec:
+  description: "Allow x-wing in cluster1 to contact rebel-base in cluster2"
+  endpointSelector:
+    matchLabels:
+      name: x-wing
+      io.cilium.k8s.policy.cluster: cluster1
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        name: rebel-base
+        io.cilium.k8s.policy.cluster: cluster2
+```
