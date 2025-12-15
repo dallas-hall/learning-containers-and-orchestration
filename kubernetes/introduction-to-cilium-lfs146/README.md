@@ -67,6 +67,11 @@ https://trainingportal.linuxfoundation.org/learn/course/introduction-to-cilium-l
 - [6. Transparent Encryption](#6-transparent-encryption)
   - [Why Use WireGuard or IPsec?](#why-use-wireguard-or-ipsec)
   - [Enabling Transparent Encryption](#enabling-transparent-encryption)
+- [7. Replacing Kube-Proxy](#7-replacing-kube-proxy)
+  - [Benefits Of Replacing Kube-Proxy](#benefits-of-replacing-kube-proxy)
+  - [Kube-Proxy Functionality](#kube-proxy-functionality)
+  - [Enabling Kube-Proxy Replacement](#enabling-kube-proxy-replacement)
+- [8. Cilium Cluster Mesh](#8-cilium-cluster-mesh)
 
 ## 1. Overview
 
@@ -235,12 +240,6 @@ nodes:
 networking:
   disableDefaultCNI: true
 ```
-
-I eventually created this config file to enable the L7 proxy.
-
-```yaml
-```
-
 
 **NOTE:** I had to run this as root for it to work.
 
@@ -905,7 +904,6 @@ You can get a quick reference of the available filter options using `hubble obse
 
 The Hubble client in the Cilium agent container is limited to showing network flows local to its node, so running it on the wrong node yields no results. To view all flows for multi-endpoint services like Death Star, it must be run on every node hosting a pod. For cluster-wide observability, the Hubble Relay service must be enabled and exposed to local workstations (e.g. with [kubectl port-forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/) or Cilium CLI). With the Hubble CLI tool, users can view and filter flows across all Death Star endpoints, including dropped packets, without knowing which nodes to query, as Hubble Relay coordinates data from all node APIs.
 
-
 ```bash
 # Forward Hubble Relay service.
 cilium hubble port-forward &
@@ -1254,3 +1252,102 @@ IP 10.0.2.31.46243 > 10.0.0.178.53: 53859+ A? deathstar.default.svc.cluster.loca
 IP 10.0.2.31.46243 > 10.0.0.178.53: 27493+ AAAA? deathstar.default.svc.cluster.local.default.svc.cluster.local. (79)
 ...
 ```
+
+## 7. Replacing Kube-Proxy
+
+### Benefits Of Replacing Kube-Proxy
+
+CNI plugins like Cilium aren’t the only components that modify container networking, kube-proxy also interacts with the Linux networking stack. It uses iptables rules to load balance Kubernetes [services](https://kubernetes.io/docs/concepts/services-networking/service/) across pod endpoints using forwarding rules of [virtual IP addresses](https://kubernetes.io/docs/reference/networking/virtual-ips/), adding multiple rules per backend. As services grow, the number of rules increases exponentially, impacting performance at scale. Using eBPF, Cilium can replace kube-proxy to handle service load balancing more efficiently, reducing iptables churn, resource overhead, and improving cluster scaling speed.
+
+### Kube-Proxy Functionality
+
+By default, Cilium performs in-cluster load balancing for ClusterIP services, while kube-proxy handles NodePort, LoadBalancer, and ExternalIP services. When Cilium’s eBPF-based kube-proxy replacement is enabled, it manages all service types, including ExternalIPs, and also handles HostPort allocations for containers with HostPort defined.
+
+### Enabling Kube-Proxy Replacement
+
+The easiest way to enable Cilium’s kube-proxy replacement is to install Cilium with the Cilium CLI on a cluster set up without kube-proxy. The CLI detects the absence of kube-proxy and automatically updates the Helm template configuration in the installation manifests.
+
+If you are using Helm to facilitate the Cilium install, you’ll need to explicitly set a few Helm chart options that the Cilium CLI tool can auto-detect:
+
+```bash
+# Remove kube-proxy and replace with Cilium
+API_SERVER_IP=<your_api_server_ip>
+API_SERVER_PORT=<your_api_server_port>
+
+helm install cilium cilium/cilium --version 1.18.4 \
+     --namespace kube-system \
+     --set kubeProxyReplacement=strict \
+     --set k8sServiceHost=${API_SERVER_IP} \
+     --set k8sServicePort=${API_SERVER_PORT}
+```
+
+If kube-proxy is already installed, you must remove it from the cluster along with any iptables rules it created on the nodes. Follow [these steps](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#kubernetes-without-kube-proxy) to remove it completely.
+
+But there are advanced workloads where operators may use kube-proxy for some functions and Cilium for others. Cilium can be configured as a partial kube-proxy replacement, defining which functions it handles. Follow [these steps](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#kube-proxy-hybrid-modes) to partially remove it.
+
+This is the updated Kind YAML config to remove kube-proxy.
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+networking:
+  disableDefaultCNI: true
+  kubeProxyMode: none
+```
+
+```bash
+# Install a k8s cluster with Cilium and without kube-proxy
+/home/dallas/go/bin/kind create cluster --config=kind-config-remove-kube-config.yaml
+
+# Check that kube-proxy doesn't exist, there should be no output.
+k get ds,po,cm -A | grep -i kube-proxy
+
+# Use the Cilium CLI tool to install Cilium.
+cilium install --version 1.18.4
+
+# Wait for the deploayment to finish.
+cilium status --wait
+```
+
+We can see in the output that kube-proxy has not been installed and Cilium will take over the functionality of it.
+
+```
+🔮 Auto-detected Kubernetes kind: kind
+ℹ️  Using Cilium version 1.18.4
+🔮 Auto-detected cluster name: kind-kind
+ℹ️  Detecting real Kubernetes API server addr and port on Kind
+🔮 Auto-detected kube-proxy has not been installed
+ℹ️  Cilium will fully replace all functionalities of kube-proxy
+I1215 14:12:45.264138  426180 warnings.go:110] "Warning: spec.SessionAffinity is ignored for headless services"
+```
+
+```bash
+# Check that Cilium is now kube-proxy
+ -n kube-system exec ds/cilium -- cilium status | grep KubeProxyReplacement
+```
+
+```
+KubeProxyReplacement:    True   [eth0    10.89.0.8 fc00:f853:ccd:e793::8 fe80::7023:d6ff:fea6:faac (Direct Routing)]
+```
+
+The Cilium CLI connectivity tests include NodePort tests, which run only if Cilium is configured to handle NodePort allocations through kube-proxy replacement. To verify kube-proxy replacement, run the full connectivity tests with the Cilium CLI to confirm NodePort services are created for testing.
+
+```bash
+# Run the NodePort test
+cilium connectivity test --request-timeout 3s --connect-timeout 3s
+```
+
+```
+⌛ [kind-kind] Waiting for NodePort 10.89.0.10:32004 (cilium-test-1/echo-other-node) to become ready...
+⌛ [kind-kind] Waiting for NodePort 10.89.0.10:31916 (cilium-test-1/echo-same-node) to become ready...
+⌛ [kind-kind] Waiting for NodePort 10.89.0.8:31916 (cilium-test-1/echo-same-node) to become ready...
+⌛ [kind-kind] Waiting for NodePort 10.89.0.8:32004 (cilium-test-1/echo-other-node) to become ready...
+⌛ [kind-kind] Waiting for NodePort 10.89.0.9:31916 (cilium-test-1/echo-same-node) to become ready...
+⌛ [kind-kind] Waiting for NodePort 10.89.0.9:32004 (cilium-test-1/echo-other-node) to become ready...
+```
+
+## 8. Cilium Cluster Mesh
